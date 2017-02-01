@@ -96,3 +96,14 @@ add_custom_target(check_whitespace
 	-r ${PROJECT_SOURCE_DIR}/src)
 
 add_dependencies(syscall_intercept_o cstyle check_whitespace)
+
+add_executable(check_license_executable utils/check_license/check-license.c)
+
+add_custom_target(check-license
+	COMMAND
+	${PROJECT_SOURCE_DIR}/utils/check_license/check-headers.sh
+	${PROJECT_SOURCE_DIR}
+	$<TARGET_FILE:check_license_executable>
+	${PROJECT_SOURCE_DIR}/LICENSE -a)
+
+add_dependencies(check-license check_license_executable)
