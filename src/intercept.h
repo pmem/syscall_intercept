@@ -110,9 +110,6 @@ struct patch_desc {
 
 void patch_apply(struct patch_desc *patch);
 
-/* The size of a trampoline jump, jmp instruction + pointer */
-#define TRAMPOLINE_SIZE (6 + 8)
-
 struct intercept_desc {
 
 	/*

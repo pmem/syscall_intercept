@@ -81,6 +81,9 @@
 
 #define PAGE_SIZE ((size_t)0x1000)
 
+/* The size of a trampoline jump, jmp instruction + pointer */
+enum { TRAMPOLINE_SIZE = 6 + 8 };
+
 static unsigned char *
 round_down_address(unsigned char *address)
 {
@@ -125,8 +128,6 @@ create_absolute_jump(unsigned char *from, void *to)
 	from[11] = d[5];
 	from[12] = d[6];
 	from[13] = d[7];
-
-	static_assert(TRAMPOLINE_SIZE == 14, "invalid TRAMPOLINE_SIZE");
 }
 
 /*
