@@ -407,7 +407,7 @@ crawl_text(struct intercept_desc *desc)
 	 * disassembling the code instruction by instruction in the
 	 * while loop below.
 	 */
-	struct intercept_disasm_result prevs[3] = {{0,}};
+	struct intercept_disasm_result prevs[3] = {{0, }};
 
 	/*
 	 * How many previous instructions were decoded before this one,

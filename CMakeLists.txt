@@ -85,3 +85,14 @@ SET_TARGET_PROPERTIES(syscall_intercept_shared
 	PROPERTIES OUTPUT_NAME syscall_intercept CLEAN_DIRECT_OUTPUT 1)
 
 TARGET_LINK_LIBRARIES(syscall_intercept_shared capstone)
+
+add_custom_target(cstyle
+	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle
+	-pP ${PROJECT_SOURCE_DIR}/src/*.{h,c}
+	${PROJECT_SOURCE_DIR}/include/*.h)
+
+add_custom_target(check_whitespace
+	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/check_whitespace
+	-r ${PROJECT_SOURCE_DIR}/src)
+
+add_dependencies(syscall_intercept_o cstyle check_whitespace)
