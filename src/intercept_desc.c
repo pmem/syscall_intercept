@@ -139,6 +139,19 @@ allocate_jump_table(struct intercept_desc *desc)
 	desc->jump_table = xmmap_anon(bytes / 8 + 1);
 }
 
+static bool
+is_bit_set(const unsigned char *table, uint64_t offset)
+{
+	return table[offset / 8] & (1 << (offset % 8));
+}
+
+static void
+set_bit(unsigned char *table, uint64_t offset)
+{
+	unsigned char tmp = (unsigned char)(1 << (offset % 8));
+	table[offset / 8] |= tmp;
+}
+
 /*
  * has_jump - check if addr is known to be a destination of any
  * jump ( or subroutine call ) in the code. The address must be
@@ -148,13 +161,11 @@ allocate_jump_table(struct intercept_desc *desc)
 bool
 has_jump(const struct intercept_desc *desc, unsigned char *addr)
 {
-	if (addr >= desc->text_start && addr <= desc->text_end) {
-		uint64_t offset = (uint64_t)(addr - desc->text_start);
-
-		return desc->jump_table[offset / 8] & (1 << (offset % 8));
-	} else {
+	if (addr >= desc->text_start && addr <= desc->text_end)
+		return is_bit_set(desc->jump_table,
+		    (uint64_t)(addr - desc->text_start));
+	else
 		return false;
-	}
 }
 
 /*
@@ -163,17 +174,8 @@ has_jump(const struct intercept_desc *desc, unsigned char *addr)
 static void
 mark_jump(const struct intercept_desc *desc, const unsigned char *addr)
 {
-	if (addr >= desc->text_start && addr <= desc->text_end) {
-		uint64_t offset = (uint64_t)(addr - desc->text_start);
-
-		/*
-		 * XXX This doesn't work with libraries that have
-		 * over 4 gigabytes of code -- todo more checks.
-		 */
-
-		unsigned char tmp = (unsigned char)(1 << (offset % 8));
-		desc->jump_table[offset / 8] |= tmp;
-	}
+	if (addr >= desc->text_start && addr <= desc->text_end)
+		set_bit(desc->jump_table, (uint64_t)(addr - desc->text_start));
 }
 
 /*
@@ -405,7 +407,7 @@ crawl_text(struct intercept_desc *desc)
 	 * disassembling the code instruction by instruction in the
 	 * while loop below.
 	 */
-	struct intercept_disasm_result prevs[3] = {0, };
+	struct intercept_disasm_result prevs[3] = {{0,}};
 
 	/*
 	 * How many previous instructions were decoded before this one,

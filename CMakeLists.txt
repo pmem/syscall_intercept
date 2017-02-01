@@ -59,6 +59,7 @@ check_c_compiler_flag(-Werror HAS_WERROR)
 check_c_compiler_flag(-Wall HAS_WALL)
 check_c_compiler_flag(-Wextra HAS_WEXTRA)
 check_c_compiler_flag(-pedantic HAS_PEDANTIC)
+check_c_compiler_flag(-Wno-missing-field-initializers HAS_NOMFI)
 
 if(HAS_WERROR)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
@@ -71,6 +72,11 @@ if(HAS_WEXTRA)
 endif()
 if(HAS_PEDANTIC)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic")
+endif()
+
+if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
+	set(CMAKE_C_FLAGS
+		"${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 endif()
 
 SET_TARGET_PROPERTIES(syscall_intercept_static
