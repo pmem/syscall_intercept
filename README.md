@@ -1,6 +1,7 @@
 # syscall_intercept
 
 Temporary home of libsyscall_intercept
+This repository is soon going to be deleted
 
 # SYNOPSIS #
 
