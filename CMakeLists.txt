@@ -32,7 +32,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(syscall_intercept C ASM)
 
-# FIND_PACKAGE(capstone)
+include(CheckCCompilerFlag)
 
 set(SOURCES
 	src/disasm_wrapper.c
@@ -47,7 +47,6 @@ include_directories(include)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_library(syscall_intercept_o OBJECT ${SOURCES})
-# set_property(TARGET ${syscall_intercept_o} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(syscall_intercept_shared SHARED
 	$<TARGET_OBJECTS:syscall_intercept_o>)
@@ -55,6 +54,24 @@ add_library(syscall_intercept_static
 	STATIC $<TARGET_OBJECTS:syscall_intercept_o>)
 
 set_property(TARGET syscall_intercept_o PROPERTY C_STANDARD 99)
+
+check_c_compiler_flag(-Werror HAS_WERROR)
+check_c_compiler_flag(-Wall HAS_WALL)
+check_c_compiler_flag(-Wextra HAS_WEXTRA)
+check_c_compiler_flag(-pedantic HAS_PEDANTIC)
+
+if(HAS_WERROR)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
+endif()
+if(HAS_WALL)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+endif()
+if(HAS_WEXTRA)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wextra")
+endif()
+if(HAS_PEDANTIC)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic")
+endif()
 
 SET_TARGET_PROPERTIES(syscall_intercept_static
 	PROPERTIES OUTPUT_NAME syscall_intercept CLEAN_DIRECT_OUTPUT 1)
