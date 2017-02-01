@@ -34,6 +34,19 @@
 # check-headers.sh - check copyright and license in source files
 
 SELF=$0
+
+function usage() {
+	echo "Usage: $SELF path_source_root path_check_license_bin path_license [-h|-v|-a]"
+	echo "   -h, --help      this help message"
+	echo "   -v, --verbose   verbose mode"
+	echo "   -a, --all       check all files (only modified files are checked by default)"
+}
+
+if [ "$#" -lt 3 ]; then
+	usage >&2
+	exit 2
+fi
+
 SOURCE_ROOT=$1
 shift
 CHECK_LICENSE=$1
@@ -48,16 +61,13 @@ rm -f $PATTERN $TMP
 function exit_if_not_exist()
 {
 	if [ ! -f $1 ]; then
-		echo "Error: file $1 does not exist. Exiting..."
+		echo "Error: file $1 does not exist. Exiting..." >&2
 		exit 1
 	fi
 }
 
 if [ "$1" == "-h" -o "$1" == "--help" ]; then
-	echo "Usage: $0 [-h|-v|-a]"
-	echo "   -h, --help      this help message"
-	echo "   -v, --verbose   verbose mode"
-	echo "   -a, --all       check all files (only modified files are checked by default)"
+	usage
 	exit 0
 fi
 
@@ -106,7 +116,7 @@ else
 	echo
 	echo "Warning: will check copyright headers of modified files only,"
 	echo "         in order to check all files issue the following command:"
-	echo "         $ $SELF -a"
+	echo "         $ $SELF srcroot checklicensebin license -a"
 	echo
 	echo "Checking copyright headers of modified files only..."
 	GIT_COMMAND="diff --name-only $MERGE_BASE $CURRENT_COMMIT $SOURCE_ROOT"
@@ -166,11 +176,11 @@ for file in $FILES ; do
 				else
 					NEW=$COMMIT_FIRST-$COMMIT_LAST
 				fi
-				echo "error: wrong copyright date in file: $file (is: $YEARS, should be: $NEW)"
+				echo "error: wrong copyright date in file: $file (is: $YEARS, should be: $NEW)" >&2
 				RV=1
 			fi
 		else
-			echo "error: unknown commit dates in file: $file"
+			echo "error: unknown commit dates in file: $file" >&2
 			RV=1
 		fi
 	fi
@@ -181,6 +191,6 @@ rm -f $TMP
 if [ $RV -eq 0 ]; then
 	echo "Copyright headers are OK."
 else
-	echo "Error(s) in copyright headers found!"
+	echo "Error(s) in copyright headers found!" >&2
 fi
 exit $RV
