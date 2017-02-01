@@ -405,7 +405,7 @@ crawl_text(struct intercept_desc *desc)
 	 * disassembling the code instruction by instruction in the
 	 * while loop below.
 	 */
-	struct intercept_disasm_result prevs[3] = {};
+	struct intercept_disasm_result prevs[3] = {0, };
 
 	/*
 	 * How many previous instructions were decoded before this one,
@@ -527,7 +527,7 @@ allocate_trampoline_table(struct intercept_desc *desc)
 		unsigned char *start;
 		unsigned char *end;
 
-		if (sscanf(line, "%p-%p", &start, &end) != 2)
+		if (sscanf(line, "%p-%p", (void **)&start, (void **)&end) != 2)
 			xabort();
 
 		/*
