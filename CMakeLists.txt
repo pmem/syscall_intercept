@@ -54,6 +54,8 @@ add_library(syscall_intercept_shared SHARED
 add_library(syscall_intercept_static
 	STATIC $<TARGET_OBJECTS:syscall_intercept_o>)
 
+set_property(TARGET syscall_intercept_o PROPERTY C_STANDARD 99)
+
 SET_TARGET_PROPERTIES(syscall_intercept_static
 	PROPERTIES OUTPUT_NAME syscall_intercept CLEAN_DIRECT_OUTPUT 1)
 SET_TARGET_PROPERTIES(syscall_intercept_shared
