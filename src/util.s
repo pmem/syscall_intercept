@@ -36,6 +36,9 @@
 .global has_ymm_registers;
 .type   has_ymm_registers, @function
 
+.global syscall_no_intercept;
+.type   syscall_no_intercept, @function
+
 .text
 
 xlongjmp:
@@ -58,3 +61,16 @@ has_ymm_registers:
 	.cfi_endproc
 
 .size   has_ymm_registers, .-has_ymm_registers
+
+syscall_no_intercept:
+	movq        %rdi, %rax  /* convert from linux ABI calling */
+	movq        %rsi, %rdi  /* convention to syscall calling convention */
+	movq        %rdx, %rsi
+	movq        %rcx, %rdx
+	movq        %r8, %r10
+	movq        %r9, %r8
+	movq        8(%rsp), %r9
+	syscall
+	ret
+
+.size   syscall_no_intercept, .-syscall_no_intercept
