@@ -48,8 +48,8 @@ include_directories(include)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_library(syscall_intercept_o OBJECT ${SOURCES})
 
-add_library(syscall_intercept_shared SHARED
-	$<TARGET_OBJECTS:syscall_intercept_o>)
+add_library(syscall_intercept_shared
+	SHARED $<TARGET_OBJECTS:syscall_intercept_o>)
 add_library(syscall_intercept_static
 	STATIC $<TARGET_OBJECTS:syscall_intercept_o>)
 
@@ -75,6 +75,7 @@ if(HAS_PEDANTIC)
 endif()
 
 if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
+	# See: https://llvm.org/bugs/show_bug.cgi?id=21689
 	set(CMAKE_C_FLAGS
 		"${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 endif()
@@ -98,6 +99,7 @@ add_custom_target(check_whitespace
 add_dependencies(syscall_intercept_o cstyle check_whitespace)
 
 add_executable(check_license_executable utils/check_license/check-license.c)
+set_property(TARGET check_license_executable PROPERTY C_STANDARD 99)
 
 add_custom_target(check-license
 	COMMAND
