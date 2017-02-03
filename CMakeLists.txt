@@ -85,11 +85,6 @@ if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
 		"${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 endif()
 
-SET_TARGET_PROPERTIES(syscall_intercept_static
-	PROPERTIES OUTPUT_NAME syscall_intercept CLEAN_DIRECT_OUTPUT 1)
-SET_TARGET_PROPERTIES(syscall_intercept_shared
-	PROPERTIES OUTPUT_NAME syscall_intercept CLEAN_DIRECT_OUTPUT 1)
-
 TARGET_LINK_LIBRARIES(syscall_intercept_shared capstone)
 
 add_custom_target(cstyle
