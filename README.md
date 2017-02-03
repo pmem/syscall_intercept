@@ -3,7 +3,31 @@
 Temporary home of libsyscall_intercept
 This repository is soon going to be deleted
 
-# SYNOPSIS #
+# How to build #
+
+Building libsyscall_intercept requires cmake.
+Example:
+```sh
+cmake path_to_syscall_intercept -DCMAKE_INSTALL_PREFIX=/home/tej/222 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang
+make
+```
+alternatively:
+```sh
+ccmake path_to_syscall_intercept
+make
+```
+
+There is an install target. For now, all it does, is cp.
+```sh
+make install
+```
+
+Coming soon:
+```sh
+make test
+```
+
+# Synopsis #
 
 ```c
 #include <libsyscall_intercept_hook_point.h>
