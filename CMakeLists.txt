@@ -29,7 +29,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 2.8)
 project(syscall_intercept C ASM)
 
 include(CheckCCompilerFlag)
@@ -58,6 +58,11 @@ set_target_properties(syscall_intercept_shared PROPERTIES
 set_target_properties(syscall_intercept_static PROPERTIES
   PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h")
 
+SET_TARGET_PROPERTIES(syscall_intercept_static
+	PROPERTIES OUTPUT_NAME syscall_intercept)
+SET_TARGET_PROPERTIES(syscall_intercept_shared
+	PROPERTIES OUTPUT_NAME syscall_intercept)
+
 set_property(TARGET syscall_intercept_o PROPERTY C_STANDARD 99)
 
 check_c_compiler_flag(-Werror HAS_WERROR)
@@ -85,7 +90,7 @@ if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
 		"${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 endif()
 
-TARGET_LINK_LIBRARIES(syscall_intercept_shared capstone)
+TARGET_LINK_LIBRARIES(syscall_intercept_shared dl capstone)
 
 add_custom_target(cstyle
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle
@@ -117,4 +122,4 @@ install(TARGETS syscall_intercept_shared syscall_intercept_static
 	PUBLIC_HEADER DESTINATION include)
 
 add_subdirectory(examples)
-add_subdirectory(test)
+include(test/CMakeLists.txt)
