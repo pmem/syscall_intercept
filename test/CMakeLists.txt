@@ -30,20 +30,19 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # See: https://cmake.org/Wiki/CMake/Testing_With_CTest
-enable_testing()
 
-add_executable(logging_test test/logging_test.c)
+add_executable(logging_test logging_test.c)
 
 target_link_libraries(logging_test syscall_intercept_shared)
 
 set(CHECK_LOG_COMMON_ARGS
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
 	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/utils/match.pl
-	-P ${PROJECT_SOURCE_DIR}/test/check_log.cmake)
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_log.cmake)
 
 add_test(NAME "logging_test"
 	COMMAND ${CMAKE_COMMAND}
 	-DTEST_PROG=$<TARGET_FILE:logging_test>
-	-DTEST_PROG_ARG=${PROJECT_SOURCE_DIR}/test/logging_test.c
-	-DMATCH_FILE=${PROJECT_SOURCE_DIR}/test/libcintercept0.log.match
+	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
+	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
 	${CHECK_LOG_COMMON_ARGS})

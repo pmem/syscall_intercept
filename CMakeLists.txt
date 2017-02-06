@@ -121,5 +121,7 @@ install(TARGETS syscall_intercept_shared syscall_intercept_static
 	ARCHIVE DESTINATION lib
 	PUBLIC_HEADER DESTINATION include)
 
+enable_testing()
+
 add_subdirectory(examples)
-include(test/CMakeLists.txt)
+add_subdirectory(test)
