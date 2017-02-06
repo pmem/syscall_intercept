@@ -42,7 +42,7 @@ set(CHECK_LOG_COMMON_ARGS
 	-P ${PROJECT_SOURCE_DIR}/test/check_log.cmake)
 
 add_test(NAME "logging_test"
-	COMMAND ${CMAKE_COMMAND} --trace
+	COMMAND ${CMAKE_COMMAND}
 	-DTEST_PROG=$<TARGET_FILE:logging_test>
 	-DTEST_PROG_ARG=${PROJECT_SOURCE_DIR}/test/logging_test.c
 	-DMATCH_FILE=${PROJECT_SOURCE_DIR}/test/libcintercept0.log.match
