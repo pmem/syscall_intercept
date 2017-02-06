@@ -90,7 +90,8 @@ TARGET_LINK_LIBRARIES(syscall_intercept_shared capstone)
 add_custom_target(cstyle
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle
 	-pP ${PROJECT_SOURCE_DIR}/src/*.{h,c}
-	${PROJECT_SOURCE_DIR}/include/*.h)
+	${PROJECT_SOURCE_DIR}/include/*.h
+	${PROJECT_SOURCE_DIR}/examples/*.c)
 
 add_custom_target(check_whitespace
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/check_whitespace
@@ -114,3 +115,6 @@ install(TARGETS syscall_intercept_shared syscall_intercept_static
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib
 	PUBLIC_HEADER DESTINATION include)
+
+add_subdirectory(examples)
+add_subdirectory(test)
