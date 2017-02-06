@@ -90,6 +90,7 @@ sub usage {
 
 	warn "$Me: $msg\n" if $msg;
 	warn "Usage: $Me [-adqv] [match-file]...\n";
+	warn "   or: $Me [-dqv] -o output-file match-file...\n";
 	exit 1;
 }
 

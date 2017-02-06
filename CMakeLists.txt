@@ -93,13 +93,13 @@ endif()
 TARGET_LINK_LIBRARIES(syscall_intercept_shared dl capstone)
 
 add_custom_target(cstyle
-	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle
+	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
 	-pP ${PROJECT_SOURCE_DIR}/src/*.{h,c}
 	${PROJECT_SOURCE_DIR}/include/*.h
 	${PROJECT_SOURCE_DIR}/examples/*.c)
 
 add_custom_target(check_whitespace
-	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/check_whitespace
+	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/check_whitespace.pl
 	-r ${PROJECT_SOURCE_DIR}/src)
 
 add_dependencies(syscall_intercept_o cstyle check_whitespace)

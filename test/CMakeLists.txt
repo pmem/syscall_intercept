@@ -38,7 +38,7 @@ target_link_libraries(logging_test syscall_intercept_shared)
 
 set(CHECK_LOG_COMMON_ARGS
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
-	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/test/match.pl
+	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/utils/match.pl
 	-P ${PROJECT_SOURCE_DIR}/test/check_log.cmake)
 
 add_test(NAME "logging_test"
