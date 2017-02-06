@@ -53,15 +53,10 @@ add_library(syscall_intercept_shared
 add_library(syscall_intercept_static
 	STATIC $<TARGET_OBJECTS:syscall_intercept_o>)
 
-set_target_properties(syscall_intercept_shared PROPERTIES
-  PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h")
-set_target_properties(syscall_intercept_static PROPERTIES
-  PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h")
-
-SET_TARGET_PROPERTIES(syscall_intercept_static
-	PROPERTIES OUTPUT_NAME syscall_intercept)
-SET_TARGET_PROPERTIES(syscall_intercept_shared
-	PROPERTIES OUTPUT_NAME syscall_intercept)
+set_target_properties(syscall_intercept_shared syscall_intercept_static
+	PROPERTIES
+	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
+	OUTPUT_NAME syscall_intercept)
 
 set_property(TARGET syscall_intercept_o PROPERTY C_STANDARD 99)
 
