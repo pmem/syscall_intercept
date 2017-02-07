@@ -55,4 +55,5 @@ text_end:
 trampoline_table:
 dst0:		movabs  r11, 123
 		jmp     [r11]
+		.space 0x100, 0
 trampoline_table_end:
