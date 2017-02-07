@@ -31,15 +31,26 @@
 
 cmake_minimum_required(VERSION 2.8.7)
 project(syscall_intercept C ASM)
-
-set(CMAKE_C_STANDARD 99)
+include(CheckCCompilerFlag)
 
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
-include(CheckCCompilerFlag)
+if (NOT CMAKE_VERSION VERSION_LESS 3.1.0)
+	set(CMAKE_C_STANDARD 99)
+else()
+	check_c_compiler_flag(-std=c99 HAS_STDC99)
+	if(HAS_STDC99)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+	else()
+		check_c_compiler_flag(-std=gnu99 HAS_STDGNU99)
+		if(HAS_STDGNU99)
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+		endif()
+	endif()
+endif()
 
 # main source files - intentionally excluding src/entry.c
 set(SOURCES
