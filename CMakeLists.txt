@@ -79,6 +79,7 @@ check_c_compiler_flag(-Wall HAS_WALL)
 check_c_compiler_flag(-Wextra HAS_WEXTRA)
 check_c_compiler_flag(-pedantic HAS_PEDANTIC)
 check_c_compiler_flag(-Wno-missing-field-initializers HAS_NOMFI)
+check_c_compiler_flag(-Wno-c90-c99-compat HAS_NO9099)
 
 # Hack, adding _GNU_SOURCE macro is just hardwired here for now.
 # Todo: only do it when building with glibc.
@@ -98,6 +99,9 @@ if(HAS_WEXTRA)
 endif()
 if(HAS_PEDANTIC)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic")
+endif()
+if(HAS_NO9099)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-c90-c99-compat")
 endif()
 
 if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
