@@ -150,9 +150,10 @@ main(int argc, char **argv)
 	init_patcher();
 
 	patches.dlinfo = lib_in.info;
-	find_syscalls(&patches);
+	patches.uses_trampoline_table = true;
 	patches.trampoline_table = lib_in.mock_trampoline_table;
 	patches.trampoline_table_size = lib_in.mock_trampoline_table_size;
+	find_syscalls(&patches);
 	patches.next_trampoline = patches.trampoline_table;
 	create_patch_wrappers(&patches);
 	mprotect_asm_wrappers();
