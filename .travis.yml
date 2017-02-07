@@ -9,4 +9,4 @@ script:
   - cmake --version
   - mkdir build
   - cd build
-  - cmake .. && make && make test
+  - cmake .. && make VERBOSE=1 && ctest --output-on-failure
