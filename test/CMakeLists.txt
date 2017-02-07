@@ -32,9 +32,10 @@
 # See: https://cmake.org/Wiki/CMake/Testing_With_CTest
 
 add_executable(logging_test logging_test.c)
-add_executable(asm_pattern asm_pattern.c $<TARGET_OBJECTS:syscall_intercept_o>)
+add_executable(asm_pattern asm_pattern.c)
 
-target_link_libraries(asm_pattern ${CMAKE_DL_LIBS} capstone)
+target_link_libraries(asm_pattern
+	${CMAKE_DL_LIBS} capstone syscall_intercept_base)
 set_property(TARGET asm_pattern
 	APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src)
 

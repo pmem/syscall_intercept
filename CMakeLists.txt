@@ -29,7 +29,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.7)
 project(syscall_intercept C ASM)
 
 set(CMAKE_C_STANDARD 99)
@@ -58,14 +58,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Main object files of the library, the entry point in entry.c
 # is only built into the final libraries. This way, testing code
 # can use the internal interface of the libraries (linking
-# with syscall_intercept_o instead of the actual lib ), without
+# with syscall_intercept_base instead of the actual lib ), without
 # the library trying to hotpatch libc every time.
-add_library(syscall_intercept_o OBJECT ${SOURCES})
+add_library(syscall_intercept_base STATIC ${SOURCES})
 
-add_library(syscall_intercept_shared
-	SHARED $<TARGET_OBJECTS:syscall_intercept_o> src/entry.c)
-add_library(syscall_intercept_static
-	STATIC $<TARGET_OBJECTS:syscall_intercept_o> src/entry.c)
+add_library(syscall_intercept_shared SHARED src/entry.c)
+add_library(syscall_intercept_static STATIC src/entry.c)
+target_link_libraries(syscall_intercept_static
+	${CMAKE_DL_LIBS} capstone syscall_intercept_base)
+target_link_libraries(syscall_intercept_shared
+	${CMAKE_DL_LIBS} capstone syscall_intercept_base)
 
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
@@ -104,8 +106,6 @@ if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
 		"${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 endif()
 
-target_link_libraries(syscall_intercept_shared ${CMAKE_DL_LIBS} capstone)
-
 add_custom_target(cstyle
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
 	-pP ${PROJECT_SOURCE_DIR}/src/*.{h,c}
@@ -117,7 +117,7 @@ add_custom_target(check_whitespace
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/check_whitespace.pl
 	-r ${PROJECT_SOURCE_DIR}/src)
 
-add_dependencies(syscall_intercept_o cstyle check_whitespace)
+add_dependencies(syscall_intercept_base cstyle check_whitespace)
 
 add_executable(check_license_executable utils/check_license/check-license.c)
 set_property(TARGET check_license_executable PROPERTY C_STANDARD 99)
