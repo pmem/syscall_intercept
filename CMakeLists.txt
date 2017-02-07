@@ -90,7 +90,7 @@ if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
 		"${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 endif()
 
-TARGET_LINK_LIBRARIES(syscall_intercept_shared dl capstone)
+TARGET_LINK_LIBRARIES(syscall_intercept_shared ${CMAKE_DL_LIBS} capstone)
 
 add_custom_target(cstyle
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
@@ -122,7 +122,7 @@ install(TARGETS syscall_intercept_shared syscall_intercept_static
 	ARCHIVE DESTINATION lib
 	PUBLIC_HEADER DESTINATION include)
 
-install(FILES ${CMAKE_BINARY_DIR}/libsyscall_intercept.pc DESTINATION lib)
+install(FILES ${CMAKE_BINARY_DIR}/libsyscall_intercept.pc DESTINATION lib/pkgconfig)
 
 enable_testing()
 
