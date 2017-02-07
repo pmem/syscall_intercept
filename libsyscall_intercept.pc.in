@@ -1,0 +1,13 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=@CMAKE_INSTALL_PREFIX@/lib
+version=@VERSION@
+includedir=@CMAKE_INSTALL_PREFIX@/include
+
+Name: libsyscall_intercept
+Description: libsyscall_intercept - system call intercepting library
+Version: @VERSION@
+URL: http://github.com/GBuella/temp_syscall_intercept
+Requires: capstone
+Libs: -L@CMAKE_INSTALL_PREFIX@/lib -lsyscall_intercept
+Libs.private: -ldl
+Cflags: -I@CMAKE_INSTALL_PREFIX@/include

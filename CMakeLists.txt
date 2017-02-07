@@ -32,6 +32,11 @@
 cmake_minimum_required(VERSION 2.8)
 project(syscall_intercept C ASM)
 
+set(VERSION_MAJOR 0)
+set(VERSION_MINOR 1)
+set(VERSION_PATCH 0)
+set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+
 include(CheckCCompilerFlag)
 
 set(SOURCES
@@ -110,11 +115,14 @@ add_custom_target(check-license
 	${PROJECT_SOURCE_DIR}/LICENSE -a)
 
 add_dependencies(check-license check_license_executable)
+configure_file(libsyscall_intercept.pc.in libsyscall_intercept.pc)
 
 install(TARGETS syscall_intercept_shared syscall_intercept_static
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib
 	PUBLIC_HEADER DESTINATION include)
+
+install(FILES ${CMAKE_BINARY_DIR}/libsyscall_intercept.pc DESTINATION lib)
 
 enable_testing()
 
