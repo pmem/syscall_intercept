@@ -37,7 +37,9 @@
 #ifndef INTERCEPT_INTERCEPT_H
 #define INTERCEPT_INTERCEPT_H
 
+/* dladdr is a GNU extenstion */
 #define _GNU_SOURCE
+
 #include <stdbool.h>
 #include <elf.h>
 #include <unistd.h>

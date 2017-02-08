@@ -30,11 +30,42 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* dladdr is a GNU extenstion */
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
+#include <string.h>
 
 #include "libsyscall_intercept_hook_point.h"
+
+#include "intercept.h"
+
+static Dl_info
+load_test_lib(const char *path)
+{
+	static const char symbol_name[] = "test_marker_symbol";
+
+	void *lib = dlopen(path, RTLD_LAZY);
+	if (lib == NULL) {
+		fprintf(stderr, "error loading \"%s\": %s\n",
+		    path, dlerror());
+		exit(EXIT_FAILURE);
+	}
+
+	Dl_info dlinfo;
+	if ((!dladdr(symbol_name, &dlinfo)) ||
+	    (dlinfo.dli_fname == NULL) ||
+	    (strcmp(dlinfo.dli_fname, path) != 0) ||
+	    (dlinfo.dli_fbase == NULL)) {
+		fprintf(stderr, "error location marker symbol in %s: \"%s\"",
+		    path, dlerror());
+		exit(EXIT_FAILURE);
+	}
+
+	return dlinfo;
+}
 
 int
 main(int argc, char **argv)
@@ -42,13 +73,14 @@ main(int argc, char **argv)
 	if (argc < 2)
 		return EXIT_FAILURE;
 
-	void *lib = dlopen(argv[1], RTLD_LAZY);
-	if (lib == NULL) {
-		fprintf(stderr, "error loading \"%s\": %s\n",
-		    argv[1], dlerror());
-		return EXIT_FAILURE;
-	}
+	Dl_info dlinfo = load_test_lib(argv[1]);
 
+	struct intercept_desc patches;
+	init_patcher();
+	find_syscalls(&patches, &dlinfo);
+	create_patch_wrappers(&patches);
+	mprotect_asm_wrappers();
+	activate_patches(&patches);
 
 	return EXIT_SUCCESS;
 }

@@ -35,6 +35,8 @@ add_executable(logging_test logging_test.c)
 add_executable(asm_pattern asm_pattern.c $<TARGET_OBJECTS:syscall_intercept_o>)
 
 target_link_libraries(asm_pattern ${CMAKE_DL_LIBS} capstone)
+target_include_directories(asm_pattern
+	PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
 set(CHECK_LOG_COMMON_ARGS
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
