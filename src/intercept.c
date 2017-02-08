@@ -89,12 +89,9 @@ intercept_routine(long nr, long arg0, long arg1,
 			long return_to_asm_wrapper,
 			long rsp_in_asm_wrapper);
 
-static __attribute__((constructor)) void
+void
 intercept(void)
 {
-	if (!libc_hook_in_process_allowed())
-		return;
-
 	bool pthreads_available;
 
 	find_self_dlinfo();

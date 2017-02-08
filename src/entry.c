@@ -30,25 +30,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <dlfcn.h>
+/*
+ * entry.c -- the entry point for libsyscall_intercept
+ *  expected to be executed by the loader while using LD_PRELOAD
+ */
 
 #include "libsyscall_intercept_hook_point.h"
+#include "intercept.h"
 
-int
-main(int argc, char **argv)
+static __attribute__((constructor)) void
+entry_point(void)
 {
-	if (argc < 2)
-		return EXIT_FAILURE;
-
-	void *lib = dlopen(argv[1], RTLD_LAZY);
-	if (lib == NULL) {
-		fprintf(stderr, "error loading \"%s\": %s\n",
-		    argv[1], dlerror());
-		return EXIT_FAILURE;
-	}
-
-
-	return EXIT_SUCCESS;
+	if (libc_hook_in_process_allowed())
+		intercept();
 }

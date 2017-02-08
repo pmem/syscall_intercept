@@ -195,4 +195,6 @@ void create_jump(unsigned char opcode, unsigned char *from, void *to);
 #define unreachable() __builtin_unreachable()
 #define return_address() __builtin_return_address(0)
 
+void intercept(void);
+
 #endif

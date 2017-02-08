@@ -32,6 +32,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(syscall_intercept C ASM)
 
+set(CMAKE_C_STANDARD 99)
+
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
@@ -51,19 +53,18 @@ set(SOURCES
 include_directories(include)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(syscall_intercept_o OBJECT ${SOURCES})
 
 add_library(syscall_intercept_shared
-	SHARED $<TARGET_OBJECTS:syscall_intercept_o>)
+	SHARED $<TARGET_OBJECTS:syscall_intercept_o> src/entry.c)
 add_library(syscall_intercept_static
-	STATIC $<TARGET_OBJECTS:syscall_intercept_o>)
+	STATIC $<TARGET_OBJECTS:syscall_intercept_o> src/entry.c)
 
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
 	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
 	OUTPUT_NAME syscall_intercept)
-
-set_property(TARGET syscall_intercept_o PROPERTY C_STANDARD 99)
 
 check_c_compiler_flag(-Werror HAS_WERROR)
 check_c_compiler_flag(-Wall HAS_WALL)
@@ -90,12 +91,13 @@ if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
 		"${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 endif()
 
-TARGET_LINK_LIBRARIES(syscall_intercept_shared ${CMAKE_DL_LIBS} capstone)
+target_link_libraries(syscall_intercept_shared ${CMAKE_DL_LIBS} capstone)
 
 add_custom_target(cstyle
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
 	-pP ${PROJECT_SOURCE_DIR}/src/*.{h,c}
 	${PROJECT_SOURCE_DIR}/include/*.h
+	${PROJECT_SOURCE_DIR}/test/*.c
 	${PROJECT_SOURCE_DIR}/examples/*.c)
 
 add_custom_target(check_whitespace
