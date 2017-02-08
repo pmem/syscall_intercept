@@ -112,10 +112,22 @@ load_test_lib(const char *path)
 static void
 check_patch(const struct lib_data *in, const struct lib_data *out)
 {
-	if (memcmp(in->text_start, out->text_start, in->text_size) != 0) {
-		fputs("Invalid patch\n", stderr);
-		exit(EXIT_FAILURE);
+	if (memcmp(in->text_start, out->text_start, in->text_size) == 0)
+		return;
+
+	fputs("Invalid patch\n", stderr);
+
+	const unsigned char *text = in->text_start;
+	const unsigned char *expected = out->text_start;
+	size_t count = in->text_size;
+
+	fputs("patch vs. expected:\n", stderr);
+	while (count > 0) {
+		fprintf(stderr, "%02x %02x\n", *text++, *expected++);
+		--count;
 	}
+
+	exit(EXIT_FAILURE);
 }
 
 int

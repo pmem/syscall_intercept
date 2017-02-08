@@ -40,14 +40,14 @@
 
 text_start:
 		jmp     dst0
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
+		int3
+		int3
+		int3
+		int3
+		int3
+		int3
+		int3
+		int3
 text_end:
 
 .data
