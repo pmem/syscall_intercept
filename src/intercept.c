@@ -108,13 +108,17 @@ intercept(void)
 
 	log_header();
 
-	find_syscalls(&glibc_patches, &libc_dlinfo);
+	glibc_patches.dlinfo = libc_dlinfo;
+	find_syscalls(&glibc_patches);
+	allocate_trampoline_table(&glibc_patches);
 	create_patch_wrappers(&glibc_patches);
 
 	pthreads_available = (find_pthreads_dl() == 0);
 
 	if (pthreads_available) {
-		find_syscalls(&pthreads_patches, &pthreads_dlinfo);
+		pthreads_patches.dlinfo = pthreads_dlinfo;
+		find_syscalls(&pthreads_patches);
+		allocate_trampoline_table(&pthreads_patches);
 		create_patch_wrappers(&pthreads_patches);
 		activate_patches(&pthreads_patches);
 	} else {

@@ -163,7 +163,8 @@ struct intercept_desc {
 
 bool has_jump(const struct intercept_desc *desc, unsigned char *addr);
 
-void find_syscalls(struct intercept_desc *desc, Dl_info *dl_info);
+void allocate_trampoline_table(struct intercept_desc *desc);
+void find_syscalls(struct intercept_desc *desc);
 
 void init_patcher(void);
 void create_patch_wrappers(struct intercept_desc *desc);

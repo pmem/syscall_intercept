@@ -82,7 +82,7 @@ check_c_compiler_flag(-Wno-missing-field-initializers HAS_NOMFI)
 # Todo: only do it when building with glibc.
 # The only possible target in the foreseeable future is GNU/Linux x86_64
 # so it doesn't matter.
-# The only library extension used is dladdr.
+# The only library extension used is dlinfo.
 add_definitions(-D_GNU_SOURCE)
 
 if(HAS_WERROR)

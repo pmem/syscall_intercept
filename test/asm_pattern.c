@@ -39,10 +39,33 @@
 
 #include "intercept.h"
 
-static Dl_info
+struct lib_data {
+	Dl_info info;
+	unsigned char *mock_trampoline_table;
+	size_t mock_trampoline_table_size;
+	const unsigned char *text_start;
+	const unsigned char *text_end;
+	size_t text_size;
+};
+
+static void *
+xdlsym(void *lib, const char *name, const char *path)
+{
+	void *symbol = dlsym(lib, name);
+	if (symbol == NULL) {
+		fprintf(stderr,
+		    "\"%s\" not found in %s: %s\n",
+		    name, path, dlerror());
+		exit(EXIT_FAILURE);
+	}
+
+	return symbol;
+}
+
+static struct lib_data
 load_test_lib(const char *path)
 {
-	static const char symbol_name[] = "test_marker_symbol";
+	struct lib_data data;
 
 	void *lib = dlopen(path, RTLD_LAZY);
 	if (lib == NULL) {
@@ -51,33 +74,79 @@ load_test_lib(const char *path)
 		exit(EXIT_FAILURE);
 	}
 
-	Dl_info dlinfo;
-	if ((!dladdr(symbol_name, &dlinfo)) ||
-	    (dlinfo.dli_fname == NULL) ||
-	    (strcmp(dlinfo.dli_fname, path) != 0) ||
-	    (dlinfo.dli_fbase == NULL)) {
-		fprintf(stderr, "error location marker symbol in %s: \"%s\"",
+	data.mock_trampoline_table = xdlsym(lib, "trampoline_table", path);
+
+	if ((!dladdr(data.mock_trampoline_table, &data.info)) ||
+	    (data.info.dli_fname == NULL) ||
+	    (data.info.dli_fbase == NULL)) {
+		fprintf(stderr,
+		    "error querying dlinfo for %s: %s\n",
 		    path, dlerror());
 		exit(EXIT_FAILURE);
 	}
 
-	return dlinfo;
+	unsigned char *end = xdlsym(lib, "trampoline_table_end", path);
+
+	if (end <= data.mock_trampoline_table) {
+		fprintf(stderr,
+		    "trampoline_table_end invalid in %s: \"%s\"\n",
+		    path, dlerror());
+		exit(EXIT_FAILURE);
+	}
+
+	data.mock_trampoline_table_size = end - data.mock_trampoline_table;
+
+	data.text_start = xdlsym(lib, "text_start", path);
+	data.text_end = xdlsym(lib, "text_end", path);
+
+	if (data.text_start >= data.text_end) {
+		fprintf(stderr, "text_start <= text_end in %s\n", path);
+		exit(EXIT_FAILURE);
+	}
+
+	data.text_size = data.text_end - data.text_start;
+
+	return data;
+}
+
+static void
+check_patch(const struct lib_data *in, const struct lib_data *out)
+{
+	if (memcmp(in->text_start, out->text_start, in->text_size) != 0) {
+		fputs("Invalid patch\n", stderr);
+		exit(EXIT_FAILURE);
+	}
 }
 
 int
 main(int argc, char **argv)
 {
-	if (argc < 2)
+	if (argc < 3)
 		return EXIT_FAILURE;
 
-	Dl_info dlinfo = load_test_lib(argv[1]);
+	struct lib_data lib_in = load_test_lib(argv[1]);
+	struct lib_data lib_out = load_test_lib(argv[2]);
+
+	if (lib_in.text_size != lib_out.text_size) {
+		fprintf(stderr,
+		    "text_size mismatch for %s and %s\n",
+		    argv[1], argv[2]);
+		exit(EXIT_FAILURE);
+	}
 
 	struct intercept_desc patches;
 	init_patcher();
-	find_syscalls(&patches, &dlinfo);
+
+	patches.dlinfo = lib_in.info;
+	find_syscalls(&patches);
+	patches.trampoline_table = lib_in.mock_trampoline_table;
+	patches.trampoline_table_size = lib_in.mock_trampoline_table_size;
+	patches.next_trampoline = patches.trampoline_table;
 	create_patch_wrappers(&patches);
 	mprotect_asm_wrappers();
 	activate_patches(&patches);
+
+	check_patch(&lib_in, &lib_out);
 
 	return EXIT_SUCCESS;
 }

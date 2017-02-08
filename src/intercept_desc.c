@@ -490,7 +490,30 @@ crawl_text(struct intercept_desc *desc)
 	intercept_disasm_destroy(context);
 }
 
-static void
+static uintptr_t
+get_min_address(void)
+{
+	static uintptr_t min_address;
+
+	if (min_address != 0)
+		return min_address;
+
+	min_address = 0x10000; /* best guess */
+
+	FILE *f = fopen("/proc/sys/vm/mmap_min_addr,", "r");
+
+	if (f != NULL) {
+		char line[64];
+		if (fgets(line, sizeof(line), f) != NULL)
+			min_address = (uintptr_t)atoll(line);
+
+		fclose(f);
+	}
+
+	return min_address;
+}
+
+void
 allocate_trampoline_table(struct intercept_desc *desc)
 {
 	char *e = getenv("INTERCEPT_NO_TRAMPOLINE");
@@ -511,12 +534,15 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	size_t size;
 
 	if ((uintptr_t)desc->text_end < (1u << 31)) {
-		guess = 0;
+		guess = (void *)0;
 	} else {
 		guess = desc->text_end - (1u << 31);
 		guess = (unsigned char *)(((uintptr_t)guess)
 				& ~((uintptr_t)(0xfff)));
 	}
+
+	if ((uintptr_t)guess < get_min_address())
+		guess = (void *)get_min_address();
 
 	size = 64 * 0x1000; /* TODO: don't just guess */
 
@@ -570,15 +596,13 @@ allocate_trampoline_table(struct intercept_desc *desc)
 }
 
 void
-find_syscalls(struct intercept_desc *desc, Dl_info *dl_info)
+find_syscalls(struct intercept_desc *desc)
 {
-	desc->dlinfo = *dl_info;
 	desc->count = 0;
 
 	long fd = open_orig_file(desc);
 
 	find_sections(desc, fd);
-	allocate_trampoline_table(desc);
 	allocate_jump_table(desc);
 
 	if (desc->has_symtab)
