@@ -6,6 +6,7 @@ compiler:
   - gcc
 
 script:
+  - sudo apt-get install capstone -y
   - cmake --version
   - mkdir build
   - cd build
