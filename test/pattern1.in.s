@@ -47,7 +47,6 @@ text_end:
 .data
 
 trampoline_table:
-		.rept 0x100
-		.ascii "MOCKTRAMPOLINETABLE"
-		.endr
+dst0:		movabs  r11, 123
+		jmp     [r11]
 trampoline_table_end:

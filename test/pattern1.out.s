@@ -53,8 +53,6 @@ text_end:
 .data
 
 trampoline_table:
-dst0:		jmp     0
-		.rept 0x100
-		.ascii "TRAMPOLINETABLE"
-		.endr
+dst0:		movabs  r11, 123
+		jmp     [r11]
 trampoline_table_end:
