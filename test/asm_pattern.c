@@ -30,9 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* dladdr is a GNU extenstion */
-#define _GNU_SOURCE
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>

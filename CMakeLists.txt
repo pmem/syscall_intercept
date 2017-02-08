@@ -41,6 +41,7 @@ set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 include(CheckCCompilerFlag)
 
+# main source files - intentionally excluding src/entry.c
 set(SOURCES
 	src/disasm_wrapper.c
 	src/intercept.c
@@ -54,6 +55,11 @@ include_directories(include)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Main object files of the library, the entry point in entry.c
+# is only built into the final libraries. This way, testing code
+# can use the internal interface of the libraries (linking
+# with syscall_intercept_o instead of the actual lib ), without
+# the library trying to hotpatch libc every time.
 add_library(syscall_intercept_o OBJECT ${SOURCES})
 
 add_library(syscall_intercept_shared
@@ -71,6 +77,13 @@ check_c_compiler_flag(-Wall HAS_WALL)
 check_c_compiler_flag(-Wextra HAS_WEXTRA)
 check_c_compiler_flag(-pedantic HAS_PEDANTIC)
 check_c_compiler_flag(-Wno-missing-field-initializers HAS_NOMFI)
+
+# Hack, adding _GNU_SOURCE macro is just hardwired here for now.
+# Todo: only do it when building with glibc.
+# The only possible target in the foreseeable future is GNU/Linux x86_64
+# so it doesn't matter.
+# The only library extension used is dladdr.
+add_definitions(-D_GNU_SOURCE)
 
 if(HAS_WERROR)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")

@@ -30,8 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#define _GNU_SOURCE
 #include <assert.h>
 #include <syscall.h>
 #include <unistd.h>

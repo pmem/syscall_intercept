@@ -36,10 +36,8 @@
  *
  * intercept() - the library entry point
  * intercept_routine() - the entry point for each hooked syscall
- * libc_hook_in_process_allowed() is defined here - see other docs
  */
 
-#define _GNU_SOURCE
 #include <assert.h>
 #include <stdbool.h>
 #include <elf.h>
@@ -263,55 +261,4 @@ intercept_routine(long nr, long arg0, long arg1,
 	    syscall_offset, KNOWN, result);
 
 	xlongjmp(return_to_asm_wrapper, rsp_in_asm_wrapper, result);
-}
-
-int
-libc_hook_in_process_allowed(void)
-{
-	char *c = getenv("LIBC_HOOK_CMDLINE_FILTER");
-	if (c == NULL)
-		return 1;
-
-	long fd = syscall_no_intercept(SYS_open, "/proc/self/cmdline",
-	    O_RDONLY, 0);
-	if (fd < 0)
-		return 0;
-
-	char buf[0x1000];
-	long r = syscall_no_intercept(SYS_read, fd, buf, sizeof(buf));
-
-	syscall_no_intercept(SYS_close, fd);
-
-	if (r <= 1 || buf[0] == '\0')
-		return 0;
-
-	/*
-	 * Find the last component of the path in "/proc/self/cmdline"
-	 * The user might provide something like:
-	 *
-	 * LIBC_HOOK_CMDLINE_FILTER=mkdir
-	 *
-	 * in which case we should compare the string "mkdir" with the
-	 * last component of a path, e.g.:
-	 * "usr/bin/mkdir"
-	 */
-
-	char *name = buf + strlen(buf);
-
-	/* Find the last slash - search backwards from the end of the string */
-
-	while (*name != '/' && name != buf)
-		--name;
-
-	if (*name == '/') {
-		/*
-		 * Found a slash, don't include the slash
-		 * itself in the comparison
-		 */
-		++name;
-	} else {
-		/* No slash found, use the whole string */
-	}
-
-	return strcmp(name, c) == 0;
 }

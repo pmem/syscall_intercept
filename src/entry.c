@@ -35,6 +35,11 @@
  *  expected to be executed by the loader while using LD_PRELOAD
  */
 
+#include <stdlib.h>
+#include <string.h>
+#include <syscall.h>
+#include <fcntl.h>
+
 #include "libsyscall_intercept_hook_point.h"
 #include "intercept.h"
 
@@ -43,4 +48,55 @@ entry_point(void)
 {
 	if (libc_hook_in_process_allowed())
 		intercept();
+}
+
+int
+libc_hook_in_process_allowed(void)
+{
+	char *c = getenv("LIBC_HOOK_CMDLINE_FILTER");
+	if (c == NULL)
+		return 1;
+
+	long fd = syscall_no_intercept(SYS_open, "/proc/self/cmdline",
+	    O_RDONLY, 0);
+	if (fd < 0)
+		return 0;
+
+	char buf[0x1000];
+	long r = syscall_no_intercept(SYS_read, fd, buf, sizeof(buf));
+
+	syscall_no_intercept(SYS_close, fd);
+
+	if (r <= 1 || buf[0] == '\0')
+		return 0;
+
+	/*
+	 * Find the last component of the path in "/proc/self/cmdline"
+	 * The user might provide something like:
+	 *
+	 * LIBC_HOOK_CMDLINE_FILTER=mkdir
+	 *
+	 * in which case we should compare the string "mkdir" with the
+	 * last component of a path, e.g.:
+	 * "usr/bin/mkdir"
+	 */
+
+	char *name = buf + strlen(buf);
+
+	/* Find the last slash - search backwards from the end of the string */
+
+	while (*name != '/' && name != buf)
+		--name;
+
+	if (*name == '/') {
+		/*
+		 * Found a slash, don't include the slash
+		 * itself in the comparison
+		 */
+		++name;
+	} else {
+		/* No slash found, use the whole string */
+	}
+
+	return strcmp(name, c) == 0;
 }

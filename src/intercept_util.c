@@ -30,12 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#define _GNU_SOURCE
-
 #include "intercept_util.h"
 #include "intercept.h"
-
 
 #include <assert.h>
 #include <inttypes.h>
