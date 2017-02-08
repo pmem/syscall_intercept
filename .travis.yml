@@ -1,12 +1,17 @@
 
 language: c
 
+dist: trusty
+sudo: required
+
 compiler:
   - clang
   - gcc
 
-script:
+before_install:
   - sudo apt-get install capstone -y
+
+script:
   - cmake --version
   - mkdir build
   - cd build
