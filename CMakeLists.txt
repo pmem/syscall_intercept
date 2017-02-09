@@ -75,6 +75,18 @@ set_target_properties(syscall_intercept_shared
 	PROPERTIES VERSION ${SYSCALL_INTERCEPT_VERSION}
 		   SOVERSION ${SYSCALL_INTERCEPT_VERSION_MAJOR})
 
+if(CMAKE_OBJCOPY)
+foreach(target syscall_intercept_shared syscall_intercept_static)
+	add_custom_command(TARGET ${target}
+	POST_BUILD COMMAND ${CMAKE_OBJCOPY}
+	--localize-hidden
+	-G intercept_hook_point
+	-G syscall_no_intercept
+	-G libc_hook_in_process_allowed
+	$<TARGET_FILE:${target}>)
+endforeach()
+endif()
+
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
 	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
