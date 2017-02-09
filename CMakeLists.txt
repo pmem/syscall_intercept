@@ -77,7 +77,8 @@ set_target_properties(syscall_intercept_shared syscall_intercept_static
 
 add_custom_target(cstyle
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
-	-pP ${PROJECT_SOURCE_DIR}/src/*.{h,c}
+	-pP ${PROJECT_SOURCE_DIR}/src/*.h
+	${PROJECT_SOURCE_DIR}/src/*.c
 	${PROJECT_SOURCE_DIR}/include/*.h
 	${PROJECT_SOURCE_DIR}/test/*.c
 	${PROJECT_SOURCE_DIR}/examples/*.c)
