@@ -73,7 +73,7 @@ target_link_libraries(syscall_intercept_shared syscall_intercept_base)
 
 set_target_properties(syscall_intercept_shared
 	PROPERTIES VERSION ${SYSCALL_INTERCEPT_VERSION}
-		   SOVERSION ${SYSCALL_INTERCEPT_VERSION})
+		   SOVERSION ${SYSCALL_INTERCEPT_VERSION_MAJOR})
 
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
