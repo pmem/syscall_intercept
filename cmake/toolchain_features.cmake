@@ -130,8 +130,7 @@ endif()
 
 # dladdr -- GNU libc extension
 set(orig_req_libs ${CMAKE_REQUIRED_LIBRARIES})
-set(CMAKE_REQUIRED_LIBRARIES
-	"${CMAKE_REQUIRED_LIBRARIES} ${CMAKE_DL_LIBS}")
+set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_DL_LIBS})
 
 check_function_exists(dladdr HAS_DLADDR)
 
