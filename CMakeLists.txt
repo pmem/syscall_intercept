@@ -32,10 +32,11 @@
 cmake_minimum_required(VERSION 2.8.7)
 project(syscall_intercept C ASM)
 
-set(VERSION_MAJOR 0)
-set(VERSION_MINOR 1)
-set(VERSION_PATCH 0)
-set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+set(SYSCALL_INTERCEPT_VERSION_MAJOR 0)
+set(SYSCALL_INTERCEPT_VERSION_MINOR 1)
+set(SYSCALL_INTERCEPT_VERSION_PATCH 0)
+set(SYSCALL_INTERCEPT_VERSION
+	${SYSCALL_INTERCEPT_VERSION_MAJOR}.${SYSCALL_INTERCEPT_VERSION_MINOR}.${SYSCALL_INTERCEPT_VERSION_PATCH})
 
 include(cmake/toolchain_features.cmake)
 include(cmake/find_capstone.cmake)
@@ -69,6 +70,10 @@ target_link_libraries(syscall_intercept_shared
 	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
 add_library(syscall_intercept_static STATIC src/entry.c)
 target_link_libraries(syscall_intercept_shared syscall_intercept_base)
+
+set_target_properties(syscall_intercept_shared
+	PROPERTIES VERSION ${SYSCALL_INTERCEPT_VERSION}
+		   SOVERSION ${SYSCALL_INTERCEPT_VERSION})
 
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
