@@ -31,26 +31,14 @@
 
 cmake_minimum_required(VERSION 2.8.7)
 project(syscall_intercept C ASM)
-include(CheckCCompilerFlag)
 
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
-if (NOT CMAKE_VERSION VERSION_LESS 3.1.0)
-	set(CMAKE_C_STANDARD 99)
-else()
-	check_c_compiler_flag(-std=c99 HAS_STDC99)
-	if(HAS_STDC99)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-	else()
-		check_c_compiler_flag(-std=gnu99 HAS_STDGNU99)
-		if(HAS_STDGNU99)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
-		endif()
-	endif()
-endif()
+include(cmake/toolchain_features.cmake)
+include(cmake/find_capstone.cmake)
 
 # main source files - intentionally excluding src/entry.c
 set(SOURCES
@@ -73,53 +61,19 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # the library trying to hotpatch libc every time.
 add_library(syscall_intercept_base STATIC ${SOURCES})
 
+set_property(TARGET syscall_intercept_base
+	APPEND PROPERTY COMPILE_FLAGS ${capstone_CFLAGS})
+
 add_library(syscall_intercept_shared SHARED src/entry.c)
-add_library(syscall_intercept_static STATIC src/entry.c)
-target_link_libraries(syscall_intercept_static
-	${CMAKE_DL_LIBS} capstone syscall_intercept_base)
 target_link_libraries(syscall_intercept_shared
-	${CMAKE_DL_LIBS} capstone syscall_intercept_base)
+	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
+add_library(syscall_intercept_static STATIC src/entry.c)
+target_link_libraries(syscall_intercept_shared syscall_intercept_base)
 
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
 	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
 	OUTPUT_NAME syscall_intercept)
-
-check_c_compiler_flag(-Werror HAS_WERROR)
-check_c_compiler_flag(-Wall HAS_WALL)
-check_c_compiler_flag(-Wextra HAS_WEXTRA)
-check_c_compiler_flag(-pedantic HAS_PEDANTIC)
-check_c_compiler_flag(-Wno-missing-field-initializers HAS_NOMFI)
-check_c_compiler_flag(-Wno-c90-c99-compat HAS_NO9099)
-
-# Hack, adding _GNU_SOURCE macro is just hardwired here for now.
-# Todo: only do it when building with glibc.
-# The only possible target in the foreseeable future is GNU/Linux x86_64
-# so it doesn't matter.
-# The only library extension used is dlinfo.
-add_definitions(-D_GNU_SOURCE)
-
-if(HAS_WERROR)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
-endif()
-if(HAS_WALL)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
-endif()
-if(HAS_WEXTRA)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wextra")
-endif()
-if(HAS_PEDANTIC)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic")
-endif()
-if(HAS_NO9099)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-c90-c99-compat")
-endif()
-
-if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND HAS_NOMFI)
-	# See: https://llvm.org/bugs/show_bug.cgi?id=21689
-	set(CMAKE_C_FLAGS
-		"${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
-endif()
 
 add_custom_target(cstyle
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle.pl

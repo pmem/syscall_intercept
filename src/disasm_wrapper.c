@@ -42,11 +42,10 @@
 #include "intercept_util.h"
 #include "disasm_wrapper.h"
 
-
 #include <assert.h>
 #include <string.h>
 #include <syscall.h>
-#include <capstone/capstone.h>
+#include "capstone_wrapper.h"
 
 struct intercept_disasm_context {
 	csh handle;

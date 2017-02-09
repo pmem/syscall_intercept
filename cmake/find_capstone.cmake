@@ -29,41 +29,15 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# See: https://cmake.org/Wiki/CMake/Testing_With_CTest
+find_package(capstone QUIET)
 
-add_executable(logging_test logging_test.c)
-add_executable(asm_pattern asm_pattern.c)
+if(NOT capstone_FOUND)
+	find_package(PkgConfig QUIET)
+	if(PKG_CONFIG_FOUND)
+		pkg_search_module(capstone capstone QUIET)
+	endif()
+endif()
 
-target_link_libraries(asm_pattern
-	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
-set_property(TARGET asm_pattern
-	APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src)
-
-set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
-
-add_library(pattern0.in SHARED pattern0.in.s)
-add_library(pattern0.out SHARED pattern0.out.s)
-add_library(pattern1.in SHARED pattern1.in.s)
-add_library(pattern1.out SHARED pattern1.out.s)
-
-set(CHECK_LOG_COMMON_ARGS
-	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
-	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/utils/match.pl
-	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_log.cmake)
-
-add_test(NAME "logging_test"
-	COMMAND ${CMAKE_COMMAND}
-	-DTEST_PROG=$<TARGET_FILE:logging_test>
-	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
-	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
-	${CHECK_LOG_COMMON_ARGS})
-
-add_test(NAME "asm_pattern0"
-	COMMAND $<TARGET_FILE:asm_pattern>
-	$<TARGET_FILE:pattern0.in>
-	$<TARGET_FILE:pattern0.out>)
-
-add_test(NAME "asm_pattern1"
-	COMMAND $<TARGET_FILE:asm_pattern>
-	$<TARGET_FILE:pattern1.in>
-	$<TARGET_FILE:pattern1.out>)
+if(NOT capstone_FOUND)
+	message(FATAL_ERROR "capstone library not found")
+endif()
