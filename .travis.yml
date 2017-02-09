@@ -8,8 +8,8 @@ compiler:
   - clang
   - gcc
 
-before_install:
-  - sudo apt-get install capstone -y
+#before_install:
+#  - sudo apt-get install capstone -y
 
 script:
   - cmake --version
