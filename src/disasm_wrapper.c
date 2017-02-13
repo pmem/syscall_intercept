@@ -212,6 +212,7 @@ intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 		case X86_INS_JP:
 		case X86_INS_JRCXZ:
 		case X86_INS_JS:
+		case X86_INS_LOOP:
 			result.is_jump = true;
 			assert(context->insn->detail->x86.op_count == 1);
 			break;
