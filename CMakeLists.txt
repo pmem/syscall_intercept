@@ -38,6 +38,7 @@ set(SYSCALL_INTERCEPT_VERSION_PATCH 0)
 set(SYSCALL_INTERCEPT_VERSION
 	${SYSCALL_INTERCEPT_VERSION_MAJOR}.${SYSCALL_INTERCEPT_VERSION_MINOR}.${SYSCALL_INTERCEPT_VERSION_PATCH})
 
+include(GNUInstallDirs)
 include(cmake/toolchain_features.cmake)
 include(cmake/find_capstone.cmake)
 
@@ -120,11 +121,11 @@ add_dependencies(check-license check_license_executable)
 configure_file(libsyscall_intercept.pc.in libsyscall_intercept.pc)
 
 install(TARGETS syscall_intercept_shared syscall_intercept_static
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib
-	PUBLIC_HEADER DESTINATION include)
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(FILES ${CMAKE_BINARY_DIR}/libsyscall_intercept.pc DESTINATION lib/pkgconfig)
+install(FILES ${CMAKE_BINARY_DIR}/libsyscall_intercept.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 enable_testing()
 
