@@ -41,11 +41,6 @@ set_property(TARGET asm_pattern
 
 set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
 
-add_library(pattern0.in SHARED pattern0.in.s)
-add_library(pattern0.out SHARED pattern0.out.s)
-add_library(pattern1.in SHARED pattern1.in.s)
-add_library(pattern1.out SHARED pattern1.out.s)
-
 set(CHECK_LOG_COMMON_ARGS
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
 	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/utils/match.pl
@@ -58,12 +53,15 @@ add_test(NAME "logging_test"
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
 	${CHECK_LOG_COMMON_ARGS})
 
-add_test(NAME "asm_pattern0"
-	COMMAND $<TARGET_FILE:asm_pattern>
-	$<TARGET_FILE:pattern0.in>
-	$<TARGET_FILE:pattern0.out>)
+set(asm_patterns
+	pattern0
+	pattern1)
 
-add_test(NAME "asm_pattern1"
-	COMMAND $<TARGET_FILE:asm_pattern>
-	$<TARGET_FILE:pattern1.in>
-	$<TARGET_FILE:pattern1.out>)
+foreach(name ${asm_patterns})
+	add_library(${name}.in SHARED ${name}.in.s)
+	add_library(${name}.out SHARED ${name}.out.s)
+	add_test(NAME "asm_pattern_${name}"
+		COMMAND $<TARGET_FILE:asm_pattern>
+		$<TARGET_FILE:${name}.in>
+		$<TARGET_FILE:${name}.out>)
+endforeach()
