@@ -29,40 +29,31 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# See: https://cmake.org/Wiki/CMake/Testing_With_CTest
+.intel_syntax noprefix
 
-add_executable(logging_test logging_test.c)
-add_executable(asm_pattern asm_pattern.c)
+.global trampoline_table;
+.global trampoline_table_end;
+.global text_start;
+.global text_end;
 
-target_link_libraries(asm_pattern
-	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
-set_property(TARGET asm_pattern
-	APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src)
+.text
 
-set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
+text_start:
+		xor     rax, rax
+		mov     rax, 1
+		syscall
+		cmp     rax, -1
+		mov     rax, 2
+		syscall
+		cmp     rax, -1
+text_end:
 
-set(CHECK_LOG_COMMON_ARGS
-	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
-	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/utils/match.pl
-	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_log.cmake)
+.data
 
-add_test(NAME "logging_test"
-	COMMAND ${CMAKE_COMMAND}
-	-DTEST_PROG=$<TARGET_FILE:logging_test>
-	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
-	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
-	${CHECK_LOG_COMMON_ARGS})
-
-set(asm_patterns
-	nosyscall
-	pattern1
-	pattern2)
-
-foreach(name ${asm_patterns})
-	add_library(${name}.in SHARED ${name}.in.s)
-	add_library(${name}.out SHARED ${name}.out.s)
-	add_test(NAME "asm_pattern_${name}"
-		COMMAND $<TARGET_FILE:asm_pattern>
-		$<TARGET_FILE:${name}.in>
-		$<TARGET_FILE:${name}.out>)
-endforeach()
+trampoline_table:
+dst0:		movabs  r11, 123
+		jmp     [r11]
+dst1:		movabs  r11, 123
+		jmp     [r11]
+		.space 0x100, 0
+trampoline_table_end:

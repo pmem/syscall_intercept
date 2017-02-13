@@ -123,7 +123,12 @@ check_patch(const struct lib_data *in, const struct lib_data *out)
 
 	fputs("patch vs. expected:\n", stderr);
 	while (count > 0) {
-		fprintf(stderr, "%02x %02x\n", *text++, *expected++);
+		fprintf(stderr,
+		    "0x%04zx: 0x%02hhx 0x%02hhx%s\n",
+		    text - in->text_start,
+		    *text, *expected, (*text == *expected) ? "" : " <-");
+		++text;
+		++expected;
 		--count;
 	}
 
@@ -141,8 +146,8 @@ main(int argc, char **argv)
 
 	if (lib_in.text_size != lib_out.text_size) {
 		fprintf(stderr,
-		    "text_size mismatch for %s and %s\n",
-		    argv[1], argv[2]);
+		    "text_size mismatch for %s(%zu) and %s(%zu)\n",
+		    argv[1], lib_in.text_size, argv[2], lib_out.text_size);
 		exit(EXIT_FAILURE);
 	}
 
