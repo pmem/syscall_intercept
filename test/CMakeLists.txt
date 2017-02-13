@@ -61,6 +61,12 @@ set(asm_patterns
 foreach(name ${asm_patterns})
 	add_library(${name}.in SHARED ${name}.in.s)
 	add_library(${name}.out SHARED ${name}.out.s)
+	if(HAS_NOSTDLIB)
+		set_target_properties(${name}.in
+			PROPERTIES LINK_FLAGS "-nostdlib")
+		set_target_properties(${name}.out
+			PROPERTIES LINK_FLAGS "-nostdlib")
+	endif()
 	add_test(NAME "asm_pattern_${name}"
 		COMMAND $<TARGET_FILE:asm_pattern>
 		$<TARGET_FILE:${name}.in>

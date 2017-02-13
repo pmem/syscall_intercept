@@ -54,6 +54,7 @@ check_c_compiler_flag(-Wextra HAS_WEXTRA)
 check_c_compiler_flag(-pedantic HAS_PEDANTIC)
 check_c_compiler_flag(-Wno-missing-field-initializers HAS_NOMFI)
 check_c_compiler_flag(-Wno-c90-c99-compat HAS_NO9099)
+check_c_compiler_flag(-Wa,-nostdlib HAS_NOSTDLIB)
 
 if(HAS_WERROR)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
