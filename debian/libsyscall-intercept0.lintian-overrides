@@ -1,0 +1,6 @@
+# https://lintian.debian.org/tags/new-package-should-close-itp-bug.html
+new-package-should-close-itp-bug
+
+# https://lintian.debian.org/tags/shlib-with-executable-stack.html
+# by design
+shlib-with-executable-stack usr/lib/x86_64-linux-gnu/libsyscall_intercept.so.0.1.0
