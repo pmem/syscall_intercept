@@ -32,6 +32,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <dlfcn.h>
 #include <string.h>
 
@@ -154,6 +155,7 @@ main(int argc, char **argv)
 	struct intercept_desc patches;
 	init_patcher();
 
+	patches.c_detination = (void *)(uintptr_t)main;
 	patches.dlinfo = lib_in.info;
 	patches.uses_trampoline_table = true;
 	patches.trampoline_table = lib_in.mock_trampoline_table;
