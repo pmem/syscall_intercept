@@ -343,7 +343,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 			}
 		}
 
-		create_wrapper(patch, desc->c_detination,
+		create_wrapper(patch, desc->c_destination,
 			desc->uses_trampoline_table,
 			desc->dlinfo.dli_fname);
 	}

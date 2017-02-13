@@ -93,8 +93,10 @@ intercept(void)
 	bool pthreads_available;
 
 	find_self_dlinfo();
-	glibc_patches.c_detination = (void *)((uintptr_t)&intercept_routine);
-	pthreads_patches.c_detination = (void *)((uintptr_t)&intercept_routine);
+	glibc_patches.c_destination =
+	    (void *)((uintptr_t)&intercept_routine);
+	pthreads_patches.c_destination =
+	    (void *)((uintptr_t)&intercept_routine);
 	intercept_setup_log(getenv("INTERCEPT_LOG"),
 			getenv("INTERCEPT_LOG_TRUNC"));
 

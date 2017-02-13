@@ -153,7 +153,7 @@ struct intercept_desc {
 	unsigned count;
 	unsigned char *jump_table;
 
-	void *c_detination;
+	void *c_destination;
 
 	unsigned char *trampoline_table;
 	size_t trampoline_table_size;
