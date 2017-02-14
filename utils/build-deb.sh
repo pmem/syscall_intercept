@@ -2,9 +2,9 @@
 
 export LC_ALL=C
 
-git archive HEAD | gzip > syscall-intercept_0.1.orig.tar.gz
 rm -rf build-deb
-mkdir build-deb
-cd build-deb
+mkdir -p build-deb/syscall_intercept
+git archive HEAD | gzip > build-deb/syscall-intercept_0.1.orig.tar.gz
+cd build-deb/syscall_intercept
 tar xf ../syscall-intercept_0.1.orig.tar.gz
 debuild -us -uc
