@@ -124,7 +124,7 @@ fi
 
 FILES=$(git $GIT_COMMAND | \
 	grep -v -E -e 'src/jemalloc/' -e 'src/windows/jemalloc_gen/' -e '/queue.h$' -e '/ListEntry.h$' \
-		   -e '/getopt.h$' -e '/getopt.c$' | \
+		   -e '/getopt.h$' -e '/getopt.c$' -e 'test_header\.h$' | \
 	grep    -E -e '*\.[chs]$' -e '*\.[ch]pp$' -e '*\.sh$' \
 		   -e '*\.py$' -e '*\.map$' -e 'Makefile*' -e 'TEST*' \
 		   -e '/common.inc$' -e '/match$' -e '/check_whitespace$' \
