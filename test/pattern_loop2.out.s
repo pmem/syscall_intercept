@@ -39,10 +39,8 @@
 .text
 
 text_start:
+		xor     rax, rax
 0:		jmp     dst0
-		int3
-		int3
-		int3
 		int3
 		int3
 		int3

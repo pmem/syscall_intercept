@@ -69,7 +69,8 @@ set(asm_patterns
 	nosyscall
 	pattern1
 	pattern2
-	pattern_loop)
+	pattern_loop
+	pattern_loop2)
 
 foreach(name ${asm_patterns})
 	add_library(${name}.in SHARED ${name}.in.s)

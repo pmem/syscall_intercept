@@ -39,22 +39,11 @@
 .text
 
 text_start:
-0:		jmp     dst0
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		jmp     dst1
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
+		xor     rax, rax
+0:		mov     rax, 1
+		syscall
+		cmp     rax, -1
+		mov     rax, 2
+		syscall
 		loop    0b
 text_end:
