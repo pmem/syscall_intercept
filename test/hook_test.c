@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2017, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,51 +31,22 @@
  */
 
 /*
- * logging_test.c -- dummy program, to issue some syscalls via libc
+ * hook_test.c -- dummy program, using syscall hooking
  */
 
-#include <stdio.h>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
+#include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sched.h>
-#include <sys/wait.h>
-
-#include <pthread.h>
+#include <syscall.h>
 
 #include "magic_syscalls.h"
 
-static void *
-busy(void *arg)
-{
-	FILE *f;
-	const char *path = (const char *)arg;
-	char buffer[0x100];
-	size_t s;
-
-	if ((f = fopen(path, "r")) == NULL)
-		exit(EXIT_FAILURE);
-
-	usleep(10000);
-	s = fread(buffer, 1, sizeof(buffer), f);
-	if (s < 4)
-		exit(EXIT_FAILURE);
-	usleep(10000);
-	fwrite(buffer, 1, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 2, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 3, 1, stdout);
-	fflush(stdout);
-	putchar('\n');
-	usleep(10000);
-	fflush(stdout);
-	puts("Done being busy here");
-	fflush(stdout);
-	usleep(10000);
-	fclose(f);
-
-	return NULL;
-}
+#include "hook_test_data.h"
 
 int
 main(int argc, char *argv[])
@@ -85,18 +56,9 @@ main(int argc, char *argv[])
 
 	magic_syscall_start_log(argv[2], "1");
 
-	if (fork() == 0) {
-		busy(argv[1]);
-	} else {
-		wait(NULL);
-#ifdef USE_CLONE
-		pthread_t t;
-		if (pthread_create(&t, NULL, busy, argv[1]) != 0)
-			return EXIT_FAILURE;
-		pthread_join(t, NULL);
-#endif
-		busy(argv[1]);
-	}
+	assert(write(1, dummy_data, sizeof(dummy_data)) == 99);
+	assert(write(1, "thing", 4) == 4);
+	assert(write(1, dummy_data, sizeof(dummy_data)) == 99);
 
 	magic_syscall_stop_log();
 

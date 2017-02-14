@@ -31,29 +31,39 @@
 
 # See: https://cmake.org/Wiki/CMake/Testing_With_CTest
 
-add_executable(logging_test logging_test.c)
-add_executable(asm_pattern asm_pattern.c)
-
-target_link_libraries(asm_pattern
-	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
-set_property(TARGET asm_pattern
-	APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src)
-set_property(TARGET logging_test
-	APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/src)
 
 set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
 
 set(CHECK_LOG_COMMON_ARGS
-	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
 	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/utils/match.pl
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_log.cmake)
 
-add_test(NAME "logging_test"
+
+add_executable(logging_test logging_test.c)
+add_test(NAME "logging"
 	COMMAND ${CMAKE_COMMAND}
+	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
 	-DTEST_PROG=$<TARGET_FILE:logging_test>
 	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
 	${CHECK_LOG_COMMON_ARGS})
+
+add_executable(hook_test hook_test.c)
+add_library(hook_test_preload SHARED hook_test_preload.c)
+target_link_libraries(hook_test_preload syscall_intercept_shared)
+add_test(NAME "hook"
+	COMMAND ${CMAKE_COMMAND}
+	-DLIB_FILE=$<TARGET_FILE:hook_test_preload>
+	-DTEST_PROG=$<TARGET_FILE:hook_test>
+	-DTEST_PROG_ARG=None
+	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept1.log.match
+	${CHECK_LOG_COMMON_ARGS})
+
+
+add_executable(asm_pattern asm_pattern.c)
+target_link_libraries(asm_pattern
+	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
 
 set(asm_patterns
 	nosyscall

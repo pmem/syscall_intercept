@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2017, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,75 +30,84 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * logging_test.c -- dummy program, to issue some syscalls via libc
- */
 
-#include <stdio.h>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <sched.h>
-#include <sys/wait.h>
+#include <syscall.h>
 
-#include <pthread.h>
+#include "libsyscall_intercept_hook_point.h"
 
-#include "magic_syscalls.h"
+#include "hook_test_data.h"
 
-static void *
-busy(void *arg)
+static int hook_counter;
+static bool in_hook;
+static bool deinit_called;
+
+static int
+hook(long syscall_number, long arg0, long arg1, long arg2, long *result)
 {
-	FILE *f;
-	const char *path = (const char *)arg;
-	char buffer[0x100];
-	size_t s;
+	switch (hook_counter++) {
+		case 0:
+			/* fallthrough */
+		case 2:
+			assert(syscall_number == SYS_write);
+			assert(arg0 == 1);
+			assert(strcmp((void *)(intptr_t)arg1, dummy_data) == 0);
+			assert(arg2 == (long)sizeof(dummy_data));
+			*result = 99;
+			return 0;
 
-	if ((f = fopen(path, "r")) == NULL)
-		exit(EXIT_FAILURE);
+		case 1:
+			assert(syscall_number == SYS_write);
+			assert(arg0 == 1);
+			assert(arg2 == 4);
+			return 1;
 
-	usleep(10000);
-	s = fread(buffer, 1, sizeof(buffer), f);
-	if (s < 4)
-		exit(EXIT_FAILURE);
-	usleep(10000);
-	fwrite(buffer, 1, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 2, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 3, 1, stdout);
-	fflush(stdout);
-	putchar('\n');
-	usleep(10000);
-	fflush(stdout);
-	puts("Done being busy here");
-	fflush(stdout);
-	usleep(10000);
-	fclose(f);
-
-	return NULL;
+		default:
+			assert(0);
+	}
 }
 
-int
-main(int argc, char *argv[])
+static int
+hook_wrapper(long syscall_number,
+	long arg0, long arg1,
+	long arg2, long arg3,
+	long arg4, long arg5,
+	long *result)
 {
-	if (argc < 3)
-		return EXIT_FAILURE;
+	(void) arg3;
+	(void) arg4;
+	(void) arg5;
 
-	magic_syscall_start_log(argv[2], "1");
+	if (in_hook || deinit_called)
+		return 1;
 
-	if (fork() == 0) {
-		busy(argv[1]);
-	} else {
-		wait(NULL);
-#ifdef USE_CLONE
-		pthread_t t;
-		if (pthread_create(&t, NULL, busy, argv[1]) != 0)
-			return EXIT_FAILURE;
-		pthread_join(t, NULL);
-#endif
-		busy(argv[1]);
-	}
+	in_hook = true;
 
-	magic_syscall_stop_log();
+	int ret = hook(syscall_number, arg0, arg1, arg2, result);
 
-	return EXIT_SUCCESS;
+	in_hook = false;
+
+	return ret;
+}
+
+static __attribute__((constructor)) void
+init(void)
+{
+	intercept_hook_point = hook_wrapper;
+}
+
+static __attribute__((destructor)) void
+deinit(void)
+{
+	deinit_called = true;
+	assert(hook_counter == 3);
 }
