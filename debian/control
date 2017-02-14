@@ -19,6 +19,6 @@ Description: System call intercepting library
 Package: libsyscall-intercept-dev
 Section: libdevel
 Architecture: amd64
-Depends: libsyscall-intercept0 (=${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: libsyscall-intercept0 (=${binary:Version}), ${misc:Depends}
 Description: Development files for libsyscall_intercept
  Development files for libsyscall_intercept library.
