@@ -55,11 +55,11 @@ busy(void *arg)
 	if ((f = fopen(path, "r")) == NULL)
 		exit(EXIT_FAILURE);
 
-	usleep(100000);
+	usleep(10000);
 	s = fread(buffer, 1, sizeof(buffer), f);
 	if (s < 4)
 		exit(EXIT_FAILURE);
-	usleep(100000);
+	usleep(10000);
 	fwrite(buffer, 1, 1, stdout);
 	fflush(stdout);
 	fwrite(buffer, 2, 1, stdout);
@@ -67,7 +67,7 @@ busy(void *arg)
 	fwrite(buffer, 3, 1, stdout);
 	fflush(stdout);
 	putchar('\n');
-	usleep(100000);
+	usleep(10000);
 	fflush(stdout);
 	puts("Done being busy here");
 	fflush(stdout);
