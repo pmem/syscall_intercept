@@ -32,10 +32,10 @@
 
 .intel_syntax noprefix
 
-.global trampoline_table;
-.global trampoline_table_end;
 .global text_start;
 .global text_end;
+
+.include "mock_trampoline_table.s"
 
 .text
 
@@ -59,13 +59,3 @@ text_start:
 		int3
 		loop    0b
 text_end:
-
-.data
-
-trampoline_table:
-dst0:		jmp     [rip]
-		.space 8, 0
-dst1:		jmp     [rip]
-		.space 8, 0
-		.space 0x100, 0
-trampoline_table_end:

@@ -31,10 +31,10 @@
 
 .intel_syntax noprefix
 
-.global trampoline_table;
-.global trampoline_table_end;
 .global text_start;
 .global text_end;
+
+.include "mock_trampoline_table.s"
 
 .text
 
@@ -49,11 +49,3 @@ text_start:
 		int3
 		int3
 text_end:
-
-.data
-
-trampoline_table:
-dst0:		movabs  r11, 123
-		jmp     [r11]
-		.space 0x100, 0
-trampoline_table_end:

@@ -31,12 +31,12 @@
 
 .intel_syntax noprefix
 
-.global trampoline_table;
-.global trampoline_table_end;
 .global text_start;
 .global text_end;
 .global fibonacci;
 .type   fibonacci, @function
+
+.include "mock_trampoline_table.s"
 
 .text
 
@@ -51,11 +51,3 @@ fibonacci:
 		ret
 		.cfi_endproc
 text_end:
-
-.data
-
-trampoline_table:
-		.rept 0x100
-		.ascii "MOCKTRAMPOLINETABLE"
-		.endr
-trampoline_table_end:
