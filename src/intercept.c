@@ -54,6 +54,7 @@
 #include "intercept_util.h"
 #include "libsyscall_intercept_hook_point.h"
 #include "disasm_wrapper.h"
+#include "magic_syscalls.h"
 
 int (*intercept_hook_point)(long syscall_number,
 			long arg0, long arg1,
@@ -244,6 +245,9 @@ intercept_routine(long nr, long arg0, long arg1,
 {
 	long result;
 	int forward_to_kernel = true;
+
+	if (handle_magic_syscalls(nr, arg0, arg1, arg2, arg3, arg4, arg5) == 0)
+		xlongjmp(return_to_asm_wrapper_syscall, rsp_in_asm_wrapper, 0);
 
 	intercept_log_syscall(libpath, nr, arg0, arg1, arg2, arg3, arg4, arg5,
 	    syscall_offset, UNKNOWN, 0);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2017, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,75 +30,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * test_libcintercept.c -- dummy program, to issue some syscalls via libc
- */
+#ifndef SYSCALL_INTERCEPT_WITHOUT_MAGIC_SYSCALLS
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sched.h>
-#include <sys/wait.h>
-
-#include <pthread.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "magic_syscalls.h"
-
-static void *
-busy(void *arg)
-{
-	FILE *f;
-	const char *path = (const char *)arg;
-	char buffer[0x100];
-	size_t s;
-
-	if ((f = fopen(path, "r")) == NULL)
-		exit(EXIT_FAILURE);
-
-	usleep(100000);
-	s = fread(buffer, 1, sizeof(buffer), f);
-	if (s < 4)
-		exit(EXIT_FAILURE);
-	usleep(100000);
-	fwrite(buffer, 1, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 2, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 3, 1, stdout);
-	fflush(stdout);
-	putchar('\n');
-	usleep(100000);
-	fflush(stdout);
-	puts("Done being busy here");
-	fflush(stdout);
-	usleep(10000);
-	fclose(f);
-
-	return NULL;
-}
+#include "intercept_util.h"
 
 int
-main(int argc, char *argv[])
+handle_magic_syscalls(long nr, long arg0, long arg1,
+			long arg2, long arg3,
+			long arg4, long arg5)
 {
-	if (argc < 3)
-		return EXIT_FAILURE;
+	(void) arg5;
 
-	magic_syscall_start_log(argv[2], "1");
+	if (nr != SYS_write)
+		return -1;
 
-	if (fork() == 0) {
-		busy(argv[1]);
-	} else {
-		wait(NULL);
-#ifdef USE_CLONE
-		pthread_t t;
-		if (pthread_create(&t, NULL, busy, argv[1]) != 0)
-			return EXIT_FAILURE;
-		pthread_join(t, NULL);
-#endif
-		busy(argv[1]);
+	if (arg0 != SYSCALL_INT_MAGIC_WRITE_FD)
+		return -1;
+
+	const char *message = (void *)(uintptr_t)arg1;
+	size_t len = (size_t)arg2;
+
+	if (strncmp(message, start_log_message, len) == 0) {
+		const char *path = (const void *)(uintptr_t)arg3;
+		const char *trunc = (const void *)(uintptr_t)arg4;
+		intercept_setup_log(path, trunc);
+		return 0;
 	}
 
-	magic_syscall_stop_log();
+	if (strncmp(message, stop_log_message, len) == 0) {
+		intercept_log_close();
+		return 0;
+	}
 
-	return EXIT_SUCCESS;
+	return -1;
 }
+
+#endif /* SYSCALL_INTERCEPT_WITHOUT_MAGIC_SYSCALLS */

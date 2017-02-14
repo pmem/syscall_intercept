@@ -38,6 +38,8 @@ target_link_libraries(asm_pattern
 	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
 set_property(TARGET asm_pattern
 	APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src)
+set_property(TARGET logging_test
+	APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src)
 
 set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
 

@@ -50,7 +50,8 @@ set(SOURCES
 	src/intercept_util.c
 	src/patcher.c
 	src/intercept_template.s
-	src/util.s)
+	src/util.s
+	src/magic_syscalls.c)
 
 include_directories(include)
 
