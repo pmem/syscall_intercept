@@ -3,3 +3,4 @@ tags
 /.cproject
 /.settings
 /build-deb
+/syscall_intercept-*.tar.gz

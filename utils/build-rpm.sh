@@ -32,10 +32,7 @@
 #
 
 export LC_ALL=C
+export VER=0.1
 
-rm -rf build-deb
-mkdir -p build-deb/syscall_intercept
-git archive HEAD | gzip > build-deb/syscall-intercept_0.1.orig.tar.gz
-cd build-deb/syscall_intercept
-tar xf ../syscall-intercept_0.1.orig.tar.gz
-debuild -us -uc
+git archive --prefix=syscall_intercept-$VER/ HEAD | gzip > syscall_intercept-$VER.tar.gz
+rpmbuild -ta syscall_intercept-$VER.tar.gz
