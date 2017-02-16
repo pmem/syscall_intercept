@@ -73,16 +73,15 @@ long syscall_no_intercept(long syscall_number, ...);
 
 Three environment variables control the operation of the library:
 
-*INTERCEPT_LOG* -- when set, the library logs each syscall
-intercepted to a file. The path of the file is formed by appending
-a period and a process id to the value provided in the environment
-variable. E.g.: initializing the library in a process with pid 123
-when the INTERCEPT_LOG=inc.log is set, will result in a log
-file named inc.log.123
+*INTERCEPT_LOG* -- when set, the library logs each syscall intercepted
+to a file. If it ends with "-" the path of the file is formed by appending
+a process id to the value provided in the environment variable.
+E.g.: initializing the library in a process with pid 123 when the
+INTERCEPT_LOG is set to "intercept.log-" will result in a log file named
+intercept.log-123.
 
-*INTERCEPT_LOG_NOPID* -- when set, the path of the log
-file is taken as is from the INTERCEPT_LOG variable,
-i.e.: without appending the process id to it.
+*INTERCEPT_LOG_TRUNC -- when set to 0, the log file from INTERCEPT_LOG
+is not truncated.
 
 *LIBC_HOOK_CMDLINE_FILTER* -- when set, the library
 checks the contents of the /proc/self/cmdline file.
