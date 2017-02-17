@@ -43,6 +43,7 @@ set(CHECK_LOG_COMMON_ARGS
 add_executable(logging_test logging_test.c)
 add_test(NAME "logging"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_NAME=logging
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
 	-DTEST_PROG=$<TARGET_FILE:logging_test>
 	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
@@ -54,6 +55,7 @@ add_library(hook_test_preload SHARED hook_test_preload.c)
 target_link_libraries(hook_test_preload syscall_intercept_shared)
 add_test(NAME "hook"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_NAME=hook
 	-DLIB_FILE=$<TARGET_FILE:hook_test_preload>
 	-DTEST_PROG=$<TARGET_FILE:hook_test>
 	-DTEST_PROG_ARG=None

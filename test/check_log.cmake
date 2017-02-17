@@ -31,7 +31,7 @@
 
 
 # XXX ask for a unique tempfile from cmake for LOG_OUTPUT
-set(LOG_OUTPUT .log)
+set(LOG_OUTPUT .log.${TEST_NAME})
 
 set(ENV{LD_PRELOAD} ${LIB_FILE})
 
