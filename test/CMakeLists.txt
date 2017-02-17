@@ -73,7 +73,8 @@ set(asm_patterns
 	pattern_loop2
 	pattern_symbol_boundary0
 	pattern_nop_padding0
-	pattern_nop_padding1)
+	pattern_nop_padding1
+	pattern_nop_padding2)
 
 foreach(name ${asm_patterns})
 	add_library(${name}.in SHARED ${name}.in.s)
