@@ -219,6 +219,9 @@ intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 			result.is_jump = true;
 			assert(context->insn->detail->x86.op_count == 1);
 			break;
+		case X86_INS_NOP:
+			result.is_nop = true;
+			break;
 		default:
 			result.is_jump = false;
 			break;

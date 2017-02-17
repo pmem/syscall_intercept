@@ -155,33 +155,6 @@ allocate_nop_table(struct intercept_desc *desc)
 	    xmmap_anon(desc->max_nop_count * sizeof(desc->nop_table[0]));
 }
 
-static bool
-is_long_nop(unsigned char *code, size_t size)
-{
-
-	static const struct nop_desc {
-		unsigned char code[0x10];
-		size_t size;
-	} nops[] = {
-		/* nop    DWORD PTR [rax+0x0] */
-		{ { 0x0f, 0x1f, 0x80, 0, 0, 0, 0, }, 7 },
-
-		/* nop    DWORD PTR [rax+rax*1+0x0] */
-		{ { 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, }, 8 },
-
-		/* nop    WORD PTR cs:[rax+rax*1+0x0] */
-		{ { 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, }, 9 }
-	};
-
-	for (size_t i = 0; i < sizeof(nops) / sizeof(nops[0]); ++i) {
-		if (size == nops[i].size &&
-		    memcmp(nops[i].code, code, size) == 0)
-			return true;
-	}
-
-	return false;
-}
-
 static void
 mark_nop(struct intercept_desc *desc, unsigned char *address, size_t size)
 {
@@ -342,7 +315,7 @@ crawl_text(struct intercept_desc *desc)
 		if (result.has_ip_relative_opr)
 			mark_jump(desc, result.rip_ref_addr);
 
-		if (is_long_nop(code, result.length))
+		if (result.is_nop && result.length >= 7)
 			mark_nop(desc, code, result.length);
 
 		/*

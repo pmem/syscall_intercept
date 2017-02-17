@@ -77,6 +77,8 @@ struct intercept_disasm_result {
 
 	bool is_ret;
 
+	bool is_nop;
+
 	/*
 	 * Optional fields:
 	 * The rip_disp field contains the displacement used in
