@@ -47,11 +47,11 @@ text_start:
 		int3
 		int3
 		int3
+		int3
+		int3
+		int3
+		int3
 		jmp     dst1
-		int3
-		int3
-		int3
-		int3
 		int3
 		int3
 		int3

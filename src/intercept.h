@@ -60,6 +60,11 @@ void intercept_patch_with_postfix(unsigned char *syscall_addr,
 
 __attribute__((noreturn)) void xabort(void);
 
+struct nop_entry {
+	unsigned char *address;
+	size_t size;
+};
+
 /*
  * The patch_list array stores some information on
  * whereabouts of patches made to glibc.
@@ -87,8 +92,6 @@ struct patch_desc {
 	/* the address to jump back to */
 	unsigned char *return_address;
 
-	unsigned char *padding_addr;
-
 	/*
 	 * Describe up to three instructions surrounding the original
 	 * syscall instructions. Sometimes just overwritting the two
@@ -99,12 +102,15 @@ struct patch_desc {
 	struct intercept_disasm_result preceding_ins_2;
 	struct intercept_disasm_result preceding_ins;
 	struct intercept_disasm_result following_ins;
-
-	bool uses_padding;
 	bool uses_prev_ins_2;
 	bool uses_prev_ins;
 	bool uses_next_ins;
+
+	bool uses_nop_trampoline;
+
 	bool ok;
+
+	struct nop_entry nop_trampoline;
 };
 
 void patch_apply(struct patch_desc *patch);
@@ -153,6 +159,10 @@ struct intercept_desc {
 	unsigned count;
 	unsigned char *jump_table;
 
+	size_t nop_count;
+	size_t max_nop_count;
+	struct nop_entry *nop_table;
+
 	void *c_destination;
 
 	unsigned char *trampoline_table;
@@ -162,6 +172,7 @@ struct intercept_desc {
 };
 
 bool has_jump(const struct intercept_desc *desc, unsigned char *addr);
+void mark_jump(const struct intercept_desc *desc, const unsigned char *addr);
 
 void allocate_trampoline_table(struct intercept_desc *desc);
 void find_syscalls(struct intercept_desc *desc);

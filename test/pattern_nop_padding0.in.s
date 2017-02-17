@@ -34,30 +34,28 @@
 .global text_start;
 .global text_end;
 
+.global dummy_symbol;
+.type dummy_symbol, @function;
+
 .include "mock_trampoline_table.s"
 
 .text
 
 text_start:
-		jmp     dst0
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		jmp     dst1
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
+		xor     rax, rax
+		mov     rax, 1
+		syscall
+		cmp     rax, -1
+		mov     rax, 2
+		inc     rax
+		.byte   0x0f           # nop     DWORD PTR [rax+rax*1+0x0]
+		.byte   0x1f
+		.byte   0x84
+		.byte   0x00
+		.byte   0x00
+		.byte   0x00
+		.byte   0x00
+		.byte   0x00
+		inc     rax
+
 text_end:

@@ -137,6 +137,62 @@ allocate_jump_table(struct intercept_desc *desc)
 	desc->jump_table = xmmap_anon(bytes / 8 + 1);
 }
 
+/*
+ * allocate_nop_table
+ */
+static void
+allocate_nop_table(struct intercept_desc *desc)
+{
+	assert(desc->text_start < desc->text_end);
+	size_t bytes = (size_t)(desc->text_end - desc->text_start + 1);
+
+	if (bytes > 65336)
+		desc->max_nop_count = bytes / 100;
+	else
+		desc->max_nop_count = 1024;
+	desc->nop_count = 0;
+	desc->nop_table =
+	    xmmap_anon(desc->max_nop_count * sizeof(desc->nop_table[0]));
+}
+
+static bool
+is_long_nop(unsigned char *code, size_t size)
+{
+
+	static const struct nop_desc {
+		unsigned char code[0x10];
+		size_t size;
+	} nops[] = {
+		/* nop    DWORD PTR [rax+0x0] */
+		{ { 0x0f, 0x1f, 0x80, 0, 0, 0, 0, }, 7 },
+
+		/* nop    DWORD PTR [rax+rax*1+0x0] */
+		{ { 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, }, 8 },
+
+		/* nop    WORD PTR cs:[rax+rax*1+0x0] */
+		{ { 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, }, 9 }
+	};
+
+	for (size_t i = 0; i < sizeof(nops) / sizeof(nops[0]); ++i) {
+		if (size == nops[i].size &&
+		    memcmp(nops[i].code, code, size) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+static void
+mark_nop(struct intercept_desc *desc, unsigned char *address, size_t size)
+{
+	if (desc->nop_count == desc->max_nop_count)
+		return;
+
+	desc->nop_table[desc->nop_count].address = address;
+	desc->nop_table[desc->nop_count].size = size;
+	desc->nop_count++;
+}
+
 static bool
 is_bit_set(const unsigned char *table, uint64_t offset)
 {
@@ -169,7 +225,7 @@ has_jump(const struct intercept_desc *desc, unsigned char *addr)
 /*
  * mark_jump - Mark an address as a jump destination, see has_jump above.
  */
-static void
+void
 mark_jump(const struct intercept_desc *desc, const unsigned char *addr)
 {
 	if (addr >= desc->text_start && addr <= desc->text_end)
@@ -235,145 +291,6 @@ add_new_patch(struct intercept_desc *desc)
 }
 
 /*
- * padding_pinpoint
- * Check the padding bytes between two text section symbols
- * for JUMP_INS_SIZE number of bytes. These are meant to contain
- * a jump instruction, jumping to intercepting code. A short jump
- * instruction replacing the two bytes of a corresponding
- * syscall instruction can jump to this instruction.
- * Must check:
- *  - size of padding
- *  - distance of padding from the syscall instruction
- *  - conflict with padding bytes used for other syscalls
- *
- * The conflicts are currently avoided by using a monotonically increasing
- * pointer, that has holds invariant of pointing to the last padding byte
- * already used.
- */
-static unsigned char *
-padding_pinpoint(unsigned char *dl_base, unsigned char *syscall_addr,
-		Elf64_Sym *sym, unsigned char *used)
-{
-	assert(sym->st_value % SALIGNMENT == 0);
-
-	/*
-	 * The destination of the short jump instruction should be
-	 * in the padding bytes after the end of a symbol,
-	 * and before the - aligned - start of the next symbol.
-	 */
-	unsigned char *bound_low;
-	unsigned char *bound_high;
-
-	if (sym->st_size % SALIGNMENT == 0)
-		return NULL; /* no padding */
-
-	/* bound_low - the lowest address in the padding */
-	bound_low = dl_base + sym->st_value + sym->st_size;
-
-	/* bound_high - the higher address in the padding */
-	bound_high = (unsigned char *)((uintptr_t)bound_low | (SALIGNMENT - 1));
-
-	if (bound_low <= used) { /* bytes in this padding are already used? */
-
-		if (bound_high <= used)
-			return NULL; /* the whole padding is used */
-
-		bound_low = used + 1; /* exclude the used bytes */
-	}
-
-	if (((bound_high - bound_low) + 1) < JUMP_INS_SIZE)
-		return NULL; /* can't fit a jump here */
-
-	/*
-	 * The source of said short jump determines what addresses
-	 * the jump can reach. Only padding bytes in this range
-	 * can be used as the jump destination i.e. the first byte
-	 * of the newly created jump instruction must be in
-	 * the [min_reach, max_reach] range.
-	 *
-	 * Thus, looking for JUMP_INS_SIZE number of consecutive
-	 * bytes int [bound_low, bound_high] range, of which,
-	 * this first byte also falls in the [min_reach, max_reach]
-	 * range. ( this first byte needs to be in the
-	 * [bound_low, bound_high - (JUMP_INS_SIZE -1)] range, to be
-	 * sure JUMP_INS_SIZE number of bytes fit in there. If such
-	 * an address is found, it is returned to serve as the address
-	 * of newly created jump instruction.
-	 */
-
-	unsigned char *source = syscall_addr + SYSCALL_INS_SIZE;
-	unsigned char *min_reach = source - 128;
-	unsigned char *max_reach = source + 127;
-
-	if (bound_low > max_reach) {
-		/*
-		 * Paddding bytes at higher addresses, than what a
-		 * short jump can reach.
-		 *
-		 * ( lower addresses to the left, higher ones to the right )
-		 *
-		 *  ....<--------- j -------->....[...padding...]....
-		 */
-		return NULL;
-	}
-
-	if (bound_high - (JUMP_INS_SIZE - 1) < min_reach) {
-		/*
-		 * Paddding bytes at lower addresses, than what a
-		 * short jump can reach.
-		 *
-		 *  ....[...padding...]....<--------- j -------->....
-		 *
-		 * There might be an intersection, but not enough
-		 * to find it JUMP_INS_SIZE bytes.
-		 *
-		 *  ....[...padding.<-.]--------- j -------->....
-		 */
-		return NULL;
-	}
-
-	if (bound_low < min_reach)
-		return min_reach;
-	else
-		return bound_low;
-}
-
-static unsigned char *
-search_padding(unsigned char *syscall_addr, unsigned char *used)
-{
-	Elf64_Sym *symbol;
-	Dl_info dlinfo;
-
-	/* note: dladdr1 -- non portable, GNU specific  */
-	if (!dladdr1(syscall_addr, &dlinfo, (void **)&symbol, RTLD_DL_SYMENT))
-		return NULL;
-
-	if (symbol == NULL)
-		return NULL;
-
-
-	unsigned char *dl_base = dlinfo.dli_fbase;
-	unsigned char *sym_begin = dl_base + symbol->st_value;
-
-	if (sym_begin > used + JUMP_INS_SIZE) {
-		Elf64_Sym *prev_symbol;
-
-		if (dladdr1(sym_begin - 0x10, &dlinfo,
-		    (void **)&prev_symbol, RTLD_DL_SYMENT)) {
-			if (prev_symbol != NULL) {
-				unsigned char *padding =
-					padding_pinpoint(dl_base, syscall_addr,
-					prev_symbol, used);
-				if (padding != NULL)
-					return padding;
-			}
-		}
-	}
-
-	return padding_pinpoint(dl_base, syscall_addr, symbol, used);
-}
-
-/*
  * crawl_text
  * Crawl the text section, disassembling it all.
  * This routine collects information about potential addresses to patch.
@@ -387,10 +304,6 @@ search_padding(unsigned char *syscall_addr, unsigned char *used)
  * it can not be merged with the preceding instruction to create a
  * new larger one.
  *
- * Every time a syscall instruction is found, the next and previous padding
- * bytes between routines are checked to find a potential space for an
- * extra jump instruction.
- *
  * Note: The actual patching can not yet be done in this disassembling phase,
  * as it is not known in advance, which addresses are jump destinations.
  */
@@ -398,7 +311,6 @@ static void
 crawl_text(struct intercept_desc *desc)
 {
 	unsigned char *code = desc->text_start;
-	unsigned char *padding_used = code;
 
 	/*
 	 * Remember the previous three instructions, while
@@ -429,6 +341,9 @@ crawl_text(struct intercept_desc *desc)
 
 		if (result.has_ip_relative_opr)
 			mark_jump(desc, result.rip_ref_addr);
+
+		if (is_long_nop(code, result.length))
+			mark_nop(desc, code, result.length);
 
 		/*
 		 * Generate a new patch description, if:
@@ -471,11 +386,6 @@ crawl_text(struct intercept_desc *desc)
 			assert(syscall_offset >= 0);
 
 			patch->syscall_offset = (unsigned long)syscall_offset;
-			patch->padding_addr =
-			    search_padding(patch->syscall_addr, padding_used);
-			if (patch->padding_addr != NULL)
-				padding_used =
-				    patch->padding_addr + JUMP_INS_SIZE;
 		}
 
 		prevs[0] = prevs[1];
@@ -604,6 +514,7 @@ find_syscalls(struct intercept_desc *desc)
 
 	find_sections(desc, fd);
 	allocate_jump_table(desc);
+	allocate_nop_table(desc);
 
 	if (desc->has_symtab)
 		find_jumps_in_section_syms(desc, &desc->sh_symtab_section, fd);

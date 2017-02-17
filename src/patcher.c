@@ -176,6 +176,73 @@ check_trampoline_usage(const struct intercept_desc *desc)
 		xabort();
 }
 
+static bool
+is_nop_in_range(unsigned char *address, const struct nop_entry *nop)
+{
+	/*
+	 * Planning to put a 5 byte jump starting at the third byte
+	 * of the nop instruction. The syscall should jump to this
+	 * trampoline jump.
+	 */
+	unsigned char *dst = nop->address + 2;
+	/*
+	 * Planning to put a two byte jump in the place of the syscall
+	 * instruction, that is going to jump relative to the value of
+	 * RIP during execution, which points to the next instruction,
+	 * at address + 2.
+	 */
+	unsigned char *src = address + 2;
+
+	/*
+	 * How far can this short jump instruction jump, considering
+	 * the one byte singed displacement?
+	 */
+	unsigned char *reach_min = src - 128;
+	unsigned char *reach_max = src + 127;
+
+	/*
+	 * Can a two byte jump reach the proposed destination?
+	 * I.e.: is dst in the [reach_min, reach_max] range?
+	 */
+	return reach_min <= dst && dst <= reach_max;
+}
+
+static void
+assign_nop_trampoline(struct intercept_desc *desc,
+		struct patch_desc *patch,
+		size_t *next_nop_i)
+{
+	struct nop_entry *nop = desc->nop_table + *next_nop_i;
+
+	if (*next_nop_i >= desc->nop_count) {
+		patch->uses_nop_trampoline = false;
+		return; /* no more nops available */
+	}
+
+	/*
+	 * Consider a nop instruction, to use as trampoline, but only
+	 * if a two byte jump in the place of the syscall can jump
+	 * to the proposed trampoline. Check if the nop is:
+	 *  1) at an address too low
+	 *  2) close enough for a two byte jump
+	 *  3) at an address too high
+	 */
+
+	if (is_nop_in_range(patch->syscall_addr, nop)) {
+		patch->uses_nop_trampoline = true;
+		patch->nop_trampoline = *nop;
+		++(*next_nop_i);
+		return; /* found a nop in range to use as trampoline */
+	}
+
+	if (nop->address > patch->syscall_addr)
+		return; /* nop is too far ahead */
+
+	/* nop is too far behind, try the next nop */
+	++(*next_nop_i);
+	assign_nop_trampoline(desc, patch, next_nop_i);
+}
+
 /*
  * create_patch_wrappers - create the custom assembly wrappers
  * around each syscall to be intercepted. Well, actually, the
@@ -194,10 +261,14 @@ check_trampoline_usage(const struct intercept_desc *desc)
 void
 create_patch_wrappers(struct intercept_desc *desc)
 {
+	size_t next_nop_i = 0;
+
 	for (unsigned patch_i = 0; patch_i < desc->count; ++patch_i) {
 		struct patch_desc *patch = desc->items + patch_i;
 
-		if (patch->padding_addr != NULL) {
+		assign_nop_trampoline(desc, patch, &next_nop_i);
+
+		if (patch->uses_nop_trampoline) {
 			/*
 			 * The preferred option it to use a 5 byte relative
 			 * jump in a padding space between symbols in libc.
@@ -206,11 +277,11 @@ create_patch_wrappers(struct intercept_desc *desc)
 			 * instructions other than the syscall
 			 * itself need to be overwritten.
 			 */
-			patch->uses_padding = true;
 			patch->uses_prev_ins = false;
 			patch->uses_prev_ins_2 = false;
 			patch->uses_next_ins = false;
-			patch->dst_jmp_patch = patch->padding_addr;
+			patch->dst_jmp_patch =
+			    patch->nop_trampoline.address + 2;
 
 			/*
 			 * Return to libc:
@@ -222,8 +293,6 @@ create_patch_wrappers(struct intercept_desc *desc)
 			patch->ok = true;
 
 		} else {
-			patch->uses_padding = false;
-
 			/*
 			 * No padding space is available, so check the
 			 * instructions surrounding the syscall instrucion.
@@ -343,11 +412,12 @@ create_patch_wrappers(struct intercept_desc *desc)
 			}
 		}
 
+		mark_jump(desc, patch->return_address);
+
 		create_wrapper(patch, desc->c_destination,
 			desc->uses_trampoline_table,
 			desc->dlinfo.dli_fname);
 	}
-
 }
 
 extern unsigned char intercept_asm_wrapper_tmpl[];
@@ -591,6 +661,16 @@ create_short_jump(unsigned char *from, unsigned char *to)
 }
 
 /*
+ * after_nop -- get the address of the instruction
+ * following the nop.
+ */
+static unsigned char *
+after_nop(const struct nop_entry *nop)
+{
+	return nop->address + nop->size;
+}
+
+/*
  * activate_patches()
  * Loop over all the patches, and and overwrite each syscall.
  */
@@ -637,9 +717,11 @@ activate_patches(struct intercept_desc *desc)
 				patch->dst_jmp_patch, patch->asm_wrapper);
 		}
 
-		if (patch->uses_padding) {
+		if (patch->uses_nop_trampoline) {
 			create_short_jump(patch->syscall_addr,
 			    patch->dst_jmp_patch);
+			create_short_jump(patch->nop_trampoline.address,
+			    after_nop(&patch->nop_trampoline));
 		} else {
 			unsigned char *byte;
 

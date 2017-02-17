@@ -190,6 +190,9 @@ intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 	result.is_ret = (context->insn->id == X86_INS_RET);
 	result.is_rel_jump = false;
 	result.is_indirect_jump = false;
+#ifndef NDEBUG
+	result.mnemonic = context->insn->mnemonic;
+#endif
 
 	switch (context->insn->id) {
 		case X86_INS_JAE:

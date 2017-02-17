@@ -87,6 +87,10 @@ struct intercept_disasm_result {
 	 */
 	int32_t rip_disp;
 	const unsigned char *rip_ref_addr;
+
+#ifndef NDEBUG
+	const char *mnemonic;
+#endif
 };
 
 struct intercept_disasm_context;
