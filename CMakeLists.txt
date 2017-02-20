@@ -67,11 +67,14 @@ add_library(syscall_intercept_base STATIC ${SOURCES})
 set_property(TARGET syscall_intercept_base
 	APPEND PROPERTY COMPILE_FLAGS ${capstone_CFLAGS})
 
+target_link_libraries(syscall_intercept_base
+	${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
+
 add_library(syscall_intercept_shared SHARED src/entry.c)
 target_link_libraries(syscall_intercept_shared
-	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
+	syscall_intercept_base)
 add_library(syscall_intercept_static STATIC src/entry.c)
-target_link_libraries(syscall_intercept_shared syscall_intercept_base)
+target_link_libraries(syscall_intercept_static syscall_intercept_base)
 
 set_target_properties(syscall_intercept_shared
 	PROPERTIES VERSION ${SYSCALL_INTERCEPT_VERSION}
