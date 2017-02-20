@@ -31,6 +31,8 @@
 
 # See: https://cmake.org/Wiki/CMake/Testing_With_CTest
 
+find_package(Threads)
+
 include_directories(${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/test)
 
 set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
@@ -60,6 +62,17 @@ add_test(NAME "hook"
 	-DTEST_PROG=$<TARGET_FILE:hook_test>
 	-DTEST_PROG_ARG=None
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept1.log.match
+	${CHECK_LOG_COMMON_ARGS})
+
+add_library(hook_test_clone_preload SHARED hook_test_clone_preload.c)
+target_link_libraries(hook_test_clone_preload syscall_intercept_shared)
+add_test(NAME "hook_clone"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_NAME=hook_clone
+	-DLIB_FILE=$<TARGET_FILE:hook_test_clone_preload>
+	-DTEST_PROG=$<TARGET_FILE:logging_test>
+	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
+	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
 	${CHECK_LOG_COMMON_ARGS})
 
 
