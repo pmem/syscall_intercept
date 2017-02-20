@@ -252,7 +252,7 @@ add_new_patch(struct intercept_desc *desc)
 		/* initial allocation */
 		desc->items = xmmap_anon(sizeof(desc->items[0]));
 
-	} else if (has_pow2_count(desc) == 0) {
+	} else if (has_pow2_count(desc)) {
 
 		/* if count is a power of two, double the allocate space */
 		size_t size = desc->count * sizeof(desc->items[0]);
