@@ -1186,20 +1186,24 @@ intercept_log(const char *buffer, size_t len)
 void
 intercept_logs(const char *str)
 {
+	if (log_fd < 0)
+		return;
+
 	size_t len = strlen(str) + 1;
 	char buffer[len];
 
 	strncpy(buffer, str, len);
 	buffer[len - 1] = '\n';
 
-	if (log_fd >= 0)
-		syscall_no_intercept(SYS_write, log_fd,
-		    (long)buffer, (long)len);
+	syscall_no_intercept(SYS_write, log_fd,
+	    (long)buffer, (long)len);
 }
 
 void
 intercept_log_close(void)
 {
-	if (log_fd >= 0)
+	if (log_fd >= 0) {
 		syscall_no_intercept(SYS_close, log_fd);
+		log_fd = -1;
+	}
 }
