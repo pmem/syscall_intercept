@@ -89,12 +89,6 @@ main(int argc, char *argv[])
 		busy(argv[1]);
 	} else {
 		wait(NULL);
-#ifdef USE_CLONE
-		pthread_t t;
-		if (pthread_create(&t, NULL, busy, argv[1]) != 0)
-			return EXIT_FAILURE;
-		pthread_join(t, NULL);
-#endif
 		busy(argv[1]);
 	}
 
