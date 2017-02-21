@@ -155,6 +155,50 @@ allocate_nop_table(struct intercept_desc *desc)
 	    xmmap_anon(desc->max_nop_count * sizeof(desc->nop_table[0]));
 }
 
+/*
+ * allocate_skip_ranges
+ */
+static void
+allocate_skip_ranges(struct intercept_desc *desc)
+{
+	assert(desc->text_start < desc->text_end);
+	size_t bytes = (size_t)(desc->text_end - desc->text_start + 1);
+
+	if (bytes > 65336)
+		desc->max_skip_range_count = bytes / 100;
+	else
+		desc->max_skip_range_count = 1024;
+	desc->skip_range_count = 0;
+	desc->skip_ranges = xmmap_anon(
+	    desc->max_skip_range_count * sizeof(desc->skip_ranges[0]));
+}
+
+static void
+mark_skip_range(struct intercept_desc *desc,
+	unsigned char *address, size_t size)
+{
+	if (desc->skip_range_count == desc->max_skip_range_count - 1)
+		return;
+
+	if (size == 0)
+		return;
+
+	desc->skip_ranges[desc->skip_range_count].address = address;
+	desc->skip_ranges[desc->skip_range_count].size = size;
+	desc->skip_range_count++;
+}
+
+static bool
+has_no_syscall(unsigned char *address, size_t size)
+{
+	while (size > 1 && (address[0] != 0x0f || address[1] != 0x05)) {
+		++address;
+		--size;
+	}
+
+	return size <= 1;
+}
+
 static void
 mark_nop(struct intercept_desc *desc, unsigned char *address, size_t size)
 {
@@ -232,9 +276,14 @@ find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
 		if (syms[i].st_shndx != desc->text_section_index)
 			continue; /* it is not in the text section */
 
+		unsigned char *address =
+		    syms[i].st_value + (unsigned char *)desc->dlinfo.dli_fbase;
+
 		/* a function entry point in .text, mark it */
-		mark_jump(desc, syms[i].st_value +
-		    (unsigned char *)desc->dlinfo.dli_fbase);
+		mark_jump(desc, address);
+
+		if (has_no_syscall(address, syms[i].st_size))
+			mark_skip_range(desc, address, syms[i].st_size);
 	}
 }
 
@@ -292,6 +341,8 @@ crawl_text(struct intercept_desc *desc)
 	 */
 	struct intercept_disasm_result prevs[3] = {{0, }};
 
+	struct range *skip = desc->skip_ranges;
+
 	/*
 	 * How many previous instructions were decoded before this one,
 	 * and stored in the prevs array. Usually three, except for the
@@ -303,6 +354,16 @@ crawl_text(struct intercept_desc *desc)
 	    intercept_disasm_init(desc->text_start, desc->text_end);
 
 	while (code <= desc->text_end) {
+
+
+		while (skip->address != NULL && code > skip->address)
+			++skip;
+
+		if (code == skip->address) {
+			code += skip->size;
+			continue;
+		}
+
 		struct intercept_disasm_result result;
 
 		result = intercept_disasm_next_instruction(context, code);
@@ -478,6 +539,13 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	desc->next_trampoline = desc->trampoline_table;
 }
 
+static int
+cmp_skip_range(const void *a, const void *b)
+{
+	return ((const struct range *)a)->address >
+	    ((const struct range *)b)->address;
+}
+
 void
 find_syscalls(struct intercept_desc *desc)
 {
@@ -488,6 +556,7 @@ find_syscalls(struct intercept_desc *desc)
 	find_sections(desc, fd);
 	allocate_jump_table(desc);
 	allocate_nop_table(desc);
+	allocate_skip_ranges(desc);
 
 	if (desc->has_symtab)
 		find_jumps_in_section_syms(desc, &desc->sh_symtab_section, fd);
@@ -496,6 +565,13 @@ find_syscalls(struct intercept_desc *desc)
 		find_jumps_in_section_syms(desc, &desc->sh_dynsym_section, fd);
 
 	syscall_no_intercept(SYS_close, fd);
+
+	qsort(desc->skip_ranges,
+	    desc->skip_range_count, sizeof(desc->skip_ranges[0]),
+	    cmp_skip_range);
+
+	desc->skip_ranges[desc->skip_range_count].address = NULL;
+	desc->skip_ranges[desc->skip_range_count].size = 0;
 
 	crawl_text(desc);
 }

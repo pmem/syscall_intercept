@@ -54,6 +54,12 @@ struct intercept_disasm_context {
 	const unsigned char *end;
 };
 
+static int
+tej_vsnprintf()
+{
+	return 0;
+}
+
 /*
  * intercept_disasm_init -- should be called before disassembling a region of
  * code. The context created contains the context capstone needs ( or generally
@@ -85,6 +91,15 @@ intercept_disasm_init(const unsigned char *begin, const unsigned char *end)
 	 * to parse the resulting string.
 	 */
 	if (cs_option(context->handle, CS_OPT_DETAIL, CS_OPT_ON) != 0)
+		xabort();
+
+	cs_opt_mem x = {
+		.malloc = malloc,
+		.free = free,
+		.calloc = calloc,
+		.realloc = realloc,
+		.vsnprintf = tej_vsnprintf};
+	if (cs_option(context->handle, CS_OPT_MEM, (size_t)&x) != 0)
 		xabort();
 
 	if ((context->insn = cs_malloc(context->handle)) == NULL)

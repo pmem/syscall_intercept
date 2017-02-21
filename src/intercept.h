@@ -60,7 +60,7 @@ void intercept_patch_with_postfix(unsigned char *syscall_addr,
 
 __attribute__((noreturn)) void xabort(void);
 
-struct nop_entry {
+struct range {
 	unsigned char *address;
 	size_t size;
 };
@@ -110,7 +110,7 @@ struct patch_desc {
 
 	bool ok;
 
-	struct nop_entry nop_trampoline;
+	struct range nop_trampoline;
 };
 
 void patch_apply(struct patch_desc *patch);
@@ -161,12 +161,16 @@ struct intercept_desc {
 
 	size_t nop_count;
 	size_t max_nop_count;
-	struct nop_entry *nop_table;
+	struct range *nop_table;
 
 	void *c_destination;
 
 	unsigned char *trampoline_table;
 	size_t trampoline_table_size;
+
+	size_t skip_range_count;
+	size_t max_skip_range_count;
+	struct range *skip_ranges;
 
 	unsigned char *next_trampoline;
 };

@@ -177,7 +177,7 @@ check_trampoline_usage(const struct intercept_desc *desc)
 }
 
 static bool
-is_nop_in_range(unsigned char *address, const struct nop_entry *nop)
+is_nop_in_range(unsigned char *address, const struct range *nop)
 {
 	/*
 	 * Planning to put a 5 byte jump starting at the third byte
@@ -212,7 +212,7 @@ assign_nop_trampoline(struct intercept_desc *desc,
 		struct patch_desc *patch,
 		size_t *next_nop_i)
 {
-	struct nop_entry *nop = desc->nop_table + *next_nop_i;
+	struct range *nop = desc->nop_table + *next_nop_i;
 
 	if (*next_nop_i >= desc->nop_count) {
 		patch->uses_nop_trampoline = false;
@@ -665,7 +665,7 @@ create_short_jump(unsigned char *from, unsigned char *to)
  * following the nop.
  */
 static unsigned char *
-after_nop(const struct nop_entry *nop)
+after_nop(const struct range *nop)
 {
 	return nop->address + nop->size;
 }
