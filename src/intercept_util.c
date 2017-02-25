@@ -560,7 +560,7 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 				F_HEX, arg1,
 				result_known, result);
 	} else if (nr == SYS_lseek) {
-		buf = print_syscall(buf, "lstat", 3,
+		buf = print_syscall(buf, "lseek", 3,
 				F_DEC, arg0,
 				F_DEC, arg1,
 				F_DEC, arg2,
