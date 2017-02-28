@@ -59,7 +59,7 @@ to signal to the intercepting library, that the specific system
 call was ignored by the user, and the original syscall should be
 executed. A zero return value signals that the user takes over the
 system call. In this case, the result of the system call
-( the value stored in the RAX register after the system call )
+(the value stored in the RAX register after the system call)
 can be set via the *result pointer. In order to use the library,
 the intercepting code is expected to be loaded using the
 LD_PRELOAD feature provided by the systems loader.
@@ -150,7 +150,7 @@ In order to handle syscalls in user space, the library relies
 on the following assumptions:
 
 - Each syscall made by the applicaton is issued via libc
-- No other facility attempts to hotpach libc in the same process
+- No other facility attempts to hotpatch libc in the same process
 - The libc implementation is already loaded in the processes
 memory space when the intercepting library is being initialized
 - The machine code in the libc implementation is suitable
@@ -164,18 +164,18 @@ locates all syscall instructions, and replaces each of them
 with a jump to a unique address. Since the syscall instruction
 of the x86_64 ISA occupies only two bytes, the method involves
 locating other bytes close to the syscall suitable for overwriting.
-The destination of the jump ( unique for each syscall ) is a
+The destination of the jump (unique for each syscall) is a
 small routine, which accomplisesh the following tasks:
 
 1. Optionally executes any instruction that originally
 preceded the syscall instruction, and was overwritten to
 make space for the jump instruction
 2. Saves the current state of all registers to the stack
-3. Translates the arguments ( in the registers ) from
+3. Translates the arguments (in the registers) from
 the Linux x86_64 syscall calling convention to the C ABI's
 calling convention used on x86_64
-4. Calls a function written in C ( which in turn calls
-the callback supplied by the libraries user )
+4. Calls a function written in C (which in turn calls
+the callback supplied by the libraries user)
 5. Loads the values from the stack back into the registers
 6. Jumps back to libc, to the instruction following the
 overwritten part
@@ -216,7 +216,7 @@ in the padding found to the end of each routine. Since the start
 of all routines is aligned to 16 bytes, often there is a padding
 space between the end of a symbol, and the start of the next symbol.
 In the example below, this padding is filled with 7 byte long
-nop instruction ( so the next symbol can start at the address 3f410 ).
+nop instruction (so the next symbol can start at the address 3f410).
 ```
 Before:                         After:
 
@@ -259,5 +259,3 @@ LIBC_HOOK_CMDLINE_FILTER=ls \
 
 With this filtering, the intercepting library is not activated in the gdb
 process itself.
-
-
