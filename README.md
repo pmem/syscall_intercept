@@ -8,7 +8,7 @@ This repository is soon going to be deleted
 Building libsyscall_intercept requires cmake.
 Example:
 ```sh
-cmake path_to_syscall_intercept -DCMAKE_INSTALL_PREFIX=/home/tej/222 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang
+cmake path_to_syscall_intercept -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang
 make
 ```
 alternatively:
