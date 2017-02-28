@@ -32,7 +32,7 @@
 find_program(PANDOC pandoc)
 
 if(PANDOC)
-	add_custom_target(manpages)
+	add_custom_target(manpages ALL)
 	function(generate_manpage name)
 		add_custom_command(
 			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/${name}
