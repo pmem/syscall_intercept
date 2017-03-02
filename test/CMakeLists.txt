@@ -96,7 +96,7 @@ set(asm_patterns
 foreach(name ${asm_patterns})
 	add_library(${name}.in SHARED ${name}.in.s)
 	add_library(${name}.out SHARED ${name}.out.s)
-	if(HAS_NOSTDLIB)
+	if(LINKER_HAS_NOSTDLIB)
 		set_target_properties(${name}.in
 			PROPERTIES LINK_FLAGS "-nostdlib")
 		set_target_properties(${name}.out
