@@ -61,13 +61,16 @@ Development files for libsyscall_intercept library
 %setup -q -n %{name}-%{version}
 
 %build
-%cmake .
+mkdir build && cd build
+%cmake -DCMAKE_BUILD_TYPE=Release ..
 make %{?_smp_mflags}
 
 %install
+cd build
 make install DESTDIR=%{buildroot}
 
 %check
+cd build
 ctest -V %{?_smp_mflags}
 
 %post   -n libsyscall_intercept -p /sbin/ldconfig

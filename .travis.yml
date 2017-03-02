@@ -1,0 +1,24 @@
+language: c
+
+env:
+  matrix:
+    - MAKE_PKG=1 OS=ubuntu OS_VER=16.04
+    - MAKE_PKG=1 OS=fedora OS_VER=25
+    - MAKE_PKG=0 OS=ubuntu OS_VER=16.04 COMPILER=clang
+    - MAKE_PKG=0 OS=fedora OS_VER=25    COMPILER=clang
+    - MAKE_PKG=0 OS=ubuntu OS_VER=16.04
+    - MAKE_PKG=0 OS=fedora OS_VER=25
+
+before_install:
+  - export HOST_WORKDIR=`pwd`
+  - cd utils/docker
+  - ./prepare-environment.sh
+  - ./pull-or-rebuild-image.sh
+  - if [[ -f push_image_to_repo_flag ]]; then PUSH_THE_IMAGE=1; fi
+  - rm -f push_image_to_repo_flag
+
+script:
+  - ./build.sh
+
+after_success:
+  - if [[ $PUSH_THE_IMAGE -eq 1 ]]; then images/push-image.sh $OS:$OS_VER; fi
