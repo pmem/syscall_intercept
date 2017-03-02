@@ -33,9 +33,9 @@
 # XXX ask for a unique tempfile from cmake for LOG_OUTPUT
 set(LOG_OUTPUT .log.${TEST_NAME})
 
-set(ENV{LD_PRELOAD} ${LIB_FILE})
-
 execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${LOG_OUTPUT})
+
+set(ENV{LD_PRELOAD} ${LIB_FILE})
 
 execute_process(COMMAND ${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT}
 	RESULT_VARIABLE HAD_ERROR)
