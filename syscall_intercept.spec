@@ -54,6 +54,7 @@ Development files for libsyscall_intercept library
 %{_libdir}/libsyscall_intercept.a
 %{_libdir}/pkgconfig/libsyscall_intercept.pc
 %{_includedir}/libsyscall_intercept_hook_point.h
+%{_mandir}/man3/libsyscall_intercept.3.gz
 %license LICENSE
 %doc
 
