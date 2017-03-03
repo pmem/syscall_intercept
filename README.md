@@ -52,7 +52,7 @@ int (*intercept_hook_point)(long syscall_number,
 			long *result);
 ```
 
-The user of the library shall assgin to the variable called
+The user of the library shall assign to the variable called
 intercept_hook_point a pointer the address of a callback function.
 A non-zero return value returned by the callback function is used
 to signal to the intercepting library, that the specific system
@@ -62,7 +62,7 @@ system call. In this case, the result of the system call
 (the value stored in the RAX register after the system call)
 can be set via the *result pointer. In order to use the library,
 the intercepting code is expected to be loaded using the
-LD_PRELOAD feature provided by the systems loader.
+LD_PRELOAD feature provided by the system loader.
 
 All syscalls issued by libc are intercepted. In order to
 be able to issue syscalls that are not intercepted, a
@@ -165,7 +165,7 @@ with a jump to a unique address. Since the syscall instruction
 of the x86_64 ISA occupies only two bytes, the method involves
 locating other bytes close to the syscall suitable for overwriting.
 The destination of the jump (unique for each syscall) is a
-small routine, which accomplisesh the following tasks:
+small routine, which accomplishes the following tasks:
 
 1. Optionally executes any instruction that originally
 preceded the syscall instruction, and was overwritten to
@@ -175,7 +175,7 @@ make space for the jump instruction
 the Linux x86_64 syscall calling convention to the C ABI's
 calling convention used on x86_64
 4. Calls a function written in C (which in turn calls
-the callback supplied by the libraries user)
+the callback supplied by the library user)
 5. Loads the values from the stack back into the registers
 6. Jumps back to libc, to the instruction following the
 overwritten part
@@ -204,7 +204,7 @@ db2b9: retq                   | db2b9: retq                |
 ```
 *Hotpatching using a trampoline jump:*
 Replace a syscall instruction with a short jmp instruction,
-the destination of which if is a regular jmp instruction.
+the destination of which is a regular jmp instruction.
 The reason to use this, is that a short jmp instruction
 consumes only two bytes, thus fits in the place of a syscall
 instruction. Sometimes the instructions directly preceding
