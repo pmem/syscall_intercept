@@ -30,27 +30,22 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 find_program(PANDOC pandoc)
-
-if(PANDOC)
-	add_custom_target(manpages ALL)
-	function(generate_manpage name)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/${name}
-			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${name}.md
-			COMMAND ${CMAKE_SOURCE_DIR}/utils/md2man.sh
-				${CMAKE_CURRENT_SOURCE_DIR}/${name}.md
-				${CMAKE_CURRENT_SOURCE_DIR}/default.man
-				${CMAKE_CURRENT_SOURCE_DIR}/generated/${name}
-		)
-		add_custom_target(manpage-${name}
-			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/generated/${name})
-		add_dependencies(manpages manpage-${name})
-	endfunction()
-
-	generate_manpage(libsyscall_intercept.3)
-else(PANDOC)
+if (NOT PANDOC)
         message(WARNING "pandoc not found")
-endif(PANDOC)
+endif()
+
+add_custom_target(manpages)
+
+function(generate_manpage name)
+        add_custom_target(manpage-${name}
+                          COMMAND ${CMAKE_SOURCE_DIR}/utils/md2man.sh
+                                  ${CMAKE_CURRENT_SOURCE_DIR}/${name}.md
+                                  ${CMAKE_CURRENT_SOURCE_DIR}/default.man
+                                  ${CMAKE_CURRENT_SOURCE_DIR}/generated/${name})
+        add_dependencies(manpages manpage-${name})
+endfunction()
+
+generate_manpage(libsyscall_intercept.3)
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/generated/libsyscall_intercept.3
-	DESTINATION ${CMAKE_INSTALL_MANDIR}/man3 CONFIGURATIONS Release None)
+       DESTINATION ${CMAKE_INSTALL_MANDIR}/man3 CONFIGURATIONS Release None)
