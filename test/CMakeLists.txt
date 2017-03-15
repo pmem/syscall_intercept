@@ -37,6 +37,38 @@ include_directories(${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/test)
 
 set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
 
+add_executable(asm_pattern asm_pattern.c)
+target_link_libraries(asm_pattern
+	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
+
+set(asm_patterns
+	nosyscall
+	pattern1
+	pattern2
+	pattern_loop
+	pattern_loop2
+	pattern_symbol_boundary0
+	pattern_symbol_boundary1
+	pattern_symbol_boundary2
+	pattern_nop_padding0
+	pattern_nop_padding1
+	pattern_nop_padding2)
+
+foreach(name ${asm_patterns})
+	add_library(${name}.in SHARED ${name}.in.s)
+	add_library(${name}.out SHARED ${name}.out.s)
+	if(LINKER_HAS_NOSTDLIB)
+		set_target_properties(${name}.in
+			PROPERTIES LINK_FLAGS "-nostdlib")
+		set_target_properties(${name}.out
+			PROPERTIES LINK_FLAGS "-nostdlib")
+	endif()
+	add_test(NAME "asm_pattern_${name}"
+		COMMAND $<TARGET_FILE:asm_pattern>
+		$<TARGET_FILE:${name}.in>
+		$<TARGET_FILE:${name}.out>)
+endforeach()
+
 set(CHECK_LOG_COMMON_ARGS
 	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/utils/match.pl
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_log.cmake)
@@ -74,36 +106,3 @@ add_test(NAME "hook_clone"
 	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
 	${CHECK_LOG_COMMON_ARGS})
-
-
-add_executable(asm_pattern asm_pattern.c)
-target_link_libraries(asm_pattern
-	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
-
-set(asm_patterns
-	nosyscall
-	pattern1
-	pattern2
-	pattern_loop
-	pattern_loop2
-	pattern_symbol_boundary0
-	pattern_symbol_boundary1
-	pattern_symbol_boundary2
-	pattern_nop_padding0
-	pattern_nop_padding1
-	pattern_nop_padding2)
-
-foreach(name ${asm_patterns})
-	add_library(${name}.in SHARED ${name}.in.s)
-	add_library(${name}.out SHARED ${name}.out.s)
-	if(LINKER_HAS_NOSTDLIB)
-		set_target_properties(${name}.in
-			PROPERTIES LINK_FLAGS "-nostdlib")
-		set_target_properties(${name}.out
-			PROPERTIES LINK_FLAGS "-nostdlib")
-	endif()
-	add_test(NAME "asm_pattern_${name}"
-		COMMAND $<TARGET_FILE:asm_pattern>
-		$<TARGET_FILE:${name}.in>
-		$<TARGET_FILE:${name}.out>)
-endforeach()
