@@ -52,11 +52,13 @@ xlongjmp:
 
 has_ymm_registers:
 	.cfi_startproc
+	pushq       %rbx
 	movq        $0x1, %rax
 	cpuid
 	movq        %rcx, %rax
 	shrq        $28, %rax
 	andq        $1, %rax
+	popq        %rbx
 	retq
 	.cfi_endproc
 
