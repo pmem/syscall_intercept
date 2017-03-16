@@ -155,7 +155,7 @@ main(int argc, char **argv)
 	struct intercept_desc patches;
 	init_patcher();
 
-	patches.c_destination = NULL;
+	patches.c_destination = (void *)(uintptr_t)init_patcher;
 	patches.dlinfo = lib_in.info;
 	patches.uses_trampoline_table = true;
 	patches.trampoline_table = lib_in.mock_trampoline_table;
