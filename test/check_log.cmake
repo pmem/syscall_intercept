@@ -37,6 +37,8 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${LOG_OUTPUT})
 
 set(ENV{LD_PRELOAD} ${LIB_FILE})
 
+message("Executing: LD_PRELOAD=${LIB_FILE} ${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT}")
+
 execute_process(COMMAND ${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT}
 	RESULT_VARIABLE HAD_ERROR)
 
