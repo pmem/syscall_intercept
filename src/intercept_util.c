@@ -895,11 +895,10 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 				F_DEC, arg3,
 				result_known, result);
 	} else if (nr == SYS_fchmodat) {
-		buf = print_syscall(buf, "fchmodat", 4,
+		buf = print_syscall(buf, "fchmodat", 3,
 				F_DEC, arg0,
 				F_STR, arg1,
 				F_OCT_MODE, arg2,
-				F_DEC, arg3,
 				result_known, result);
 	} else if (nr == SYS_faccessat) {
 		buf = print_syscall(buf, "faccessat", 4,
