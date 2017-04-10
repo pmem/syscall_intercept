@@ -108,8 +108,6 @@ struct patch_desc {
 
 	bool uses_nop_trampoline;
 
-	bool ok;
-
 	struct range nop_trampoline;
 };
 

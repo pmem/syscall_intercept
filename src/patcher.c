@@ -290,7 +290,6 @@ create_patch_wrappers(struct intercept_desc *desc)
 			 */
 			patch->return_address =
 			    patch->syscall_addr + SYSCALL_INS_SIZE;
-			patch->ok = true;
 
 		} else {
 			/*
@@ -395,10 +394,9 @@ create_patch_wrappers(struct intercept_desc *desc)
 			/*
 			 * If the length is at least 5, then a jump instrucion
 			 * with a 32 bit displacement can fit.
+			 *
+			 * Otherwise give up
 			 */
-			patch->ok = length >= JUMP_INS_SIZE;
-
-			/* Otherwise give up */
 			if (length < JUMP_INS_SIZE) {
 				char buffer[0x1000];
 
@@ -692,9 +690,6 @@ activate_patches(struct intercept_desc *desc)
 
 	for (unsigned i = 0; i < desc->count; ++i) {
 		const struct patch_desc *patch = desc->items + i;
-
-		if (!patch->ok)
-			continue;
 
 		if (patch->dst_jmp_patch < desc->text_start ||
 		    patch->dst_jmp_patch > desc->text_end)
