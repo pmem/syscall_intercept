@@ -159,6 +159,13 @@ create_jump(unsigned char opcode, unsigned char *from, void *to)
 	from[4] = d[3];
 }
 
+/*
+ * check_trampoline_usage -
+ * Make sure the trampoline table allocated at the beginning of patching has
+ * enough space for all trampolines. This just aborts the process if the
+ * allocate space does not seem to be enough, but it can be fairly easy
+ * to implement more allocation here if such need would arise.
+ */
 static void
 check_trampoline_usage(const struct intercept_desc *desc)
 {
@@ -176,6 +183,10 @@ check_trampoline_usage(const struct intercept_desc *desc)
 		xabort();
 }
 
+/*
+ * is_nop_in_range - checks if NOP is sufficiently close to address, to be
+ * reachable by a jmp having a 8 bit displacement.
+ */
 static bool
 is_nop_in_range(unsigned char *address, const struct range *nop)
 {
@@ -207,6 +218,17 @@ is_nop_in_range(unsigned char *address, const struct range *nop)
 	return reach_min <= dst && dst <= reach_max;
 }
 
+/*
+ * assign_nop_trampoline
+ * Looks for a NOP instruction close to a syscall instruction to be patched.
+ * The struct patch_desc argument specifies where the particular syscall
+ * instruction resides, and the struct intercept_desc argument of course
+ * already contains information about NOPs, collected by the find_syscalls
+ * routine.
+ *
+ * This routine essentially initializes the uses_nop_trampoline and
+ * the nop_trampoline fields of a struct patch_desc.
+ */
 static void
 assign_nop_trampoline(struct intercept_desc *desc,
 		struct patch_desc *patch,
@@ -418,6 +440,9 @@ create_patch_wrappers(struct intercept_desc *desc)
 	}
 }
 
+/*
+ * Referencing symbols defined in intercept_template.s
+ */
 extern unsigned char intercept_asm_wrapper_tmpl[];
 extern unsigned char intercept_asm_wrapper_end;
 extern unsigned char intercept_asm_wrapper_prefix;
@@ -466,6 +491,11 @@ static size_t simd_restore_YMM_size;
 
 static bool must_save_ymm_registers;
 
+/*
+ * init_patcher
+ * Some variables need to be initialized before patching.
+ * This routine must be called once before patching any library.
+ */
 void
 init_patcher(void)
 {
@@ -531,6 +561,13 @@ init_patcher(void)
 	must_save_ymm_registers = has_ymm_registers();
 }
 
+/*
+ * copy_ymm_handler_code
+ * This routine copies the code saving/restoring the YMM (256 bit wide )
+ * registers in an assembly wrapper template. Without this, the default
+ * code for saving/restoring the XMM (128 bit wide) registers stays
+ * in the generated code.
+ */
 static void
 copy_ymm_handler_code(unsigned char *asm_wrapper)
 {
@@ -540,6 +577,10 @@ copy_ymm_handler_code(unsigned char *asm_wrapper)
 	    &intercept_asm_wrapper_simd_restore_YMM, simd_restore_YMM_size);
 }
 
+/*
+ * create_push_imm
+ * Generates a push instruction, that pushes a 32 bit constant to the stack.
+ */
 static void
 create_push_imm(unsigned char *push, uint32_t syscall_offset)
 {
@@ -550,6 +591,11 @@ create_push_imm(unsigned char *push, uint32_t syscall_offset)
 	push[4] = (unsigned char)((syscall_offset / 0x1000000) % 0x100);
 }
 
+/*
+ * create_movabs_r11
+ * Generates a movabs instruction, that assigns a 64 bit constant to
+ * the R11 register.
+ */
 static void
 create_movabs_r11(unsigned char *code, uint64_t value)
 {
@@ -567,6 +613,15 @@ create_movabs_r11(unsigned char *code, uint64_t value)
 	code[9] = bytes[7];
 }
 
+/*
+ * create_wrapper
+ * Generates an assembly wrapper. Copies the template written in
+ * intercept_template.s, and generates the instructions specific
+ * to a particular syscall into the new copy.
+ * After this wrapper is created, a syscall can be replaced with a
+ * jump to this wrapper, and wrapper is going to call dest_routine
+ * (actually only after a call to mprotect_asm_wrappers).
+ */
 static void
 create_wrapper(struct patch_desc *patch, void *dest_routine,
 			bool use_absolute_return,
@@ -646,6 +701,11 @@ create_wrapper(struct patch_desc *patch, void *dest_routine,
 		copy_ymm_handler_code(begin);
 }
 
+/*
+ * create_short_jump
+ * Generates a 2 byte jump instruction. The to address must be reachable
+ * using an 8 bit displacement.
+ */
 static void
 create_short_jump(unsigned char *from, unsigned char *to)
 {
@@ -733,6 +793,13 @@ activate_patches(struct intercept_desc *desc)
 		xabort();
 }
 
+/*
+ * next_asm_wrapper_space
+ * Assigns a memory region in syscall_intercept's memory region
+ * for an asm wrapper instance.
+ * This is trivial memory allocation, using the asm_wrapper_space
+ * array as a memory pool.
+ */
 static unsigned char *
 next_asm_wrapper_space(void)
 {
@@ -750,6 +817,13 @@ next_asm_wrapper_space(void)
 	return result;
 }
 
+/*
+ * mprotect_asm_wrappers
+ * The code generated into the data segment at the asm_wrapper_space
+ * array is not executable by default. This routine sets that memory region
+ * to be executable, must called before attempting to execute any patched
+ * syscall.
+ */
 void
 mprotect_asm_wrappers(void)
 {

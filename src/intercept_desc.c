@@ -138,7 +138,7 @@ allocate_jump_table(struct intercept_desc *desc)
 }
 
 /*
- * allocate_nop_table
+ * allocate_nop_table - allocates desc->nop_table
  */
 static void
 allocate_nop_table(struct intercept_desc *desc)
@@ -156,7 +156,7 @@ allocate_nop_table(struct intercept_desc *desc)
 }
 
 /*
- * allocate_skip_ranges
+ * allocate_skip_ranges - allocates desc->skip_ranges
  */
 static void
 allocate_skip_ranges(struct intercept_desc *desc)
@@ -173,6 +173,10 @@ allocate_skip_ranges(struct intercept_desc *desc)
 	    desc->max_skip_range_count * sizeof(desc->skip_ranges[0]));
 }
 
+/*
+ * mark_skip_range - mark a range in a text section for skipping
+ * This range is not going to be disassembled.
+ */
 static void
 mark_skip_range(struct intercept_desc *desc,
 	unsigned char *address, size_t size)
@@ -188,6 +192,13 @@ mark_skip_range(struct intercept_desc *desc,
 	desc->skip_range_count++;
 }
 
+/*
+ * has_no_syscall -
+ * Returns true if the given memory range definitely
+ * does not contain a syscall instruction.
+ * Returning false does not necessarily mean there is at least a syscall
+ * in the given memory range.
+ */
 static bool
 has_no_syscall(unsigned char *address, size_t size)
 {
@@ -199,6 +210,9 @@ has_no_syscall(unsigned char *address, size_t size)
 	return size <= 1;
 }
 
+/*
+ * mark_nop - mark an address in a text section as overwritable nop instruction
+ */
 static void
 mark_nop(struct intercept_desc *desc, unsigned char *address, size_t size)
 {
@@ -210,12 +224,18 @@ mark_nop(struct intercept_desc *desc, unsigned char *address, size_t size)
 	desc->nop_count++;
 }
 
+/*
+ * is_bit_set - check a bit in a bitmap
+ */
 static bool
 is_bit_set(const unsigned char *table, uint64_t offset)
 {
 	return table[offset / 8] & (1 << (offset % 8));
 }
 
+/*
+ * set_bit - set a bit in a bitmap
+ */
 static void
 set_bit(unsigned char *table, uint64_t offset)
 {
@@ -287,12 +307,22 @@ find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
 	}
 }
 
+/*
+ * has_pow2_count
+ * Checks if the number of patches in a struct intercept_desc
+ * is a power of two or not.
+ */
 static bool
 has_pow2_count(const struct intercept_desc *desc)
 {
 	return (desc->count & (desc->count - 1)) == 0;
 }
 
+/*
+ * add_new_patch
+ * Acquires a new patch entry, and allocates memory for it if
+ * needed.
+ */
 static struct patch_desc *
 add_new_patch(struct intercept_desc *desc)
 {
@@ -434,6 +464,12 @@ crawl_text(struct intercept_desc *desc)
 	intercept_disasm_destroy(context);
 }
 
+/*
+ * get_min_address
+ * Looks for the lowest address that might be mmap-ed. This is
+ * useful while looking for space for a trampoline table close
+ * to some text section.
+ */
 static uintptr_t
 get_min_address(void)
 {
@@ -457,6 +493,12 @@ get_min_address(void)
 	return min_address;
 }
 
+/*
+ * allocate_trampoline_table
+ * Allocates memory close to a text section (close enough
+ * to be reachable with 32 bit displacements in jmp instructions).
+ * Using mmap syscall with MAP_FIXED flag.
+ */
 void
 allocate_trampoline_table(struct intercept_desc *desc)
 {
@@ -539,6 +581,10 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	desc->next_trampoline = desc->trampoline_table;
 }
 
+/*
+ * cmp_skip_range
+ * Used as a callback with libc qsort.
+ */
 static int
 cmp_skip_range(const void *a, const void *b)
 {
@@ -546,6 +592,15 @@ cmp_skip_range(const void *a, const void *b)
 	    ((const struct range *)b)->address;
 }
 
+/*
+ * find_syscalls
+ * The routine that disassembles a text section. Here is some higher level
+ * logic for finding syscalls, finding overwritable NOP instructions, and
+ * finding out what instructions around syscalls can be overwritten or not.
+ * This code is intentionally independent of the disassembling library used,
+ * such specific code is in wrapper functions in the disasm_wrapper.c source
+ * file.
+ */
 void
 find_syscalls(struct intercept_desc *desc)
 {

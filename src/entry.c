@@ -44,6 +44,14 @@
 #include "libsyscall_intercept_hook_point.h"
 #include "intercept.h"
 
+/*
+ * entry_point - the main entry point for syscall_intercept
+ *
+ * The loader calls this routine once the library is loaded, except in certain
+ * cases when testing -- see asm_wrapper.c for more details.
+ * The actual work of hotpatching libraries is done the routine
+ * called intercept.
+ */
 static __attribute__((constructor)) void
 entry_point(void)
 {
@@ -51,6 +59,12 @@ entry_point(void)
 		intercept();
 }
 
+/*
+ * libc_hook_in_process_allowed - checks if a filter should be applied
+ * for processes. If the users requests it (via an environment variable) the
+ * syscall interception should not be performed in the current process.
+ * This is part of syscall_intercept's public API.
+ */
 int
 libc_hook_in_process_allowed(void)
 {

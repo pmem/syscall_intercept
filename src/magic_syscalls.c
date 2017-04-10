@@ -38,6 +38,13 @@
 #include "magic_syscalls.h"
 #include "intercept_util.h"
 
+/*
+ * handle_magic_syscalls - this routine performs two tasks:
+ * recognizes 'magic' syscalls, and, if executes commands based
+ * on messages from 'magic' syscalls.
+ * It returns zero if some magic syscall was handled,
+ * -1 otherwise (i.e.: the syscall shall be treated as a regular syscall).
+ */
 int
 handle_magic_syscalls(long nr, long arg0, long arg1,
 			long arg2, long arg3,

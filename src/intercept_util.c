@@ -102,7 +102,11 @@ xread(long fd, void *buffer, size_t size)
 		xabort();
 }
 
-
+/*
+ * intercept_setup_log
+ * Open (create) a log file. If requested, the current processes pid
+ * number is attached to the path.
+ */
 void
 intercept_setup_log(const char *path_base, const char *trunc)
 {
@@ -130,6 +134,13 @@ intercept_setup_log(const char *path_base, const char *trunc)
 		xabort();
 }
 
+/*
+ * print_open_flags
+ * Parses and prints open syscall specific flags to the buffer passed as the
+ * first argument.
+ * Returns a pointer pointing to the first char right after the just
+ * printed strings.
+ */
 static char *
 print_open_flags(char *buffer, int flags)
 {
@@ -221,6 +232,10 @@ print_open_flags(char *buffer, int flags)
 	return c;
 }
 
+/*
+ * fcntl_name
+ * Returns a pointer to string literal describing an fcntl command.
+ */
 static const char *
 fcntl_name(long cmd)
 {
@@ -264,12 +279,23 @@ fcntl_name(long cmd)
 #undef F
 }
 
+/*
+ * print_fcntl_cmd
+ * Prints an fcntl command in a human readable format to a buffer,
+ * advances to char pointer, and returns the pointer pointing right
+ * after the just printed text.
+ */
 static char *
 print_fcntl_cmd(char *buffer, long cmd)
 {
 	return buffer + sprintf(buffer, "%ld (%s)", cmd, fcntl_name(cmd));
 }
 
+/*
+ * print_clone_flags
+ * Prints SYS_clone specific flags into the buffer provided. Does not return
+ * the to pointer advanced while printing.
+ */
 static void
 print_clone_flags(char buffer[static 0x100], long flags)
 {
@@ -367,6 +393,16 @@ print_clone_flags(char buffer[static 0x100], long flags)
 /* 2nd argument of fcntl */
 #define F_FCNTL_CMD 7
 
+/*
+ * xprint_escape
+ * Prints a user provided buffer (in src) as printable characters (to dst).
+ * The zero_term argument specifies if it is a zero terminated buffer, e.g.
+ * used with SYS_open, SYS_stat, or a buffer with a specified length, e.g.
+ * used with SYS_write.
+ * No more than dst_size characters are written.
+ *
+ * Returns the pointer advanced while printing.
+ */
 static char *
 xprint_escape(char *restrict dst, const char *restrict src,
 			size_t dst_size, bool zero_term, size_t src_size)
@@ -432,6 +468,14 @@ xprint_escape(char *restrict dst, const char *restrict src,
 	return dst;
 }
 
+/*
+ * print_syscall
+ * A more general way of printing syscalls into a buffer. The args argument
+ * specifies the number of syscall arguments to be printed, the rest of the
+ * arguments specifiy their format.
+ *
+ * Returns a pointer pointing to right after the just printed text.
+ */
 static char *
 print_syscall(char *b, const char *name, unsigned args, ...)
 {
@@ -1181,6 +1225,11 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 	intercept_log(buffer, (size_t)(buf - buffer));
 }
 
+/*
+ * intercept_log
+ * Write a buffer to the log, with a specified length.
+ * No conversion is done to make it human readable.
+ */
 void
 intercept_log(const char *buffer, size_t len)
 {
@@ -1189,6 +1238,10 @@ intercept_log(const char *buffer, size_t len)
 		    (long)buffer, (long)len);
 }
 
+/*
+ * intercept_logs - intercept_log string
+ * Similar to the above routine, except for null terminated strings.
+ */
 void
 intercept_logs(const char *str)
 {
@@ -1205,6 +1258,10 @@ intercept_logs(const char *str)
 	    (long)buffer, (long)len);
 }
 
+/*
+ * intercept_log_close
+ * Closes the log, if one was open.
+ */
 void
 intercept_log_close(void)
 {

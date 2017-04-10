@@ -120,6 +120,9 @@ intercept_disasm_init(const unsigned char *begin, const unsigned char *end)
 	return context;
 }
 
+/*
+ * intercept_disasm_destroy -- see comments for above routine
+ */
 void
 intercept_disasm_destroy(struct intercept_disasm_context *context)
 {
@@ -128,6 +131,10 @@ intercept_disasm_destroy(struct intercept_disasm_context *context)
 	xmunmap(context, sizeof(*context));
 }
 
+/*
+ * check_op - checks a single operand of an instruction, looking
+ * for RIP relative addressing.
+ */
 static void
 check_op(struct intercept_disasm_result *result, cs_x86_op *op,
 		const unsigned char *code)
@@ -191,6 +198,11 @@ check_op(struct intercept_disasm_result *result, cs_x86_op *op,
 	}
 }
 
+/*
+ * intercept_disasm_next_instruction - Examines a single instruction
+ * in a text section. This is only a wrapper around capstone specific code,
+ * collecting data that can be used later to make decisions about patching.
+ */
 struct intercept_disasm_result
 intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 					const unsigned char *code)

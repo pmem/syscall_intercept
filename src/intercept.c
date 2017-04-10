@@ -62,11 +62,8 @@ int (*intercept_hook_point)(long syscall_number,
 			long arg4, long arg5,
 			long *result);
 
-static Dl_info self_dlinfo;
 static Dl_info libc_dlinfo;
 static Dl_info pthreads_dlinfo;
-
-static void find_self_dlinfo(void);
 
 static int find_glibc_dl(void);
 static int find_pthreads_dl(void);
@@ -88,12 +85,17 @@ intercept_routine(long nr, long arg0, long arg1,
 			long return_to_asm_wrapper,
 			long rsp_in_asm_wrapper);
 
+/*
+ * intercept - This is where the highest level logic of hotpatching
+ * is described. Upon startup, this routine looks for libc, and libpthreads.
+ * If these libraries are found in the process's address space, they are
+ * patched.
+ */
 void
 intercept(void)
 {
 	bool pthreads_available;
 
-	find_self_dlinfo();
 	glibc_patches.c_destination =
 	    (void *)((uintptr_t)&intercept_routine);
 	pthreads_patches.c_destination =
@@ -134,6 +136,11 @@ intercept(void)
 		activate_patches(&pthreads_patches);
 }
 
+/*
+ * log_header - part of logging
+ * This routine outputs some potentially useful information into the log
+ * file, which can be very useful during development.
+ */
 static void
 log_header(void)
 {
@@ -147,16 +154,9 @@ log_header(void)
 	intercept_log(self_decoder, sizeof(self_decoder) - 1);
 }
 
-static void
-find_self_dlinfo(void)
-{
-	if (!dladdr((void *)((uintptr_t)&intercept), &self_dlinfo))
-		syscall_no_intercept(SYS_exit_group, INTERCEPTOR_EXIT_CODE + 1);
-
-	if (self_dlinfo.dli_fbase == NULL)
-		syscall_no_intercept(SYS_exit_group, INTERCEPTOR_EXIT_CODE + 2);
-}
-
+/*
+ * find_glibc_dl - look for libc
+ */
 static int
 find_glibc_dl(void)
 {
@@ -174,6 +174,11 @@ find_glibc_dl(void)
 	return 0;
 }
 
+/*
+ * find_glibc_dl - look for libpthreads
+ * Returns zero if pthreads is found. It is required to have libpthreads
+ * loaded in order to intercept syscalls.
+ */
 static int
 find_pthreads_dl(void)
 {
@@ -200,6 +205,11 @@ find_pthreads_dl(void)
 	return 0;
 }
 
+/*
+ * xabort - speaks for itself
+ * Calling abort() in libc might result other syscalls being called
+ * by libc.
+ */
 void
 xabort(void)
 {
