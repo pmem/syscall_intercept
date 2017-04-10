@@ -53,5 +53,5 @@ execute_process(COMMAND
 	RESULT_VARIABLE MATCH_ERROR)
 
 if(MATCH_ERROR)
-	message(FATAL_ERROR "Uwaga! Log does not match! ${MATCH_ERROR}")
+	message(FATAL_ERROR "Log does not match! ${MATCH_ERROR}")
 endif()
