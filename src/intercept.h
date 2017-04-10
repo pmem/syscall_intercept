@@ -199,15 +199,6 @@ void activate_patches(struct intercept_desc *desc);
 
 void create_jump(unsigned char opcode, unsigned char *from, void *to);
 
-/*
- * Symbols in the glibc text section are expected to
- * start on 16 byte aligned addresses.
- */
-#define SALIGNMENT 16
-
-#define unreachable() __builtin_unreachable()
-#define return_address() __builtin_return_address(0)
-
 void intercept(void);
 
 #endif
