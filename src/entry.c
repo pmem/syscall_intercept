@@ -39,6 +39,7 @@
 #include <string.h>
 #include <syscall.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "libsyscall_intercept_hook_point.h"
 #include "intercept.h"
@@ -53,24 +54,38 @@ entry_point(void)
 int
 libc_hook_in_process_allowed(void)
 {
+	long fd;
+	long r;
+
 	char *c = getenv("LIBC_HOOK_CMDLINE_FILTER");
 	if (c == NULL)
 		return 1;
 
-	long fd = syscall_no_intercept(SYS_open, "/proc/self/cmdline",
+	size_t len = strlen(c) + 1;
+
+	fd = syscall_no_intercept(SYS_open, "/proc/self/cmdline",
 	    O_RDONLY, 0);
 	if (fd < 0)
 		return 0;
 
-	char buf[0x1000];
-	long r = syscall_no_intercept(SYS_read, fd, buf, sizeof(buf));
+	char buf[len];
+	r = syscall_no_intercept(SYS_lseek, fd, -len, SEEK_END);
+
+	/*
+	 * If SEEK_END failed, assume it happened because there are fewer than
+	 * len characters in the contents of "/proc/self/cmdline".
+	 */
+	if (r < 0)
+		return 1;
+
+	r = syscall_no_intercept(SYS_read, fd, buf, len);
 
 	syscall_no_intercept(SYS_close, fd);
 
 	if (r <= 1 || buf[0] == '\0')
 		return 0;
 
-	buf[sizeof(buf) - 1] = '\0';
+	buf[len - 1] = '\0';
 
 	/*
 	 * Find the last component of the path in "/proc/self/cmdline"
@@ -83,7 +98,7 @@ libc_hook_in_process_allowed(void)
 	 * "usr/bin/mkdir"
 	 */
 
-	char *name = buf + strlen(buf);
+	char *name = buf + len;
 
 	/* Find the last slash - search backwards from the end of the string */
 
