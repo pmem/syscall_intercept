@@ -209,7 +209,8 @@ xabort(void)
 /*
  * intercept_routine(...)
  * This is the function called from the asm wrappers,
- * forwarding the syscall parameters to pmemfile.
+ * forwarding the syscall parameters to a hook function
+ * if one is present.
  *
  * Arguments:
  * nr, arg0 - arg 5 -- syscall number
