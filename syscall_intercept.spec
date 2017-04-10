@@ -3,9 +3,9 @@ Version:	0.1
 Release:	0%{?dist}
 Summary:	System call intercepting library
 License:	BSD
-URL:		http://github.com/GBuella/syscall_intercept
+URL:		http://github.com/pmem/syscall_intercept
 Source0:	syscall_intercept-%{version}.tar.gz
-#Source0:	https://github.com/GBuella/syscall_intercept/archive/%{version}.tar.gz#/syscall_intercept-%{version}.tar.gz
+#Source0:	https://github.com/pmem/syscall_intercept/archive/%{version}.tar.gz#/syscall_intercept-%{version}.tar.gz
 
 BuildRequires:	glibc-devel
 BuildRequires:	cmake

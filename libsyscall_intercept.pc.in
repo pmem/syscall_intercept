@@ -6,7 +6,7 @@ includedir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@
 Name: libsyscall_intercept
 Description: libsyscall_intercept - system call intercepting library
 Version: @VERSION@
-URL: http://github.com/GBuella/syscall_intercept
+URL: http://github.com/pmem/syscall_intercept
 Requires.private: capstone
 Libs: -L@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBDIR@ -lsyscall_intercept
 Libs.private: -ldl
