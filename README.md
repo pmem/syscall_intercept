@@ -66,7 +66,8 @@ can be set via the *result pointer. In order to use the library,
 the intercepting code is expected to be loaded using the
 LD_PRELOAD feature provided by the system loader.
 
-All syscalls issued by libc are intercepted. In order to
+All syscalls issued by libc are intercepted. Syscalls made
+by code outside libc are not intercepted. In order to
 be able to issue syscalls that are not intercepted, a
 convenience function is provided by the library:
 ```c
