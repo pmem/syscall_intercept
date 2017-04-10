@@ -36,6 +36,8 @@ include(CheckFunctionExists)
 
 if (NOT CMAKE_VERSION VERSION_LESS 3.1.0)
 	set(CMAKE_C_STANDARD 99)
+	set(CMAKE_C_STANDARD_REQUIRED ON)
+	set(CMAKE_C_EXTENSIONS OFF)
 else()
 	check_c_compiler_flag(-std=c99 HAS_STDC99)
 	if(HAS_STDC99)
