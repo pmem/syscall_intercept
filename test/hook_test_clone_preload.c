@@ -45,8 +45,6 @@
 
 #include "libsyscall_intercept_hook_point.h"
 
-#include "hook_test_data.h"
-
 static int hook_counter;
 static bool deinit_called;
 
