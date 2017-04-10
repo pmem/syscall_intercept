@@ -70,6 +70,8 @@ libc_hook_in_process_allowed(void)
 	if (r <= 1 || buf[0] == '\0')
 		return 0;
 
+	buf[sizeof(buf) - 1] = '\0';
+
 	/*
 	 * Find the last component of the path in "/proc/self/cmdline"
 	 * The user might provide something like:
