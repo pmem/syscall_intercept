@@ -30,6 +30,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * This program can be used to test certain instruction level details
+ * of disassembling/patching the text section of a library.
+ * One needs an 'input' and an 'expected output' library as two
+ * shared objects in order to perform a comparision between what
+ * syscall_intercept's patching results in, and what the result should be.
+ * The pathes of these two libraries are expected to be supplied as command
+ * line arguments.
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -40,6 +50,17 @@
 
 #include "intercept.h"
 
+/*
+ * All test libraries are expected to provide the following symbols:
+ * trampoline_table - the mock trampoline table using while patching
+ * trampoline_table_end - used to calculate the size
+ *				of the mock trampoline table
+ * text_start, text_end - symbols that help this program find the
+ *				text section of the shared object
+ *
+ * The lib_data struct is used to describe a shared library loaded
+ * for testing.
+ */
 struct lib_data {
 	Dl_info info;
 	unsigned char *mock_trampoline_table;
@@ -49,6 +70,9 @@ struct lib_data {
 	size_t text_size;
 };
 
+/*
+ * xdlsym - no-fail wrapper around dlsym
+ */
 static void *
 xdlsym(void *lib, const char *name, const char *path)
 {
@@ -63,6 +87,12 @@ xdlsym(void *lib, const char *name, const char *path)
 	return symbol;
 }
 
+/*
+ * Load a shared object into this process's address space, and set up
+ * a lib_data struct to be used later while testing.
+ * This same routine is used to load an 'input' library, and
+ * an 'expected output' library.
+ */
 static struct lib_data
 load_test_lib(const char *path)
 {
@@ -110,6 +140,15 @@ load_test_lib(const char *path)
 	return data;
 }
 
+/*
+ * check_patch - binary comparision of text sections
+ * This routine compares each byte in the text section of the 'input'
+ * library and the 'expected output library' -- after the input library
+ * has been patched.
+ *
+ * If a difference is found, it prints both text sections, highlighting
+ * the differences.
+ */
 static void
 check_patch(const struct lib_data *in, const struct lib_data *out)
 {
@@ -142,6 +181,7 @@ main(int argc, char **argv)
 	if (argc < 3)
 		return EXIT_FAILURE;
 
+	/* first load both libraries */
 	struct lib_data lib_in = load_test_lib(argv[1]);
 	struct lib_data lib_out = load_test_lib(argv[2]);
 
@@ -152,20 +192,40 @@ main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	/*
+	 * Initialize syscall_intercept -- this initialization is usually
+	 * done in the routine called intercept in the intercept.c source
+	 * file.
+	 */
 	struct intercept_desc patches;
 	init_patcher();
 
+	/*
+	 * patches.c_destination - The routine that would be called from the
+	 * assembly wrapper templates.
+	 * This is never called while this testing, so the only thing
+	 * that matters here, is that it is a 2GB range of the generated
+	 * assembly wrappers.
+	 */
 	patches.c_destination = (void *)(uintptr_t)init_patcher;
+
+	/*
+	 * Some more information about the library to be patched, normally
+	 * these variables would refer to libc.
+	 */
 	patches.dlinfo = lib_in.info;
 	patches.uses_trampoline_table = true;
 	patches.trampoline_table = lib_in.mock_trampoline_table;
 	patches.trampoline_table_size = lib_in.mock_trampoline_table_size;
-	find_syscalls(&patches);
 	patches.next_trampoline = patches.trampoline_table;
+
+	/* perform the actualy patching */
+	find_syscalls(&patches);
 	create_patch_wrappers(&patches);
 	mprotect_asm_wrappers();
 	activate_patches(&patches);
 
+	/* compare the result of patching with the expected result */
 	check_patch(&lib_in, &lib_out);
 
 	return EXIT_SUCCESS;
