@@ -60,7 +60,7 @@ WORKDIR=/${PROJECT}
 
 # Run a container with
 #  - environment variables set (--env)
-#  - host directory containing nvml source mounted (-v)
+#  - host directory containing source mounted (-v)
 #  - working directory set (-w)
 sudo docker run --rm --privileged=true --name=$containerName -ti \
 	--env http_proxy=$http_proxy \

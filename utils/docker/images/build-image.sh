@@ -61,7 +61,7 @@ if [[ ! -f "Dockerfile.$os_ver" ]]; then
 	exit 1
 fi
 
-# Build a Docker image tagged with nvml/OS:VER
+# Build a Docker image tagged with PROJECT/OS:VER
 tag=${DOCKER_USER}/${PROJECT}_$1
 sudo docker build -t $tag \
 	--build-arg http_proxy=$http_proxy \
