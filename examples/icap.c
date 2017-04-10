@@ -59,7 +59,7 @@ static int hook(long syscall_number,
 
 		memcpy(buf_copy, (char *)arg1, size);
 
-		// Capitalize the letter 'i', for fun
+		/* Capitalize the letter 'i', for fun */
 		for (size_t i = 0; i < size; ++i) {
 			if (buf_copy[i] == 'i')
 				buf_copy[i] = 'I';
