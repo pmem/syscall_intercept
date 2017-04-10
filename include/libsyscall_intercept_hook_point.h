@@ -69,7 +69,7 @@ long syscall_no_intercept(long syscall_number, ...);
 
 /*
  * The syscall intercepting library checks for the
- * LIBC_HOOK_CMDLINE_FILTER environment variable, with which one can
+ * INTERCEPT_HOOK_CMDLINE_FILTER environment variable, with which one can
  * control in which processes interception should actually happen.
  * If the library is loaded in this process, but syscall interception
  * is not allowed, the libc_hook_in_process_allowed function returns zero,

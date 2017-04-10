@@ -83,7 +83,7 @@ intercept.log-123.
 *INTERCEPT_LOG_TRUNC -- when set to 0, the log file from INTERCEPT_LOG
 is not truncated.
 
-*LIBC_HOOK_CMDLINE_FILTER* -- when set, the library
+*INTERCEPT_HOOK_CMDLINE_FILTER* -- when set, the library
 checks the contents of the /proc/self/cmdline file.
 Hotpatching, and syscall intercepting is only done, if the
 last component of the first zero terminated string in
@@ -249,10 +249,10 @@ with some other libc implementations as well
 # Debugging: #
 Besides logging, the most important factor during debugging is to make
 sure the syscalls in the debugger are not intercepted. To achieve this, use
-the LIBC_HOOK_CMDLINE_FILTER variable described above.
+the INTERCEPT_HOOK_CMDLINE_FILTER variable described above.
 
 ```
-LIBC_HOOK_CMDLINE_FILTER=ls \
+INTERCEPT_HOOK_CMDLINE_FILTER=ls \
 	LD_PRELOAD=libsyscall_intercept.so \
 	gdb ls
 ```

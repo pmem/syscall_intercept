@@ -57,7 +57,7 @@ libc_hook_in_process_allowed(void)
 	long fd;
 	long r;
 
-	char *c = getenv("LIBC_HOOK_CMDLINE_FILTER");
+	char *c = getenv("INTERCEPT_HOOK_CMDLINE_FILTER");
 	if (c == NULL)
 		return 1;
 
@@ -91,7 +91,7 @@ libc_hook_in_process_allowed(void)
 	 * Find the last component of the path in "/proc/self/cmdline"
 	 * The user might provide something like:
 	 *
-	 * LIBC_HOOK_CMDLINE_FILTER=mkdir
+	 * INTERCEPT_HOOK_CMDLINE_FILTER=mkdir
 	 *
 	 * in which case we should compare the string "mkdir" with the
 	 * last component of a path, e.g.:
