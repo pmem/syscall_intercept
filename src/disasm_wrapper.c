@@ -54,8 +54,16 @@ struct intercept_disasm_context {
 	const unsigned char *end;
 };
 
+/*
+ * nop_vsnprintf - A dummy function, serving as a callback called by
+ * the capstone implementation. The syscall_intercept library never makes
+ * any use of string representation of instructions, but there seems to no
+ * trivial way to use dissassemlbe using capstone without it spending time
+ * on printing syscalls. This seeems to be the most that can be done in
+ * this regard i.e. providing capstone with nop implementation of vsnprintf.
+ */
 static int
-tej_vsnprintf()
+nop_vsnprintf()
 {
 	return 0;
 }
@@ -93,12 +101,16 @@ intercept_disasm_init(const unsigned char *begin, const unsigned char *end)
 	if (cs_option(context->handle, CS_OPT_DETAIL, CS_OPT_ON) != 0)
 		xabort();
 
+	/*
+	 * Overriding the printing routine used by capstone,
+	 * see comments above about nop_vsnprintf.
+	 */
 	cs_opt_mem x = {
 		.malloc = malloc,
 		.free = free,
 		.calloc = calloc,
 		.realloc = realloc,
-		.vsnprintf = tej_vsnprintf};
+		.vsnprintf = nop_vsnprintf};
 	if (cs_option(context->handle, CS_OPT_MEM, (size_t)&x) != 0)
 		xabort();
 
