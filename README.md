@@ -1,6 +1,6 @@
 # syscall_intercept
 
-Temporary home of libsyscall_intercept
+Userspace syscall intercepting library.
 This repository is soon going to be deleted
 
 # How to build #
@@ -43,7 +43,7 @@ for hooking Linux system calls in user space. This is achieved
 by hotpatching the machine code of the standard C library in the
 memory of a process. The user of this library can provide the
 functionality of almost any syscall in user space, using the very
-simple API spcified in the libsyscall_intercept\_hook\_point.h header file:
+simple API specified in the libsyscall_intercept\_hook\_point.h header file:
 ```c
 int (*intercept_hook_point)(long syscall_number,
 			long arg0, long arg1,
@@ -53,7 +53,7 @@ int (*intercept_hook_point)(long syscall_number,
 ```
 
 The user of the library shall assign to the variable called
-intercept_hook_point a pointer the address of a callback function.
+intercept_hook_point a pointer to the address of a callback function.
 A non-zero return value returned by the callback function is used
 to signal to the intercepting library, that the specific system
 call was ignored by the user, and the original syscall should be
@@ -240,7 +240,7 @@ Before:                         After:
 # Limitations: #
 * Only Linux is supported
 * Only x86\_64 is supported
-* Only tested with glibc, altought perhaps it works
+* Only tested with glibc, although perhaps it works
 with some other libc implementations as well
 * There are known issues with the following syscalls:
   * clone
