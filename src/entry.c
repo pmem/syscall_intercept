@@ -100,7 +100,7 @@ libc_hook_in_process_allowed(void)
 
 	char *name = buf + len;
 
-	/* Find the last slash - search backwards from the end of the string */
+	/* find the last slash - search backwards from the end of the string */
 
 	while (*name != '/' && name != buf)
 		--name;
