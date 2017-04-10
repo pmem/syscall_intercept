@@ -488,7 +488,7 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	if ((uintptr_t)guess < get_min_address())
 		guess = (void *)get_min_address();
 
-	size = 64 * 0x1000; /* TODO: don't just guess */
+	size = 64 * 0x1000; /* XXX: don't just guess */
 
 	if ((maps = fopen("/proc/self/maps", "r")) == NULL)
 		xabort();

@@ -68,7 +68,7 @@ hook(long syscall_number,
 	if (syscall_number == SYS_clone)
 		hook_counter++;
 
-	/* TODO: test post clone hook, when available */
+	/* XXX: test post clone hook, when available */
 
 	return 1;
 }

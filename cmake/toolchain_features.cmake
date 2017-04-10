@@ -84,7 +84,7 @@ endif()
 
 
 # Hack, adding _GNU_SOURCE macro is just hardwired here for now.
-# Todo: only do it when building with glibc.
+# XXX: only do it when building with glibc.
 # The only possible target in the foreseeable future is GNU/Linux x86_64
 # so it doesn't matter.
 # The only library extension used is dlinfo.
