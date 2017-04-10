@@ -62,6 +62,11 @@ void *xmmap_anon(size_t size);
 void *xmremap(void *addr, size_t old, size_t new);
 
 /*
+ * xmunmap - no fail munmap
+ */
+void xmunmap(void *addr, size_t len);
+
+/*
  * xlseek - no fail lseek
  *
  * Not intercepted - does not call libc.

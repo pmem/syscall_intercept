@@ -76,6 +76,13 @@ xmremap(void *addr, size_t old, size_t new)
 	return addr;
 }
 
+void
+xmunmap(void *addr, size_t len)
+{
+	if (syscall_no_intercept(SYS_munmap, addr, len) != 0)
+		xabort();
+}
+
 long
 xlseek(long fd, unsigned long off, int whence)
 {

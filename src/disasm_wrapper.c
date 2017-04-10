@@ -125,7 +125,7 @@ intercept_disasm_destroy(struct intercept_disasm_context *context)
 {
 	cs_free(context->insn, 1);
 	cs_close(&context->handle);
-	(void) syscall_no_intercept(SYS_munmap, context, sizeof(*context));
+	xmunmap(context, sizeof(*context));
 }
 
 static void
