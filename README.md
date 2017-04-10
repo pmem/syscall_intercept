@@ -33,7 +33,9 @@ make test
 #include <libsyscall_intercept_hook_point.h>
 ```
 ```sh
-cc -lsyscall_intercept -fpic -shared
+cc -lsyscall_intercept -fpic -shared source.c -o preloadlib.so
+
+LD_PRELOAD=preloadlib.so ./application
 ```
 
 ##### Description: #####
