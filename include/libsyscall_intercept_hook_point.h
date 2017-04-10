@@ -40,7 +40,7 @@
  *
  * The syscall_number, and the six args describe the syscall
  * currently being intercepted.
- * For now, a non-zero return value means libsyscall_intercept
+ * A non-zero return value means libsyscall_intercept
  * should execute the original syscall, use its result. A zero return value
  * means libsyscall_intercept should not execute the syscall, and
  * use the integer stored to *result as the result of the syscall
