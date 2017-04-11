@@ -1,6 +1,6 @@
 Name:		syscall_intercept
 Version:	0.1
-Release:	0%{?dist}
+Release:	1%{?dist}
 Summary:	System call intercepting library
 License:	BSD
 URL:		http://github.com/pmem/syscall_intercept
