@@ -262,4 +262,3 @@ INTERCEPT_HOOK_CMDLINE_FILTER=ls \
 
 With this filtering, the intercepting library is not activated in the gdb
 process itself.
-
