@@ -66,7 +66,7 @@ static Dl_info libc_dlinfo;
 static Dl_info pthreads_dlinfo;
 
 static int find_glibc_dl(void);
-static int find_pthreads_dl(void);
+static int find_libpthread_dl(void);
 
 static struct intercept_desc glibc_patches;
 static struct intercept_desc pthreads_patches;
@@ -87,7 +87,7 @@ intercept_routine(long nr, long arg0, long arg1,
 
 /*
  * intercept - This is where the highest level logic of hotpatching
- * is described. Upon startup, this routine looks for libc, and libpthreads.
+ * is described. Upon startup, this routine looks for libc, and libpthread.
  * If these libraries are found in the process's address space, they are
  * patched.
  */
@@ -118,7 +118,7 @@ intercept(void)
 	allocate_trampoline_table(&glibc_patches);
 	create_patch_wrappers(&glibc_patches);
 
-	pthreads_available = (find_pthreads_dl() == 0);
+	pthreads_available = (find_libpthread_dl() == 0);
 
 	if (pthreads_available) {
 		pthreads_patches.dlinfo = pthreads_dlinfo;
@@ -127,7 +127,7 @@ intercept(void)
 		create_patch_wrappers(&pthreads_patches);
 		activate_patches(&pthreads_patches);
 	} else {
-		intercept_logs("libpthreads not found");
+		intercept_logs("libpthread not found");
 	}
 
 	mprotect_asm_wrappers();
@@ -175,12 +175,12 @@ find_glibc_dl(void)
 }
 
 /*
- * find_glibc_dl - look for libpthreads
- * Returns zero if pthreads is found. It is required to have libpthreads
+ * find_libpthread_dl - look for libpthread
+ * Returns zero if pthreads is found. It is required to have libpthread
  * loaded in order to intercept syscalls.
  */
 static int
-find_pthreads_dl(void)
+find_libpthread_dl(void)
 {
 	/*
 	 * Assume the library that provides pthread_create is libpthread.

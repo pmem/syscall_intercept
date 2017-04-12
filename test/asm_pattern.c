@@ -36,7 +36,7 @@
  * One needs an 'input' and an 'expected output' library as two
  * shared objects in order to perform a comparision between what
  * syscall_intercept's patching results in, and what the result should be.
- * The pathes of these two libraries are expected to be supplied as command
+ * The paths of these two libraries are expected to be supplied as command
  * line arguments.
  */
 
@@ -141,7 +141,7 @@ load_test_lib(const char *path)
 }
 
 /*
- * check_patch - binary comparision of text sections
+ * check_patch - binary comparison of text sections
  * This routine compares each byte in the text section of the 'input'
  * library and the 'expected output library' -- after the input library
  * has been patched.

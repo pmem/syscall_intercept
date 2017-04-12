@@ -80,7 +80,7 @@ call was ignored by the user, and the original syscall should be
 executed. A zero return value signals that the user takes over the
 system call. In this case, the result of the system call
 (the value stored in the RAX register after the system call)
-can be set via the *result pointer. In order to use the library,
+can be set via the \*result pointer. In order to use the library,
 the intercepting code is expected to be loaded using the
 LD_PRELOAD feature provided by the system loader.
 

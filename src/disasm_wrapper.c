@@ -58,8 +58,8 @@ struct intercept_disasm_context {
  * nop_vsnprintf - A dummy function, serving as a callback called by
  * the capstone implementation. The syscall_intercept library never makes
  * any use of string representation of instructions, but there seems to no
- * trivial way to use dissassemlbe using capstone without it spending time
- * on printing syscalls. This seeems to be the most that can be done in
+ * trivial way to use dissassemble using capstone without it spending time
+ * on printing syscalls. This seems to be the most that can be done in
  * this regard i.e. providing capstone with nop implementation of vsnprintf.
  */
 static int
