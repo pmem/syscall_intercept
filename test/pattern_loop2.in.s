@@ -29,6 +29,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#
+# Two syscall instructions in the test text, one of them followed by a
+# loop instruction. The patching must recognize the destination of the
+# loop instruction (at label '0:') can not be merged with the previous
+# instruction.
+# Also, the loop instruction can not be relocated.
+
 .intel_syntax noprefix
 
 .global text_start;
@@ -39,11 +46,11 @@
 .text
 
 text_start:
-		xor     rax, rax
+		xor     rax, rax # this instruction should be left unchanged
 0:		mov     rax, 1
 		syscall
 		cmp     rax, -1
 		mov     rax, 2
 		syscall
-		loop    0b
+		loop    0b # this one as well
 text_end:

@@ -29,6 +29,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#
+# A single syscall instruction, with a suitable NOP close to it. The patching
+# code is expected to recognize, that altering the instructions right next to
+# the syscall is not necessary. The 2 byte syscall instruction can be
+# overwritten with a jmp instruction of the same size, and a jump with a longer
+# range can be inserted into the unused bytes in the nop instruction.
+
 .intel_syntax noprefix
 
 .global text_start;
@@ -44,14 +51,14 @@
 text_start:
 		xor     rax, rax
 		mov     rax, 1
-		syscall
+		syscall        # should be replaced with a jmp having 8bit disp.
 		cmp     rax, -1
 		mov     rax, 2
 		inc     rax
 		.byte   0x0f           # nop     DWORD PTR [rax+rax*1+0x0]
-		.byte   0x1f
-		.byte   0x84
-		.byte   0x00
+		.byte   0x1f           # this nop should be overwritten
+		.byte   0x84           # to provide the jump that actually
+		.byte   0x00           # jumps out of the text segment
 		.byte   0x00
 		.byte   0x00
 		.byte   0x00

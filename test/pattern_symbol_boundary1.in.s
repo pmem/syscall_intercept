@@ -29,6 +29,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#
+# see pattern_symbol_boundary0.in.s
+#
+# This test has two overlapping symbols in the text, it should not
+# confuse the patcher.
+
 .intel_syntax noprefix
 
 .global text_start;

@@ -29,6 +29,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#
+# A simple test, the text contains no syscall instructions, patching
+# is expected to alter no bytes whatsoever.
+
 .intel_syntax noprefix
 
 .global text_start;

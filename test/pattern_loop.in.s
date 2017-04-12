@@ -29,6 +29,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#
+# A test with a loop instruction following a syscall instruction. The
+# patching code is expected to recognize that the loop instruction can
+# not be relocated.
+
 .intel_syntax noprefix
 
 .global text_start;
@@ -45,5 +50,5 @@ text_start:
 		cmp     rax, -1
 		mov     rax, 2
 		syscall
-		loop    0b
+		loop    0b # this instruction should not be touched
 text_end:

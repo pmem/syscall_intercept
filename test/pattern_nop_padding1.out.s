@@ -29,6 +29,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# see pattern_nop_padding1.in.s
+
 .intel_syntax noprefix
 
 .global text_start;
@@ -43,14 +45,14 @@
 
 text_start:
 		xor     rax, rax
-		jmp     1f
+		jmp     1f    # where a nop was originally
 0:		jmp     dst0
 		.byte   0x00
 1:		inc     rax	
 		inc     rax	
 		inc     rax	
 		mov     rax, 1
-		jmp     0b
+		jmp     0b      # where a syscall was originally
 		cmp     rax, -1
 		mov     rax, 2
 		jmp     dst1

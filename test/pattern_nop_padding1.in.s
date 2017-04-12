@@ -29,6 +29,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# see pattern_nop_padding0.in.s
+#
+# This time the nop instruction is at a lower address than the syscall
+# instruction. There is another syscall as well, that one is expected to be
+# patched using the default method, i.e. relocating some of the surrounding
+# instructions.
+
 .intel_syntax noprefix
 
 .global text_start;

@@ -29,6 +29,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# see pattern_nop_padding1.in.s
+#
+# The same test as in pattern_nop_padding1, except using a different nop
+# instruction (notice the 'cs:' segment specifier).
+
 .intel_syntax noprefix
 
 .global text_start;

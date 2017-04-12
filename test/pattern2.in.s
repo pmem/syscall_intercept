@@ -29,6 +29,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#
+# A simple test with two syscall instructions. The resulting patched
+# text is expected to have two jump instructions, to two different
+# entries in the mock trampoline table.
+
 .intel_syntax noprefix
 
 .global text_start;

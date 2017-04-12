@@ -29,6 +29,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# see pattern_nop_padding0.in.s
+
 .intel_syntax noprefix
 
 .global text_start;
@@ -44,12 +46,12 @@
 text_start:
 		xor     rax, rax
 		mov     rax, 1
-		jmp     0f
+		jmp     0f      # short jump to the newly created jmp below
 		cmp     rax, -1
 		mov     rax, 2
 		inc     rax
-		jmp     1f
-0:		jmp     dst0
-		.byte   0x00
+		jmp     1f      # the nop started here, skip to the next instruction
+0:		jmp     dst0    # a jump with 32 bit displacement, starting at the
+		.byte   0x00    # second byte of the original nop instruction
 1:		inc     rax
 text_end:

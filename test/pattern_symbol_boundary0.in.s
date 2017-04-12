@@ -29,6 +29,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#
+# One of the syscall instructions in this test is a jump destination, therefore
+# the patching code is expected to recognize that it can not be merged with
+# the previous instruction. In order to recognize this, it is necessary to
+# parse a symbol table of the object file being patched.
+
 .intel_syntax noprefix
 
 .global text_start;
