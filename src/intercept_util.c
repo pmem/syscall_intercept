@@ -128,6 +128,8 @@ intercept_setup_log(const char *path_base, const char *trunc)
 	if (trunc && trunc[0] == '0')
 		flags &= ~O_TRUNC;
 
+	intercept_log_close();
+
 	log_fd = syscall_no_intercept(SYS_open, path, flags, 0700);
 
 	if (log_fd < 0)

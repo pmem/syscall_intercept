@@ -32,6 +32,9 @@
 
 # XXX ask for a unique tempfile from cmake for LOG_OUTPUT
 set(LOG_OUTPUT .log.${TEST_NAME})
+if(HAS_SECOND_LOG)
+	set(SECOND_LOG_OUTPUT .log.2.${TEST_NAME})
+endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${LOG_OUTPUT})
 
@@ -39,8 +42,13 @@ set(ENV{LD_PRELOAD} ${LIB_FILE})
 
 message("Executing: LD_PRELOAD=${LIB_FILE} ${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT}")
 
-execute_process(COMMAND ${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT}
-	RESULT_VARIABLE HAD_ERROR)
+if(HAS_SECOND_LOG)
+	execute_process(COMMAND ${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT} ${SECOND_LOG_OUTPUT}
+		RESULT_VARIABLE HAD_ERROR)
+else()
+	execute_process(COMMAND ${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT}
+		RESULT_VARIABLE HAD_ERROR)
+endif()
 
 set(ENV{LD_PRELOAD} "")
 
@@ -54,4 +62,13 @@ execute_process(COMMAND
 
 if(MATCH_ERROR)
 	message(FATAL_ERROR "Log does not match! ${MATCH_ERROR}")
+endif()
+
+if(HAS_SECOND_LOG)
+	execute_process(COMMAND
+		${MATCH_SCRIPT} -o ${SECOND_LOG_OUTPUT} ${SECOND_MATCH_FILE}
+		RESULT_VARIABLE MATCH_ERROR)
+	if(MATCH_ERROR)
+		message(FATAL_ERROR "Second log does not match! ${MATCH_ERROR}")
+	endif()
 endif()

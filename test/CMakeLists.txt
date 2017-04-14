@@ -81,7 +81,9 @@ add_test(NAME "logging"
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
 	-DTEST_PROG=$<TARGET_FILE:logging_test>
 	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
+	-DHAS_SECOND_LOG=1
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
+	-DSECOND_MATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0_child.log.match
 	${CHECK_LOG_COMMON_ARGS})
 
 add_executable(hook_test hook_test.c)
@@ -105,4 +107,6 @@ add_test(NAME "hook_clone"
 	-DTEST_PROG=$<TARGET_FILE:logging_test>
 	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
+	-DHAS_SECOND_LOG=1
+	-DSECOND_MATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0_child.log.match
 	${CHECK_LOG_COMMON_ARGS})

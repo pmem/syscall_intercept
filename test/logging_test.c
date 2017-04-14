@@ -44,6 +44,9 @@
 
 #include "magic_syscalls.h"
 
+static const char *log_parent;
+static const char *log_child;
+
 static void *
 busy(void *arg)
 {
@@ -55,11 +58,9 @@ busy(void *arg)
 	if ((f = fopen(path, "r")) == NULL)
 		exit(EXIT_FAILURE);
 
-	usleep(10000);
 	s = fread(buffer, 1, sizeof(buffer), f);
 	if (s < 4)
 		exit(EXIT_FAILURE);
-	usleep(10000);
 	fwrite(buffer, 1, 1, stdout);
 	fflush(stdout);
 	fwrite(buffer, 2, 1, stdout);
@@ -67,12 +68,12 @@ busy(void *arg)
 	fwrite(buffer, 3, 1, stdout);
 	fflush(stdout);
 	putchar('\n');
-	usleep(10000);
 	fflush(stdout);
 	puts("Done being busy here");
 	fflush(stdout);
-	usleep(10000);
 	fclose(f);
+
+	magic_syscall_stop_log();
 
 	return NULL;
 }
@@ -80,12 +81,16 @@ busy(void *arg)
 int
 main(int argc, char *argv[])
 {
-	if (argc < 3)
+	if (argc < 4)
 		return EXIT_FAILURE;
 
-	magic_syscall_start_log(argv[2], "1");
+	log_parent = argv[2];
+	log_child = argv[3];
+
+	magic_syscall_start_log(log_parent, "1");
 
 	if (fork() == 0) {
+		magic_syscall_start_log(log_child, "1");
 		busy(argv[1]);
 	} else {
 		wait(NULL);
