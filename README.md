@@ -57,8 +57,8 @@ int (*intercept_hook_point)(long syscall_number,
 The user of the library shall assign to the variable called
 intercept_hook_point a pointer to the address of a callback function.
 A non-zero return value returned by the callback function is used
-to signal to the intercepting library, that the specific system
-call was ignored by the user, and the original syscall should be
+to signal to the intercepting library that the specific system
+call was ignored by the user and the original syscall should be
 executed. A zero return value signals that the user takes over the
 system call. In this case, the result of the system call
 (the value stored in the RAX register after the system call)
