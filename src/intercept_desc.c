@@ -34,6 +34,7 @@
 #include <syscall.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -546,10 +547,10 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	unsigned char *guess; /* Where we would like to allocate the table */
 	size_t size;
 
-	if ((uintptr_t)desc->text_end < (1u << 31)) {
+	if ((uintptr_t)desc->text_end < INT32_MAX) {
 		guess = (void *)0;
 	} else {
-		guess = desc->text_end - (1u << 31);
+		guess = desc->text_end - INT32_MAX;
 		guess = (unsigned char *)(((uintptr_t)guess)
 				& ~((uintptr_t)(0xfff)));
 	}
@@ -587,7 +588,7 @@ allocate_trampoline_table(struct intercept_desc *desc)
 		 */
 		guess = end;
 
-		if (guess + size >= desc->text_start + (1u << 31)) {
+		if (guess + size >= desc->text_start + INT32_MAX) {
 			/* Too far away */
 			xabort();
 		}
