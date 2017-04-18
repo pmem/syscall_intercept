@@ -32,6 +32,14 @@
 cmake_minimum_required(VERSION 2.8.7)
 project(syscall_intercept C ASM)
 
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+# Setting CMAKE_DISABLE_IN_SOURCE_BUILD to ON should
+# disallow in source builds, but in practice it doesn't seem
+# to disallow it. Check the paths as well:
+if(",${CMAKE_SOURCE_DIR}," STREQUAL ",${CMAKE_BINARY_DIR},")
+	message(FATAL_ERROR "In-source builds are not supported.")
+endif()
+
 set(SYSCALL_INTERCEPT_VERSION_MAJOR 0)
 set(SYSCALL_INTERCEPT_VERSION_MINOR 1)
 set(SYSCALL_INTERCEPT_VERSION_PATCH 0)
