@@ -71,5 +71,4 @@ text_start:
 		cmp     rax, -1
 		mov     rax, 2
 		inc     rax
-
 text_end:
