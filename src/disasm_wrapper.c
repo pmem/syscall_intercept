@@ -207,8 +207,6 @@ struct intercept_disasm_result
 intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 					const unsigned char *code)
 {
-	(void) context;
-
 	struct intercept_disasm_result result = {0, };
 	const unsigned char *start = code;
 	size_t size = (size_t)(context->end - code + 1);
