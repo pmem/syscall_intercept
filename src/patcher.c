@@ -316,7 +316,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 		} else {
 			/*
 			 * No padding space is available, so check the
-			 * instructions surrounding the syscall instrucion.
+			 * instructions surrounding the syscall instruction.
 			 * If they can be relocated, then they can be
 			 * overwritten. Of course some instrucions depend
 			 * on the value of the RIP register, these can not
