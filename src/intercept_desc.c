@@ -387,6 +387,7 @@ crawl_text(struct intercept_desc *desc)
 	 */
 	struct intercept_disasm_result prevs[3] = {{0, }};
 
+	/* an iterator pointing to a skip range */
 	struct range *skip = desc->skip_ranges;
 
 	/*
@@ -400,15 +401,25 @@ crawl_text(struct intercept_desc *desc)
 	    intercept_disasm_init(desc->text_start, desc->text_end);
 
 	while (code <= desc->text_end) {
-
-
+		/*
+		 * First, check if the code pointer points to a range
+		 * that can be skipped (as there can not be a syscall
+		 * instruction in such a range).
+		 */
 		while (skip->address != NULL && code > skip->address)
-			++skip;
+			++skip; /* update the iterator for skip ranges */
 
 		if (code == skip->address) {
+			/*
+			 * When at the start of a skippable range, just
+			 * advance the code pointer - without disassembling
+			 * anything in this range.
+			 */
 			code += skip->size;
 			continue;
 		}
+
+		assert(skip->address == NULL || code < skip->address);
 
 		struct intercept_disasm_result result;
 
