@@ -755,6 +755,15 @@ activate_patches(struct intercept_desc *desc)
 		    patch->dst_jmp_patch > desc->text_end)
 			xabort();
 
+		/*
+		 * The dst_jmp_patch pointer contains the address where
+		 * the actual jump instruction escaping the patched text
+		 * segment should be written.
+		 * This is either at the place of the original syscall
+		 * instruction, or at some usable padding space close to
+		 * it (an overwritable NOP instruction).
+		 */
+
 		if (desc->uses_trampoline_table) {
 			/*
 			 * First jump to the trampoline table, which
@@ -762,10 +771,15 @@ activate_patches(struct intercept_desc *desc)
 			 * jump to the asm_wrapper.
 			 */
 			check_trampoline_usage(desc);
+
+			/* jump - escape the text segment */
 			create_jump(JMP_OPCODE,
 				patch->dst_jmp_patch, desc->next_trampoline);
+
+			/* jump - escape the 2 GB range of the text segment */
 			create_absolute_jump(
 				desc->next_trampoline, patch->asm_wrapper);
+
 			desc->next_trampoline += TRAMPOLINE_SIZE;
 		} else {
 			create_jump(JMP_OPCODE,
@@ -773,8 +787,28 @@ activate_patches(struct intercept_desc *desc)
 		}
 
 		if (patch->uses_nop_trampoline) {
+			/*
+			 * Create a mini trampoline jump.
+			 * The first two bytes of the NOP instruction are
+			 * overwritten by a short jump instruction
+			 * (with 8 bit displacement), to make sure whenever
+			 * this the execution reaches the address where this
+			 * NOP resided originally, it continues uninterrupted.
+			 * The rest of the bytes occupied by this instruction
+			 * are used as an mini extra trampoline table.
+			 *
+			 * See also: the is_overwritable_nop function in
+			 * the intercept_desc.c source file.
+			 */
+
+			/* jump from syscall to mini trampoline */
 			create_short_jump(patch->syscall_addr,
 			    patch->dst_jmp_patch);
+
+			/*
+			 * Short jump to next instruction, skipping the newly
+			 * created trampoline jump.
+			 */
 			create_short_jump(patch->nop_trampoline.address,
 			    after_nop(&patch->nop_trampoline));
 		} else {

@@ -360,6 +360,35 @@ add_new_patch(struct intercept_desc *desc)
 }
 
 /*
+ * is_overwritable_nop
+ * Check if an instruction just disassembled is a NOP that can be
+ * used for placing an extra jump instruction into it.
+ * See the nop_trampoline usage in the patcher.c source file.
+ * This instruction is usable only if it occupies at least seven bytes.
+ * Two are needed for a short jump, and another 5 bytes for a trampoline
+ * jump with 32 bit displacement.
+ *
+ * As in (where XXXX represents a 32 bit displacement):
+ *                                Before      After
+ *                                _______     _______
+ * address of NOP instruction ->  | NOP |     | JMP | <- jumps to next
+ *                                |     |     | +8  |     instruction
+ *                                |     |     | JMP | <- 5 bytes of payload
+ *                                |     |     |  X  |
+ *                                |     |     |  X  |
+ *                                |     |     |  X  |
+ *                                |     |     |  X  |
+ *                                |     |     |     |
+ * address of next instruction -> -------     -------
+ *
+ */
+static bool
+is_overwritable_nop(struct intercept_disasm_result ins)
+{
+	return ins.is_nop && ins.length >= 2 + 5;
+}
+
+/*
  * crawl_text
  * Crawl the text section, disassembling it all.
  * This routine collects information about potential addresses to patch.
@@ -434,7 +463,7 @@ crawl_text(struct intercept_desc *desc)
 		if (result.has_ip_relative_opr)
 			mark_jump(desc, result.rip_ref_addr);
 
-		if (result.is_nop && result.length >= 7)
+		if (is_overwritable_nop(result))
 			mark_nop(desc, code, result.length);
 
 		/*
