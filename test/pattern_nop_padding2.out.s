@@ -50,9 +50,9 @@ text_start:
 		.byte   0x00
 		.byte   0x00
 		.byte   0x00
-1:		inc     rax	
-		inc     rax	
-		inc     rax	
+1:		inc     rax
+		inc     rax
+		inc     rax
 		mov     rax, 1
 		jmp     0b
 		cmp     rax, -1

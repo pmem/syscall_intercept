@@ -48,9 +48,9 @@ text_start:
 		jmp     1f    # where a nop was originally
 0:		jmp     dst0
 		.byte   0x00
-1:		inc     rax	
-		inc     rax	
-		inc     rax	
+1:		inc     rax
+		inc     rax
+		inc     rax
 		mov     rax, 1
 		jmp     0b      # where a syscall was originally
 		cmp     rax, -1
