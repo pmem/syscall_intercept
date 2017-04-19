@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2017, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,56 +30,32 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBSYSCALL_INTERCEPT_HOOK_POINT_H
-#define LIBSYSCALL_INTERCEPT_HOOK_POINT_H
-
 /*
- * The inteface for using the intercepting library.
- * This callback function should be implemented by
- * the code using the library.
+ * check if the public header file is useable from C++
  *
- * The syscall_number, and the six args describe the syscall
- * currently being intercepted.
- * A non-zero return value means libsyscall_intercept
- * should execute the original syscall, use its result. A zero return value
- * means libsyscall_intercept should not execute the syscall, and
- * use the integer stored to *result as the result of the syscall
- * to be returned in RAX to libc.
+ * These are mock definitions of symbols used in the
+ * cpp_compile_test.cc C++ source file. This way, it is verified that a C
+ * implementation can be linked correctly with a C++ code using the header,
+ * before building syscall_intercept.
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "libsyscall_intercept_hook_point.h"
 
-extern int (*intercept_hook_point)(long syscall_number,
+int (*intercept_hook_point)(long syscall_number,
 			long arg0, long arg1,
 			long arg2, long arg3,
 			long arg4, long arg5,
 			long *result);
 
-/*
- * syscall_no_intercept - syscall without interception
- *
- * Call syscall_no_intercept to make syscalls
- * from the interceptor library, once glibc is already patched.
- * Don't use the syscall function from glibc, that
- * would just result in an infinite recursion.
- */
-long syscall_no_intercept(long syscall_number, ...);
-
-/*
- * The syscall intercepting library checks for the
- * INTERCEPT_HOOK_CMDLINE_FILTER environment variable, with which one can
- * control in which processes interception should actually happen.
- * If the library is loaded in this process, but syscall interception
- * is not allowed, the libc_hook_in_process_allowed function returns zero,
- * otherwise, it returns one. The user of the library can use it to notice
- * such situations, where the code is loaded, but no syscall will be hooked.
- */
-int libc_hook_in_process_allowed(void);
-
-#ifdef __cplusplus
+long
+syscall_no_intercept(long syscall_number, ...)
+{
+	(void) syscall_number;
+	return 0;
 }
-#endif
 
-#endif
+int
+libc_hook_in_process_allowed(void)
+{
+	return 0;
+}

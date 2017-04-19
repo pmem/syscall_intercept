@@ -30,7 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 2.8.7)
-project(syscall_intercept C ASM)
+project(syscall_intercept C CXX ASM)
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 # Setting CMAKE_DISABLE_IN_SOURCE_BUILD to ON should
@@ -88,6 +88,8 @@ set_target_properties(syscall_intercept_shared
 	PROPERTIES VERSION ${SYSCALL_INTERCEPT_VERSION}
 		   SOVERSION ${SYSCALL_INTERCEPT_VERSION_MAJOR})
 
+add_executable(cpp_test src/cpp_compile_test.cc src/cpp_compile_mock.c)
+
 if(CMAKE_OBJCOPY)
 foreach(target syscall_intercept_shared syscall_intercept_static)
 	add_custom_command(TARGET ${target}
@@ -116,7 +118,7 @@ add_custom_target(check_whitespace
 	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/check_whitespace.pl
 	-r ${PROJECT_SOURCE_DIR}/src)
 
-add_dependencies(syscall_intercept_base cstyle check_whitespace)
+add_dependencies(syscall_intercept_base cstyle check_whitespace cpp_test)
 
 add_executable(check_license_executable utils/check_license/check-license.c)
 
