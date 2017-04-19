@@ -257,8 +257,10 @@ assign_nop_trampoline(struct intercept_desc *desc,
 		return; /* found a nop in range to use as trampoline */
 	}
 
-	if (nop->address > patch->syscall_addr)
+	if (nop->address > patch->syscall_addr) {
+		patch->uses_nop_trampoline = false;
 		return; /* nop is too far ahead */
+	}
 
 	/* nop is too far behind, try the next nop */
 	++(*next_nop_i);
