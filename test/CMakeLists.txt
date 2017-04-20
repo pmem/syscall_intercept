@@ -54,7 +54,9 @@ set(asm_patterns
 	pattern_nop_padding1
 	pattern_nop_padding2
 	pattern_nop_padding3
-	pattern_nop_padding4)
+	pattern_nop_padding4
+	pattern_nop_padding5
+	pattern_nop_padding6)
 
 foreach(name ${asm_patterns})
 	add_library(${name}.in SHARED ${name}.in.s)
