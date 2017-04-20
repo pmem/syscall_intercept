@@ -58,19 +58,37 @@ set(asm_patterns
 	pattern_nop_padding5
 	pattern_nop_padding6)
 
-foreach(name ${asm_patterns})
-	add_library(${name}.in SHARED ${name}.in.s)
-	add_library(${name}.out SHARED ${name}.out.s)
+set(asm_patterns_failing
+	pattern_double_syscall
+	pattern_rets
+	pattern_jmps)
+
+macro(add_asm_test test_name failing)
+	add_library(${test_name}.in SHARED ${test_name}.in.s)
+	add_library(${test_name}.out SHARED ${test_name}.out.s)
 	if(LINKER_HAS_NOSTDLIB)
-		set_target_properties(${name}.in
+		set_target_properties(${test_name}.in
 			PROPERTIES LINK_FLAGS "-nostdlib")
-		set_target_properties(${name}.out
+		set_target_properties(${test_name}.out
 			PROPERTIES LINK_FLAGS "-nostdlib")
 	endif()
-	add_test(NAME "asm_pattern_${name}"
+	add_test(NAME "asm_pattern_${test_name}"
 		COMMAND $<TARGET_FILE:asm_pattern>
-		$<TARGET_FILE:${name}.in>
-		$<TARGET_FILE:${name}.out>)
+		$<TARGET_FILE:${test_name}.in>
+		$<TARGET_FILE:${test_name}.out>)
+	if(${failing})
+		set_tests_properties("asm_pattern_${test_name}"
+			PROPERTIES WILL_FAIL ON
+			PASS_REGULAR_EXPRESSION "Invalid patch")
+	endif()
+endmacro()
+
+foreach(name ${asm_patterns})
+	add_asm_test(${name} FALSE)
+endforeach()
+
+foreach(name ${asm_patterns_failing})
+	add_asm_test(${name} TRUE)
 endforeach()
 
 set(CHECK_LOG_COMMON_ARGS
