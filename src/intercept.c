@@ -213,6 +213,11 @@ find_libpthread_dl(void)
 void
 xabort(void)
 {
+	static const char msg[] = "libsyscall_intercept error\n";
+
+	syscall_no_intercept(SYS_write, 2, msg, sizeof(msg));
+	syscall_no_intercept(SYS_exit_group, 1);
+
 	__builtin_trap();
 }
 
