@@ -268,6 +268,70 @@ assign_nop_trampoline(struct intercept_desc *desc,
 }
 
 /*
+ * is_relocateable_before_syscall
+ * checks if an instruction found before a syscall instruction
+ * can be relocated (and thus overwritten).
+ */
+static bool
+is_relocateable_before_syscall(struct intercept_disasm_result ins)
+{
+	return !(ins.has_ip_relative_opr ||
+	    ins.is_call ||
+	    ins.is_rel_jump ||
+	    ins.is_jump ||
+	    ins.is_ret ||
+	    ins.is_syscall);
+}
+
+/*
+ * is_relocateable_before_syscall
+ * checks if an instruction found before a syscall instruction
+ * can be relocated (and thus overwritten).
+ *
+ * Notice: we allow relocation of ret instructions.
+ */
+static bool
+is_relocateable_after_syscall(struct intercept_disasm_result ins)
+{
+	return !(ins.has_ip_relative_opr ||
+	    ins.is_call ||
+	    ins.is_rel_jump ||
+	    ins.is_jump ||
+	    ins.is_syscall);
+}
+
+
+/*
+ * check_surrounding_instructions
+ * Sets up the following members in a patch_desc, based on
+ * instruction being relocateable or not:
+ * uses_prev_ins ; uses_prev_ins_2 ; uses_next_ins
+ */
+static void
+check_surrounding_instructions(struct intercept_desc *desc,
+				struct patch_desc *patch)
+{
+	patch->uses_prev_ins =
+	    is_relocateable_before_syscall(patch->preceding_ins) &&
+	    !has_jump(desc, patch->syscall_addr);
+
+	if (patch->uses_prev_ins) {
+		patch->uses_prev_ins_2 =
+		    patch->uses_prev_ins &&
+		    is_relocateable_before_syscall(patch->preceding_ins_2) &&
+		    !has_jump(desc, patch->syscall_addr
+			- patch->preceding_ins.length);
+	} else {
+		patch->uses_prev_ins_2 = false;
+	}
+
+	patch->uses_next_ins =
+	    is_relocateable_after_syscall(patch->following_ins) &&
+	    !has_jump(desc,
+		patch->syscall_addr + SYSCALL_INS_SIZE);
+}
+
+/*
  * create_patch_wrappers - create the custom assembly wrappers
  * around each syscall to be intercepted. Well, actually, the
  * function create_wrapper does that, so perhaps this function
@@ -330,29 +394,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 			 * be relocated.
 			 */
 
-			patch->uses_prev_ins =
-			    !(patch->preceding_ins.has_ip_relative_opr ||
-			    patch->preceding_ins.is_call ||
-			    patch->preceding_ins.is_jump ||
-			    patch->preceding_ins.is_ret ||
-			    patch->preceding_ins.is_syscall ||
-			    has_jump(desc, patch->syscall_addr));
-
-			patch->uses_prev_ins_2 = patch->uses_prev_ins &&
-			    !(patch->preceding_ins_2.has_ip_relative_opr ||
-			    patch->preceding_ins_2.is_call ||
-			    patch->preceding_ins_2.is_ret ||
-			    patch->preceding_ins_2.is_syscall ||
-			    has_jump(desc, patch->syscall_addr
-				- patch->preceding_ins.length));
-
-			patch->uses_next_ins =
-			    !(patch->following_ins.has_ip_relative_opr ||
-			    patch->following_ins.is_rel_jump ||
-			    patch->following_ins.is_call ||
-			    patch->following_ins.is_syscall ||
-			    has_jump(desc,
-				patch->syscall_addr + SYSCALL_INS_SIZE));
+			check_surrounding_instructions(desc, patch);
 
 			/*
 			 * Count the number of overwritable bytes
