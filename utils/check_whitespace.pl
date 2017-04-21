@@ -1,4 +1,3 @@
-#!/usr/bin/perl
 #
 # Copyright 2015-2017, Intel Corporation
 #

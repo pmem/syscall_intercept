@@ -32,6 +32,8 @@
 cmake_minimum_required(VERSION 2.8.7)
 project(syscall_intercept C CXX ASM)
 
+include(FindPerl)
+
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 # Setting CMAKE_DISABLE_IN_SOURCE_BUILD to ON should
 # disallow in source builds, but in practice it doesn't seem
@@ -107,18 +109,22 @@ set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
 	OUTPUT_NAME syscall_intercept)
 
-add_custom_target(cstyle
-	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
-	-pP ${PROJECT_SOURCE_DIR}/src/*.[ch]
-	${PROJECT_SOURCE_DIR}/include/*.h
-	${PROJECT_SOURCE_DIR}/test/*.c
-	${PROJECT_SOURCE_DIR}/examples/*.c)
+add_dependencies(syscall_intercept_base cpp_test)
 
-add_custom_target(check_whitespace
-	COMMAND perl ${PROJECT_SOURCE_DIR}/utils/check_whitespace.pl
-	-r ${PROJECT_SOURCE_DIR}/src)
+if(${PERL_FOUND})
+	add_custom_target(cstyle
+		COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
+		-pP ${PROJECT_SOURCE_DIR}/src/*.[ch]
+		${PROJECT_SOURCE_DIR}/include/*.h
+		${PROJECT_SOURCE_DIR}/test/*.c
+		${PROJECT_SOURCE_DIR}/examples/*.c)
 
-add_dependencies(syscall_intercept_base cstyle check_whitespace cpp_test)
+	add_custom_target(check_whitespace
+		COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/check_whitespace.pl
+		-r ${PROJECT_SOURCE_DIR}/src)
+
+	add_dependencies(syscall_intercept_base cstyle check_whitespace)
+endif()
 
 add_executable(check_license_executable utils/check_license/check-license.c)
 
