@@ -38,6 +38,21 @@
  *
  * If the need arises, this can be disabled by defining the
  * SYSCALL_INTERCEPT_WITHOUT_MAGIC_SYSCALLS macro during compilation.
+ *
+ * At the moment there are only two 'magci' syscalls which trigger
+ * this feature:
+ *
+ * write(123, start_log_message, sizeof(start_log_message))
+ * write(123, stop_log_message, sizeof(stop_log_message))
+ *
+ * These two syscalls are not handled as regular syscalls i.e.:
+ * they are not forwarded to the kernel, neither to a hook routine.
+ *
+ * Notice: the arguments of the syscall must match exactly. Thus, if
+ * for example a file with 123 is open, this feature does not interfere with
+ * actual file operations on that file. A syscall such as:
+ * write(123, "data", 4)
+ * is handled as expected -- forwarded to kernel, or to hook routine.
  */
 
 #ifndef INTERCEPT_MAGIC_SYSCALLS_H
