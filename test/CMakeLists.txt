@@ -150,7 +150,7 @@ target_link_libraries(filter_test syscall_intercept_shared)
 add_test(NAME "filter_none"
 	COMMAND ${CMAKE_COMMAND}
 	-DTEST_PROG=$<TARGET_FILE:filter_test>
-	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
 set_tests_properties("filter_none"
 	PROPERTIES PASS_REGULAR_EXPRESSION "hooked - allowed")
 
@@ -160,7 +160,7 @@ add_test(NAME "filter_positive"
 	COMMAND ${CMAKE_COMMAND}
 	-DFILTER=${filter_test_filename}
 	-DTEST_PROG=$<TARGET_FILE:filter_test>
-	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
 set_tests_properties("filter_positive"
 	PROPERTIES PASS_REGULAR_EXPRESSION "hooked - allowed")
 
@@ -168,7 +168,7 @@ add_test(NAME "filter_negative"
 	COMMAND ${CMAKE_COMMAND}
 	-DFILTER=non_matching_filter
 	-DTEST_PROG=$<TARGET_FILE:filter_test>
-	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
 set_tests_properties("filter_negative"
 	PROPERTIES PASS_REGULAR_EXPRESSION "disallowed")
 
@@ -181,6 +181,74 @@ add_test(NAME "clone_thread"
 	-DFILTER=${test_clone_thread_filename}
 	-DTEST_PROG=$<TARGET_FILE:test_clone_thread>
 	-DLIB_FILE=$<TARGET_FILE:test_clone_thread_preload>
-	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
 set_tests_properties("clone_thread"
 	PROPERTIES PASS_REGULAR_EXPRESSION "clone_hook_child called")
+
+add_library(intercept_sys_write SHARED intercept_sys_write.c)
+target_link_libraries(intercept_sys_write PRIVATE syscall_intercept_shared)
+
+add_executable(executable_with_syscall_pie executable_with_syscall.s)
+if(HAS_NOUNUSEDARG)
+	target_compile_options(executable_with_syscall_pie BEFORE
+		PRIVATE "-Wno-unused-command-line-argument")
+endif()
+set_target_properties(executable_with_syscall_pie
+			PROPERTIES POSITION_INDEPENDENT_CODE True)
+if(HAS_ARG_PIE)
+	target_compile_options(executable_with_syscall_pie PRIVATE "-pie")
+	target_link_libraries(executable_with_syscall_pie PRIVATE "-pie")
+endif()
+
+add_executable(executable_with_syscall_no_pie executable_with_syscall.s)
+if(HAS_NOUNUSEDARG)
+	target_compile_options(executable_with_syscall_no_pie BEFORE
+		PRIVATE "-Wno-unused-command-line-argument")
+endif()
+set_target_properties(executable_with_syscall_no_pie
+			PROPERTIES POSITION_INDEPENDENT_CODE False)
+if(HAS_ARG_NOPIE)
+	target_compile_options(executable_with_syscall_no_pie PRIVATE "-nopie")
+	target_link_libraries(executable_with_syscall_no_pie PRIVATE "-nopie")
+elseif(HAS_ARG_NO_PIE)
+	target_compile_options(executable_with_syscall_no_pie PRIVATE "-no-pie")
+	target_link_libraries(executable_with_syscall_no_pie PRIVATE "-no-pie")
+endif()
+
+add_test(NAME "prog_pie_intercept_libc_only"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_PROG=$<TARGET_FILE:executable_with_syscall_pie>
+	-DLIB_FILE=$<TARGET_FILE:intercept_sys_write>
+	-DTEST_PROG_ARGS=original_syscall
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
+set_tests_properties("prog_pie_intercept_libc_only"
+	PROPERTIES PASS_REGULAR_EXPRESSION "original_syscall")
+
+add_test(NAME "prog_no_pie_intercept_libc_only"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_PROG=$<TARGET_FILE:executable_with_syscall_no_pie>
+	-DLIB_FILE=$<TARGET_FILE:intercept_sys_write>
+	-DTEST_PROG_ARGS=original_syscall
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
+set_tests_properties("prog_no_pie_intercept_libc_only"
+	PROPERTIES PASS_REGULAR_EXPRESSION "original_syscall")
+
+add_test(NAME "prog_pie_intercept_all"
+	COMMAND ${CMAKE_COMMAND}
+	-DINTERCEPT_ALL=1
+	-DTEST_PROG=$<TARGET_FILE:executable_with_syscall_pie>
+	-DLIB_FILE=$<TARGET_FILE:intercept_sys_write>
+	-DTEST_PROG_ARGS=original_syscall
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
+set_tests_properties("prog_pie_intercept_all"
+	PROPERTIES PASS_REGULAR_EXPRESSION "intercepted_call")
+
+add_test(NAME "prog_no_pie_intercept_all"
+	COMMAND ${CMAKE_COMMAND}
+	-DINTERCEPT_ALL=1
+	-DTEST_PROG=$<TARGET_FILE:executable_with_syscall_no_pie>
+	-DLIB_FILE=$<TARGET_FILE:intercept_sys_write>
+	-DTEST_PROG_ARGS=original_syscall
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
+set_tests_properties("prog_no_pie_intercept_all"
+	PROPERTIES PASS_REGULAR_EXPRESSION "intercepted_call")
