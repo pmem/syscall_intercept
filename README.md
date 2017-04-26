@@ -3,6 +3,19 @@
 Userspace syscall intercepting library.
 This repository is soon going to be deleted
 
+# Dependencies #
+
+## Runtime dependencies ##
+
+ * libcapstone -- the disassembly engine used under the hood
+
+## Build dependencies ##
+
+ * C99 toolchain -- tested with recent versions of GCC and clang
+ * cmake
+ * perl
+ * pandoc -- for generating the man page
+
 # How to build #
 
 Building libsyscall_intercept requires cmake.
