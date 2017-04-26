@@ -90,6 +90,12 @@ intercept_routine(long nr, long arg0, long arg1,
  * is described. Upon startup, this routine looks for libc, and libpthread.
  * If these libraries are found in the process's address space, they are
  * patched.
+ * The reason to look for these two libraries, is that these two are essential
+ * parts of the glibc implementation, containing a lot of syscall instructions
+ * most users would care to override. Some other parts of glibc (e.g.: libm)
+ * don't contain syscalls - at least not ones that many would care about.
+ * Other libraries are expected to never issue any syscalls directly, and are
+ * not patched here.
  */
 void
 intercept(void)
