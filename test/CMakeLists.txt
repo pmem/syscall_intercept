@@ -39,7 +39,7 @@ set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
 
 add_executable(asm_pattern asm_pattern.c)
 target_link_libraries(asm_pattern
-	${CMAKE_DL_LIBS} ${capstone_LDFLAGS}
+	PRIVATE ${CMAKE_DL_LIBS} ${capstone_LDFLAGS}
 	syscall_intercept_base_c syscall_intercept_base_asm)
 
 set(asm_patterns
@@ -121,7 +121,7 @@ add_test(NAME "logging"
 
 add_executable(hook_test hook_test.c)
 add_library(hook_test_preload SHARED hook_test_preload.c)
-target_link_libraries(hook_test_preload syscall_intercept_shared)
+target_link_libraries(hook_test_preload PRIVATE syscall_intercept_shared)
 add_test(NAME "hook"
 	COMMAND ${CMAKE_COMMAND}
 	-DTEST_NAME=hook
@@ -132,7 +132,7 @@ add_test(NAME "hook"
 	${CHECK_LOG_COMMON_ARGS})
 
 add_library(hook_test_clone_preload SHARED hook_test_clone_preload.c)
-target_link_libraries(hook_test_clone_preload syscall_intercept_shared)
+target_link_libraries(hook_test_clone_preload PRIVATE syscall_intercept_shared)
 add_test(NAME "hook_clone"
 	COMMAND ${CMAKE_COMMAND}
 	-DTEST_NAME=hook_clone
@@ -145,7 +145,7 @@ add_test(NAME "hook_clone"
 	${CHECK_LOG_COMMON_ARGS})
 
 add_executable(filter_test filter_test.c)
-target_link_libraries(filter_test syscall_intercept_shared)
+target_link_libraries(filter_test PRIVATE syscall_intercept_shared)
 
 add_test(NAME "filter_none"
 	COMMAND ${CMAKE_COMMAND}

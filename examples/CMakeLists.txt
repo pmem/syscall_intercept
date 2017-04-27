@@ -31,8 +31,8 @@
 
 add_library(icap SHARED icap.c)
 
-target_link_libraries(icap syscall_intercept_shared)
+target_link_libraries(icap PRIVATE syscall_intercept_shared)
 
 add_library(fork_ban SHARED fork_ban.c)
 
-target_link_libraries(fork_ban syscall_intercept_shared)
+target_link_libraries(fork_ban PRIVATE syscall_intercept_shared)
