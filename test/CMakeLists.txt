@@ -39,7 +39,8 @@ set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
 
 add_executable(asm_pattern asm_pattern.c)
 target_link_libraries(asm_pattern
-	${CMAKE_DL_LIBS} ${capstone_LDFLAGS} syscall_intercept_base)
+	${CMAKE_DL_LIBS} ${capstone_LDFLAGS}
+	syscall_intercept_base_c syscall_intercept_base_asm)
 
 set(asm_patterns
 	nosyscall
@@ -71,6 +72,13 @@ macro(add_asm_test test_name failing)
 			PROPERTIES LINK_FLAGS "-nostdlib")
 		set_target_properties(${test_name}.out
 			PROPERTIES LINK_FLAGS "-nostdlib")
+	endif()
+	if(HAS_NOUNUSEDARG)
+		target_compile_options(${test_name}.in BEFORE
+			PRIVATE "-Wno-unused-command-line-argument")
+		target_compile_options(${test_name}.out BEFORE
+			PRIVATE "-Wno-unused-command-line-argument")
+
 	endif()
 	add_test(NAME "asm_pattern_${test_name}"
 		COMMAND $<TARGET_FILE:asm_pattern>

@@ -53,15 +53,18 @@ include(cmake/toolchain_features.cmake)
 include(cmake/find_capstone.cmake)
 
 # main source files - intentionally excluding src/entry.c
-set(SOURCES
+set(SOURCES_C
 	src/disasm_wrapper.c
 	src/intercept.c
 	src/intercept_desc.c
 	src/intercept_util.c
 	src/patcher.c
-	src/intercept_template.s
-	src/util.s
 	src/magic_syscalls.c)
+
+set(SOURCES_ASM
+	src/intercept_template.s
+	src/util.s)
+
 
 include_directories(include)
 
@@ -72,19 +75,26 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # can use the internal interface of the libraries (linking
 # with syscall_intercept_base instead of the actual lib ), without
 # the library trying to hotpatch libc every time.
-add_library(syscall_intercept_base STATIC ${SOURCES})
+add_library(syscall_intercept_base_c STATIC ${SOURCES_C})
+add_library(syscall_intercept_base_asm STATIC ${SOURCES_ASM})
 
-set_property(TARGET syscall_intercept_base
+if(HAS_NOUNUSEDARG)
+	target_compile_options(syscall_intercept_base_asm BEFORE
+		PRIVATE "-Wno-unused-command-line-argument")
+endif()
+
+set_property(TARGET syscall_intercept_base_c
 	APPEND PROPERTY COMPILE_FLAGS ${capstone_CFLAGS})
 
-target_link_libraries(syscall_intercept_base
+target_link_libraries(syscall_intercept_base_c
 	${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
 
 add_library(syscall_intercept_shared SHARED src/entry.c)
 target_link_libraries(syscall_intercept_shared
-	syscall_intercept_base)
+	syscall_intercept_base_c syscall_intercept_base_asm)
 add_library(syscall_intercept_static STATIC src/entry.c)
-target_link_libraries(syscall_intercept_static syscall_intercept_base)
+target_link_libraries(syscall_intercept_static
+	syscall_intercept_base_c syscall_intercept_base_asm)
 
 set_target_properties(syscall_intercept_shared
 	PROPERTIES VERSION ${SYSCALL_INTERCEPT_VERSION}
@@ -109,7 +119,7 @@ set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
 	OUTPUT_NAME syscall_intercept)
 
-add_dependencies(syscall_intercept_base cpp_test)
+add_dependencies(syscall_intercept_base_c cpp_test)
 
 if(${PERL_FOUND})
 	add_custom_target(cstyle
@@ -123,7 +133,7 @@ if(${PERL_FOUND})
 		COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/check_whitespace.pl
 		-r ${PROJECT_SOURCE_DIR}/src)
 
-	add_dependencies(syscall_intercept_base cstyle check_whitespace)
+	add_dependencies(syscall_intercept_base_c cstyle check_whitespace)
 endif()
 
 add_executable(check_license_executable utils/check_license/check-license.c)

@@ -64,6 +64,7 @@ check_c_compiler_flag(-Wno-missing-field-initializers HAS_NOMFI)
 check_c_compiler_flag(-Wno-c90-c99-compat HAS_NO9099)
 check_c_compiler_flag(-Wl,-nostdlib LINKER_HAS_NOSTDLIB)
 check_c_compiler_flag(-Wl,--fatal-warnings HAS_WLFATAL)
+check_c_compiler_flag(-Wno-unused-command-line-argument HAS_NOUNUSEDARG)
 
 if(HAS_WERROR AND DEVELOPER_MODE)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
