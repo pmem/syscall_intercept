@@ -382,10 +382,10 @@ add_new_patch(struct intercept_desc *desc)
  * address of next instruction -> -------     -------
  *
  */
-static bool
-is_overwritable_nop(struct intercept_disasm_result ins)
+bool
+is_overwritable_nop(const struct intercept_disasm_result *ins)
 {
-	return ins.is_nop && ins.length >= 2 + 5;
+	return ins->is_nop && ins->length >= 2 + 5;
 }
 
 /*
@@ -463,7 +463,7 @@ crawl_text(struct intercept_desc *desc)
 		if (result.has_ip_relative_opr)
 			mark_jump(desc, result.rip_ref_addr);
 
-		if (is_overwritable_nop(result))
+		if (is_overwritable_nop(&result))
 			mark_nop(desc, code, result.length);
 
 		/*

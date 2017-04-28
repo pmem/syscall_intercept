@@ -57,7 +57,10 @@ set(asm_patterns
 	pattern_nop_padding3
 	pattern_nop_padding4
 	pattern_nop_padding5
-	pattern_nop_padding6)
+	pattern_nop_padding6
+	pattern_nop_padding7
+	pattern_nop_padding8
+	pattern_nop_padding9)
 
 set(asm_patterns_failing
 	pattern_double_syscall
