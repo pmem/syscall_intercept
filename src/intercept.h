@@ -197,6 +197,8 @@ void activate_patches(struct intercept_desc *desc);
 #define NOP_OPCODE 0x90
 #define INT3_OPCODE 0xCC
 
+bool is_overwritable_nop(const struct intercept_disasm_result *ins);
+
 void create_jump(unsigned char opcode, unsigned char *from, void *to);
 
 void intercept(void);

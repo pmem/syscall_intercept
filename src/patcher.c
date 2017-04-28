@@ -313,12 +313,14 @@ check_surrounding_instructions(struct intercept_desc *desc,
 {
 	patch->uses_prev_ins =
 	    is_relocateable_before_syscall(patch->preceding_ins) &&
+	    !is_overwritable_nop(&patch->preceding_ins) &&
 	    !has_jump(desc, patch->syscall_addr);
 
 	if (patch->uses_prev_ins) {
 		patch->uses_prev_ins_2 =
 		    patch->uses_prev_ins &&
 		    is_relocateable_before_syscall(patch->preceding_ins_2) &&
+		    !is_overwritable_nop(&patch->preceding_ins_2) &&
 		    !has_jump(desc, patch->syscall_addr
 			- patch->preceding_ins.length);
 	} else {
@@ -327,6 +329,7 @@ check_surrounding_instructions(struct intercept_desc *desc,
 
 	patch->uses_next_ins =
 	    is_relocateable_after_syscall(patch->following_ins) &&
+	    !is_overwritable_nop(&patch->following_ins) &&
 	    !has_jump(desc,
 		patch->syscall_addr + SYSCALL_INS_SIZE);
 }
