@@ -1,7 +1,6 @@
 # syscall_intercept
 
 Userspace syscall intercepting library.
-This repository is soon going to be deleted
 
 # Dependencies #
 
