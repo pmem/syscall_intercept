@@ -140,3 +140,31 @@ add_test(NAME "hook_clone"
 	-DHAS_SECOND_LOG=1
 	-DSECOND_MATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0_child.log.match
 	${CHECK_LOG_COMMON_ARGS})
+
+add_executable(filter_test filter_test.c)
+target_link_libraries(filter_test syscall_intercept_shared)
+
+add_test(NAME "filter_none"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_PROG=$<TARGET_FILE:filter_test>
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
+set_tests_properties("filter_none"
+	PROPERTIES PASS_REGULAR_EXPRESSION "hooked - allowed")
+
+get_filename_component(filter_test_filename $<TARGET_FILE:filter_test> NAME)
+
+add_test(NAME "filter_positive"
+	COMMAND ${CMAKE_COMMAND}
+	-DFILTER=${filter_test_filename}
+	-DTEST_PROG=$<TARGET_FILE:filter_test>
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
+set_tests_properties("filter_positive"
+	PROPERTIES PASS_REGULAR_EXPRESSION "hooked - allowed")
+
+add_test(NAME "filter_negative"
+	COMMAND ${CMAKE_COMMAND}
+	-DFILTER=non_matching_filter
+	-DTEST_PROG=$<TARGET_FILE:filter_test>
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
+set_tests_properties("filter_negative"
+	PROPERTIES PASS_REGULAR_EXPRESSION "disallowed")
