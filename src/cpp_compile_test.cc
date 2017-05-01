@@ -38,5 +38,5 @@ int main()
 {
 	intercept_hook_point = nullptr;
 	(void) syscall_no_intercept(0);
-	(void) libc_hook_in_process_allowed();
+	(void) syscall_hook_in_process_allowed();
 }

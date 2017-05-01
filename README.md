@@ -106,7 +106,7 @@ last component of the first zero terminated string in
 in the environment variable. This can also be queried
 by the user of the library:
 ```c
-int libc_hook_in_process_allowed(void);
+int syscall_hook_in_process_allowed(void);
 ```
 
 ##### Example: #####

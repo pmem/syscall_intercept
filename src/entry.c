@@ -55,7 +55,7 @@
 static __attribute__((constructor)) void
 entry_point(void)
 {
-	if (libc_hook_in_process_allowed())
+	if (syscall_hook_in_process_allowed())
 		intercept();
 }
 
@@ -63,7 +63,7 @@ entry_point(void)
  * match_with_file_end
  * Compare a string with the end of a file's contents.
  * Reads only char by char, but it is expected to be used only for a dozen or so
- * chars at a time. See libc_hook_in_process_allowed below.
+ * chars at a time. See syscall_hook_in_process_allowed below.
  */
 static bool
 match_with_file_end(const char *expected, long fd)
@@ -90,13 +90,13 @@ match_with_file_end(const char *expected, long fd)
 }
 
 /*
- * libc_hook_in_process_allowed - checks if a filter should be applied
+ * syscall_hook_in_process_allowed - checks if a filter should be applied
  * for processes. If the users requests it (via an environment variable) the
  * syscall interception should not be performed in the current process.
  * This is part of syscall_intercept's public API.
  */
 int
-libc_hook_in_process_allowed(void)
+syscall_hook_in_process_allowed(void)
 {
 	long fd;
 	bool result;

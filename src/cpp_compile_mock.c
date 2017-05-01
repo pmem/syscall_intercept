@@ -55,7 +55,7 @@ syscall_no_intercept(long syscall_number, ...)
 }
 
 int
-libc_hook_in_process_allowed(void)
+syscall_hook_in_process_allowed(void)
 {
 	return 0;
 }
