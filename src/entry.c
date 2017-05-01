@@ -60,6 +60,36 @@ entry_point(void)
 }
 
 /*
+ * match_with_file_end
+ * Compare a string with the end of a file's contents.
+ * Reads only char by char, but it is expected to be used only for a dozen or so
+ * chars at a time. See libc_hook_in_process_allowed below.
+ */
+static bool
+match_with_file_end(const char *expected, long fd)
+{
+	char file_c; /* next character from file */
+	const char *c; /* next character from the expected string */
+
+	if (expected[0] == '\0')
+		return false;
+
+	c = expected;
+
+	while (syscall_no_intercept(SYS_read, fd, &file_c, 1) == 1) {
+		if (file_c == '\0') /* this probably never happens */
+			break;
+
+		if (file_c != *c)
+			c = expected; /* start from the beginning */
+		else
+			++c; /* match next char */
+	}
+
+	return *c == '\0';
+}
+
+/*
  * libc_hook_in_process_allowed - checks if a filter should be applied
  * for processes. If the users requests it (via an environment variable) the
  * syscall interception should not be performed in the current process.
@@ -69,65 +99,21 @@ int
 libc_hook_in_process_allowed(void)
 {
 	long fd;
-	long r;
+	bool result;
+	const char *filter;
 
-	char *c = getenv("INTERCEPT_HOOK_CMDLINE_FILTER");
-	if (c == NULL)
+	filter = getenv("INTERCEPT_HOOK_CMDLINE_FILTER");
+	if (filter == NULL)
 		return 1;
 
-	size_t len = strlen(c) + 1;
+	fd = syscall_no_intercept(SYS_open, "/proc/self/cmdline", O_RDONLY, 0);
 
-	fd = syscall_no_intercept(SYS_open, "/proc/self/cmdline",
-	    O_RDONLY, 0);
 	if (fd < 0)
 		return 0;
 
-	char buf[len];
-	r = syscall_no_intercept(SYS_lseek, fd, -len, SEEK_END);
+	result = match_with_file_end(filter, fd);
 
-	/*
-	 * If SEEK_END failed, assume it happened because there are fewer than
-	 * len characters in the contents of "/proc/self/cmdline".
-	 */
-	if (r < 0)
-		return 1;
+	(void) syscall_no_intercept(SYS_close, fd);
 
-	r = syscall_no_intercept(SYS_read, fd, buf, len);
-
-	syscall_no_intercept(SYS_close, fd);
-
-	if (r <= 1 || buf[0] == '\0')
-		return 0;
-
-	buf[len - 1] = '\0';
-
-	/*
-	 * Find the last component of the path in "/proc/self/cmdline"
-	 * The user might provide something like:
-	 *
-	 * INTERCEPT_HOOK_CMDLINE_FILTER=mkdir
-	 *
-	 * in which case we should compare the string "mkdir" with the
-	 * last component of a path, e.g.:
-	 * "usr/bin/mkdir"
-	 */
-
-	char *name = buf + len;
-
-	/* find the last slash - search backwards from the end of the string */
-
-	while (*name != '/' && name != buf)
-		--name;
-
-	if (*name == '/') {
-		/*
-		 * Found a slash, don't include the slash
-		 * itself in the comparison
-		 */
-		++name;
-	} else {
-		/* No slash found, use the whole string */
-	}
-
-	return strcmp(name, c) == 0;
+	return result;
 }
