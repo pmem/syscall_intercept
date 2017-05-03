@@ -123,7 +123,7 @@ set_target_properties(syscall_intercept_shared syscall_intercept_static
 
 add_dependencies(syscall_intercept_base_c cpp_test)
 
-if(${PERL_FOUND})
+if(${PERL_FOUND} AND DEVELOPER_MODE)
 	add_custom_target(cstyle
 		COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
 		-pP ${PROJECT_SOURCE_DIR}/src/*.[ch]
