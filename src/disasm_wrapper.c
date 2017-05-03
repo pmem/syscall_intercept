@@ -140,7 +140,7 @@ check_op(struct intercept_disasm_result *result, cs_x86_op *op,
 		const unsigned char *code)
 {
 	/*
-	 * the addres the RIP register is going to contain during the
+	 * the address the RIP register is going to contain during the
 	 * execution of this instruction
 	 */
 	const unsigned char *rip = code + result->length;

@@ -52,7 +52,7 @@ struct intercept_disasm_result {
 
 	bool is_syscall;
 
-	/* Length in bytes, zero if disasm was not successfull. */
+	/* Length in bytes, zero if disasm was not successful. */
 	unsigned length;
 
 	/*
@@ -82,7 +82,7 @@ struct intercept_disasm_result {
 	/*
 	 * Optional fields:
 	 * The rip_disp field contains the displacement used in
-	 * instructions refering to RIP relative addresses.
+	 * instructions referring to RIP relative addresses.
 	 * The rip_ref_addr field contains the absolute address of
 	 * such a reference, computed based on the rip_disp.
 	 * These are only valid, when has_ip_relative_opr is true.

@@ -52,7 +52,7 @@ long syscall_no_intercept(long syscall_number, ...);
  * xmmap_anon - get new memory mapping
  *
  * Not intercepted - does not call libc.
- * Always succeds if returns - aborts the process on failure.
+ * Always succeeds if returns - aborts the process on failure.
  */
 void *xmmap_anon(size_t size);
 
@@ -70,7 +70,7 @@ void xmunmap(void *addr, size_t len);
  * xlseek - no fail lseek
  *
  * Not intercepted - does not call libc.
- * Always succeds if returns - aborts the process on failure.
+ * Always succeeds if returns - aborts the process on failure.
  */
 long xlseek(long fd, unsigned long off, int whence);
 
@@ -78,7 +78,7 @@ long xlseek(long fd, unsigned long off, int whence);
  * xread - no fail read
  *
  * Not intercepted - does not call libc.
- * Always succeds reading size bytes returns - aborts the process on failure.
+ * Always succeeds reading size bytes returns - aborts the process on failure.
  */
 void xread(long fd, void *buffer, size_t size);
 

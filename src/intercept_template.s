@@ -158,14 +158,14 @@
  * at the correct place. This brings up a new problem: The C function can't
  * just return once it has all it needs to do, as the return address it would
  * normally return to is a faked return address. To handle this problem, the C
- * function recieves the real return address as an argument, and jumps to this
+ * function receives the real return address as an argument, and jumps to this
  * address instead of returning. The xlongjmp routine serves this purpose:
  * xlongjmp sets the RAX register ( the return value of the C function ), the
  * RSP register ( to restore the stack pointer after the C function ), and the
  * RIP register ( instead of using a ret instruction ).
  * This mechanism is also used for deciding if the original syscall instruction
  * should be executed in this assembly code or not ( remember SYS_clone ).
- * So the additional arguments passed to the C funtion are as follows:
+ * So the additional arguments passed to the C function are as follows:
  *
  * long return_to_asm_wrapper_syscall
  * long return_to_asm_wrapper

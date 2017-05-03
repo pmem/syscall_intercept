@@ -34,7 +34,7 @@
  * This program can be used to test certain instruction level details
  * of disassembling/patching the text section of a library.
  * One needs an 'input' and an 'expected output' library as two
- * shared objects in order to perform a comparision between what
+ * shared objects in order to perform a comparison between what
  * syscall_intercept's patching results in, and what the result should be.
  * The paths of these two libraries are expected to be supplied as command
  * line arguments.
@@ -219,7 +219,7 @@ main(int argc, char **argv)
 	patches.trampoline_table_size = lib_in.mock_trampoline_table_size;
 	patches.next_trampoline = patches.trampoline_table;
 
-	/* perform the actualy patching */
+	/* perform the actually patching */
 	find_syscalls(&patches);
 	create_patch_wrappers(&patches);
 	mprotect_asm_wrappers();
