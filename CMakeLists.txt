@@ -42,6 +42,8 @@ if(",${CMAKE_SOURCE_DIR}," STREQUAL ",${CMAKE_BINARY_DIR},")
 	message(FATAL_ERROR "In-source builds are not supported.")
 endif()
 
+option(DEVELOPER_MODE "enable developer checks" OFF)
+
 set(SYSCALL_INTERCEPT_VERSION_MAJOR 0)
 set(SYSCALL_INTERCEPT_VERSION_MINOR 1)
 set(SYSCALL_INTERCEPT_VERSION_PATCH 0)
