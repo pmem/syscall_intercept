@@ -577,11 +577,18 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	size_t size;
 
 	if ((uintptr_t)desc->text_end < INT32_MAX) {
+		/* start from the bottom of memory */
 		guess = (void *)0;
 	} else {
+		/*
+		 * start from the lowest possible address, that can be reached
+		 * from the text segment using a 32 bit displacement.
+		 * Round up to a memory page boundary, as this address must be
+		 * mappable.
+		 */
 		guess = desc->text_end - INT32_MAX;
 		guess = (unsigned char *)(((uintptr_t)guess)
-				& ~((uintptr_t)(0xfff)));
+				& ~((uintptr_t)(0xfff))) + 0x1000;
 	}
 
 	if ((uintptr_t)guess < get_min_address())
