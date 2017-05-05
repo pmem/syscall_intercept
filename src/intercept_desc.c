@@ -204,6 +204,19 @@ mark_skip_range(struct intercept_desc *desc,
 	if (size == 0)
 		return;
 
+	if (desc->skip_range_count > 0) {
+		struct range *last =
+		    desc->skip_ranges + (desc->skip_range_count - 1);
+
+		assert(last->address < address);
+		assert(last->address + last->size <= address);
+
+		if (last->address + last->size == address) {
+			last->size += size;
+			return;
+		}
+	}
+
 	desc->skip_ranges[desc->skip_range_count].address = address;
 	desc->skip_ranges[desc->skip_range_count].size = size;
 	desc->skip_range_count++;
@@ -316,14 +329,14 @@ find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
 		if (syms[i].st_shndx != desc->text_section_index)
 			continue; /* it is not in the text section */
 
+		debug_dump("jump target: %lx\n",
+		    (unsigned long)syms[i].st_value);
+
 		unsigned char *address =
 		    syms[i].st_value + (unsigned char *)desc->dlinfo.dli_fbase;
 
 		/* a function entry point in .text, mark it */
 		mark_jump(desc, address);
-
-		if (has_no_syscall(address, syms[i].st_size))
-			mark_skip_range(desc, address, syms[i].st_size);
 	}
 }
 
@@ -448,7 +461,13 @@ crawl_text(struct intercept_desc *desc)
 			 * advance the code pointer - without disassembling
 			 * anything in this range.
 			 */
-			code += skip->size;
+			if (skip->size > 0) {
+				code += skip->size;
+				has_prevs = 0;
+				prevs[0].is_set = false;
+				prevs[1].is_set = false;
+				prevs[2].is_set = false;
+			}
 			++skip;
 			continue;
 		}
@@ -497,7 +516,7 @@ crawl_text(struct intercept_desc *desc)
 		 * These implausible edge cases don't seem to be very important
 		 * right now.
 		 */
-		if (has_prevs >= 2 && prevs[2].is_syscall) {
+		if (has_prevs >= 1 && prevs[2].is_syscall) {
 			struct patch_desc *patch = add_new_patch(desc);
 
 			patch->preceding_ins_2 = prevs[0];
@@ -650,22 +669,14 @@ allocate_trampoline_table(struct intercept_desc *desc)
 }
 
 /*
- * cmp_skip_range
- * Used as a callback with libc qsort.
- */
-static int
-cmp_skip_range(const void *a, const void *b)
-{
-	return ((const struct range *)a)->address >
-	    ((const struct range *)b)->address;
-}
-
-/*
  * dump_skip_ranges -- dump skip ranges as debug info
  */
 static void
 dump_skip_ranges(const struct intercept_desc *desc)
 {
+	if (!debug_dumps_on)
+		return;
+
 	size_t skip_sum = 0;
 	size_t text_size = desc->text_end + 1 - desc->text_start;
 
@@ -685,48 +696,58 @@ dump_skip_ranges(const struct intercept_desc *desc)
 }
 
 /*
- * clear_skip_range_overlaps -- eliminates any intersection between skip ranges
+ * find_skip_ranges -- find ranges in the text that can be skipped during
+ *  the disassembly phase
  */
 static void
-clear_skip_range_overlaps(struct intercept_desc *desc)
+find_skip_ranges(struct intercept_desc *desc)
 {
-	for (struct range *r = desc->skip_ranges; r->address; ++r) {
-		unsigned char *end = r->address + r->size;
+	size_t bytes = (size_t)(desc->text_end - desc->text_start + 1);
 
-		if (r[1].address < end) {
-			unsigned char *r1_end = r[1].address + r[1].size;
+	size_t range_start = 0;
+	size_t size;
+	unsigned char vector = desc->jump_table[0];
 
-			if (r1_end < end) {
-				r[1].size = 0;
-			} else {
-				r[1].address = end;
-				r[1].size = r1_end - end;
+	assert(bytes > 0);
+
+	for (size_t i = 0; i < bytes; ) {
+		if (i % 8 == 0) {
+			vector = desc->jump_table[i / 8];
+			if (vector == 0) {
+				i += 8;
+				continue;
 			}
 		}
-	}
-}
 
-/*
- * merge_skip_ranges - merges neighbouring skip ranges, whoese edges touch
- *
- * Every skip range, which starts right after the previous one ends is
- * extended to contain the previous skip range. That previous skip range is
- * then discarded (its size is set to zero). This helps when debugging: dumping
- * skip ranges produces output that is easier to digest for the human reader.
- */
-static void
-merge_skip_ranges(struct intercept_desc *desc)
-{
-	if (desc->skip_range_count < 2)
-		return;
-
-	for (struct range *r = desc->skip_ranges + 1; r->address; ++r) {
-		if (r[-1].address + r[-1].size == r->address) {
-			r->size += r[-1].size;
-			r->address = r[-1].address;
-			r[-1].size = 0;
+		if (!(vector & (1 << (i % 8)))) {
+			++i;
+			continue;
 		}
+
+		unsigned char *start_address = desc->text_start + range_start;
+		unsigned char *address = desc->text_start + i;
+
+		debug_dump("looking at jump at: %tx\n",
+		    address - (unsigned char *)desc->dlinfo.dli_fbase);
+
+		size = i - range_start;
+
+		if (size > 0)
+			if (has_no_syscall(start_address, size))
+				mark_skip_range(desc, start_address, size);
+
+		range_start = i;
+		++i;
 	}
+
+	size = bytes - range_start;
+	unsigned char *start_address = desc->text_start + range_start;
+
+	if (has_no_syscall(start_address, size))
+		mark_skip_range(desc, start_address, size);
+
+	desc->skip_ranges[desc->skip_range_count].address = NULL;
+	desc->skip_ranges[desc->skip_range_count].size = 0;
 }
 
 /*
@@ -760,19 +781,9 @@ find_syscalls(struct intercept_desc *desc)
 
 	syscall_no_intercept(SYS_close, fd);
 
-	qsort(desc->skip_ranges,
-	    desc->skip_range_count, sizeof(desc->skip_ranges[0]),
-	    cmp_skip_range);
+	find_skip_ranges(desc);
 
-	desc->skip_ranges[desc->skip_range_count].address = NULL;
-	desc->skip_ranges[desc->skip_range_count].size = 0;
-
-	clear_skip_range_overlaps(desc);
-
-	if (debug_dumps_on) {
-		merge_skip_ranges(desc);
-		dump_skip_ranges(desc);
-	}
+	dump_skip_ranges(desc);
 
 	crawl_text(desc);
 }

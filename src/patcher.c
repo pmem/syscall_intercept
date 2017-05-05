@@ -275,6 +275,9 @@ assign_nop_trampoline(struct intercept_desc *desc,
 static bool
 is_relocateable_before_syscall(struct intercept_disasm_result ins)
 {
+	if (!ins.is_set)
+		return false;
+
 	return !(ins.has_ip_relative_opr ||
 	    ins.is_call ||
 	    ins.is_rel_jump ||
@@ -284,7 +287,7 @@ is_relocateable_before_syscall(struct intercept_disasm_result ins)
 }
 
 /*
- * is_relocateable_before_syscall
+ * is_relocateable_after_syscall
  * checks if an instruction found before a syscall instruction
  * can be relocated (and thus overwritten).
  *
@@ -293,6 +296,9 @@ is_relocateable_before_syscall(struct intercept_disasm_result ins)
 static bool
 is_relocateable_after_syscall(struct intercept_disasm_result ins)
 {
+	if (!ins.is_set)
+		return false;
+
 	return !(ins.has_ip_relative_opr ||
 	    ins.is_call ||
 	    ins.is_rel_jump ||

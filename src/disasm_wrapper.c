@@ -214,6 +214,7 @@ intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 
 	if (!cs_disasm_iter(context->handle, &start, &size,
 	    &address, context->insn)) {
+		result.is_set = false;
 		result.length = 0;
 		return result;
 	}
@@ -284,6 +285,8 @@ intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 	    op_i < context->insn->detail->x86.op_count; ++op_i)
 		check_op(&result, context->insn->detail->x86.operands + op_i,
 		    code);
+
+	result.is_set = true;
 
 	return result;
 }

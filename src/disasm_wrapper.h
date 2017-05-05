@@ -50,6 +50,8 @@
 
 struct intercept_disasm_result {
 
+	bool is_set;
+
 	bool is_syscall;
 
 	/* Length in bytes, zero if disasm was not successful. */
