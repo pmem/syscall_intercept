@@ -219,6 +219,9 @@ mark_skip_range(struct intercept_desc *desc,
 static bool
 has_no_syscall(unsigned char *address, size_t size)
 {
+	if (size <= 1)
+		return false;
+
 	while (size > 1 && (address[0] != 0x0f || address[1] != 0x05)) {
 		++address;
 		--size;
@@ -446,6 +449,7 @@ crawl_text(struct intercept_desc *desc)
 			 * anything in this range.
 			 */
 			code += skip->size;
+			++skip;
 			continue;
 		}
 
@@ -657,6 +661,75 @@ cmp_skip_range(const void *a, const void *b)
 }
 
 /*
+ * dump_skip_ranges -- dump skip ranges as debug info
+ */
+static void
+dump_skip_ranges(const struct intercept_desc *desc)
+{
+	size_t skip_sum = 0;
+	size_t text_size = desc->text_end + 1 - desc->text_start;
+
+	for (const struct range *r = desc->skip_ranges; r->address; ++r) {
+		size_t offset =
+		    r->address - (unsigned char *)(desc->dlinfo.dli_fbase);
+
+		if (r->size > 0) {
+			debug_dump("skip range at: %zx - %zx\n",
+			    offset, offset + r->size);
+
+			skip_sum += r->size;
+		}
+	}
+	debug_dump("skip ranges: %zu bytes of %zu -- %zu%%\n",
+	    skip_sum, text_size, (skip_sum * 100) / text_size);
+}
+
+/*
+ * clear_skip_range_overlaps -- eliminates any intersection between skip ranges
+ */
+static void
+clear_skip_range_overlaps(struct intercept_desc *desc)
+{
+	for (struct range *r = desc->skip_ranges; r->address; ++r) {
+		unsigned char *end = r->address + r->size;
+
+		if (r[1].address < end) {
+			unsigned char *r1_end = r[1].address + r[1].size;
+
+			if (r1_end < end) {
+				r[1].size = 0;
+			} else {
+				r[1].address = end;
+				r[1].size = r1_end - end;
+			}
+		}
+	}
+}
+
+/*
+ * merge_skip_ranges - merges neighbouring skip ranges, whoese edges touch
+ *
+ * Every skip range, which starts right after the previous one ends is
+ * extended to contain the previous skip range. That previous skip range is
+ * then discarded (its size is set to zero). This helps when debugging: dumping
+ * skip ranges produces output that is easier to digest for the human reader.
+ */
+static void
+merge_skip_ranges(struct intercept_desc *desc)
+{
+	if (desc->skip_range_count < 2)
+		return;
+
+	for (struct range *r = desc->skip_ranges + 1; r->address; ++r) {
+		if (r[-1].address + r[-1].size == r->address) {
+			r->size += r[-1].size;
+			r->address = r[-1].address;
+			r[-1].size = 0;
+		}
+	}
+}
+
+/*
  * find_syscalls
  * The routine that disassembles a text section. Here is some higher level
  * logic for finding syscalls, finding overwritable NOP instructions, and
@@ -668,6 +741,8 @@ cmp_skip_range(const void *a, const void *b)
 void
 find_syscalls(struct intercept_desc *desc)
 {
+	debug_dump("find_syscalls in %s\n", desc->dlinfo.dli_fname);
+
 	desc->count = 0;
 
 	long fd = open_orig_file(desc);
@@ -691,6 +766,13 @@ find_syscalls(struct intercept_desc *desc)
 
 	desc->skip_ranges[desc->skip_range_count].address = NULL;
 	desc->skip_ranges[desc->skip_range_count].size = 0;
+
+	clear_skip_range_overlaps(desc);
+
+	if (debug_dumps_on) {
+		merge_skip_ranges(desc);
+		dump_skip_ranges(desc);
+	}
 
 	crawl_text(desc);
 }

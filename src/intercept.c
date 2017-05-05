@@ -49,6 +49,7 @@
 #include <string.h>
 #include <syscall.h>
 #include <sys/mman.h>
+#include <stdarg.h>
 
 #include "intercept.h"
 #include "intercept_util.h"
@@ -61,6 +62,33 @@ int (*intercept_hook_point)(long syscall_number,
 			long arg2, long arg3,
 			long arg4, long arg5,
 			long *result);
+
+bool debug_dumps_on;
+
+void
+debug_dump(const char *fmt, ...)
+{
+	int len;
+	va_list ap;
+
+	if (!debug_dumps_on)
+		return;
+
+	va_start(ap, fmt);
+	len = vsnprintf(NULL, 0, fmt, ap);
+	va_end(ap);
+
+	if (len <= 0)
+		return;
+
+	char buf[len + 1];
+
+	va_start(ap, fmt);
+	len = vsprintf(buf, fmt, ap);
+	va_end(ap);
+
+	syscall_no_intercept(SYS_write, 2, buf, len);
+}
 
 static Dl_info libc_dlinfo;
 static Dl_info pthreads_dlinfo;
@@ -101,6 +129,8 @@ void
 intercept(void)
 {
 	bool pthreads_available;
+
+	debug_dumps_on = getenv("INTERCEPT_DEBUG_DUMP") != NULL;
 
 	glibc_patches.c_destination =
 	    (void *)((uintptr_t)&intercept_routine);

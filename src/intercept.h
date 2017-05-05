@@ -44,6 +44,9 @@
 
 #include "disasm_wrapper.h"
 
+extern bool debug_dumps_on;
+void debug_dump(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
 /*
  * Create wrapper functions to be called from glibc,
  * with an extra instruction taken from glibc
