@@ -67,6 +67,36 @@ open_orig_file(const struct intercept_desc *desc)
 }
 
 /*
+ * add_symbol_table_info -- add a symbol table for later investigation
+ *  to an intercept_desc struct.
+ */
+static void
+add_symbol_table_info(struct intercept_desc *desc, const Elf64_Shdr *header)
+{
+	size_t max = sizeof(desc->sh_symtabs) / sizeof(desc->sh_symtabs[0]);
+
+	if (desc->symbol_table_count < max) {
+		desc->sh_symtabs[desc->symbol_table_count] = *header;
+		desc->symbol_table_count++;
+	}
+}
+
+/*
+ * add_text_info -- Fille the appropriate fields in an intercept_desc struct
+ * about the corresponding code text.
+ */
+static void
+add_text_info(struct intercept_desc *desc, const Elf64_Shdr *header,
+		Elf64_Half index)
+{
+	desc->text_offset = header->sh_offset;
+	desc->text_start =
+	    (unsigned char *)(desc->dlinfo.dli_fbase) + header->sh_offset;
+	desc->text_end = desc->text_start + header->sh_size - 1;
+	desc->text_section_index = index;
+}
+
+/*
  * find_sections
  *
  * See: man elf
@@ -76,8 +106,7 @@ find_sections(struct intercept_desc *desc, long fd)
 {
 	const Elf64_Ehdr *elf_header;
 
-	desc->has_symtab = false;
-	desc->has_dynsym = false;
+	desc->symbol_table_count = 0;
 
 	elf_header = (const Elf64_Ehdr *)(desc->dlinfo.dli_fbase);
 
@@ -95,24 +124,15 @@ find_sections(struct intercept_desc *desc, long fd)
 	bool text_section_found = false;
 
 	for (Elf64_Half i = 0; i < elf_header->e_shnum; ++i) {
-		Elf64_Shdr *section = &sec_headers[i];
+		const Elf64_Shdr *section = &sec_headers[i];
 		char *name = sec_string_table + section->sh_name;
 
 		if (strcmp(name, ".text") == 0) {
 			text_section_found = true;
-			desc->text_offset = section->sh_offset;
-			desc->text_start =
-			    (unsigned char *)(desc->dlinfo.dli_fbase) +
-			    section->sh_offset;
-			desc->text_end =
-			    desc->text_start + section->sh_size - 1;
-			desc->text_section_index = i;
-		} else if (strcmp(name, ".symtab") == 0) {
-			desc->sh_symtab_section = *section;
-			desc->has_symtab = true;
-		} else if (strcmp(name, ".dynsym") == 0) {
-			desc->sh_dynsym_section = *section;
-			desc->has_dynsym = true;
+			add_text_info(desc, section, i);
+		} else if (section->sh_type == SHT_SYMTAB ||
+		    section->sh_type == SHT_DYNSYM) {
+			add_symbol_table_info(desc, section);
 		}
 	}
 
@@ -315,6 +335,9 @@ static void
 find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
 				long fd)
 {
+	assert(section->sh_type == SHT_SYMTAB ||
+		section->sh_type == SHT_DYNSYM);
+
 	size_t sym_count = section->sh_size / sizeof(Elf64_Sym);
 
 	Elf64_Sym syms[sym_count];
@@ -773,11 +796,8 @@ find_syscalls(struct intercept_desc *desc)
 	allocate_nop_table(desc);
 	allocate_skip_ranges(desc);
 
-	if (desc->has_symtab)
-		find_jumps_in_section_syms(desc, &desc->sh_symtab_section, fd);
-
-	if (desc->has_dynsym)
-		find_jumps_in_section_syms(desc, &desc->sh_dynsym_section, fd);
+	for (Elf64_Half i = 0; i < desc->symbol_table_count; ++i)
+		find_jumps_in_section_syms(desc, desc->sh_symtabs + i, fd);
 
 	syscall_no_intercept(SYS_close, fd);
 

@@ -140,10 +140,9 @@ struct intercept_desc {
 	 */
 	Elf64_Half text_section_index;
 	Elf64_Shdr sh_text_section;
-	bool has_symtab;
-	Elf64_Shdr sh_symtab_section;
-	bool has_dynsym;
-	Elf64_Shdr sh_dynsym_section;
+
+	Elf64_Half symbol_table_count;
+	Elf64_Shdr sh_symtabs[0x10];
 
 	/* Where the text starts inside the shared object */
 	unsigned long text_offset;
