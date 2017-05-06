@@ -377,6 +377,10 @@ find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
 
 		/* a function entry point in .text, mark it */
 		mark_jump(desc, address);
+
+		/* a function's end in .text, mark it */
+		if (syms[i].st_size != 0)
+			mark_jump(desc, address + syms[i].st_size);
 	}
 }
 

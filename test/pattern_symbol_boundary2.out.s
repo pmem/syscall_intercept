@@ -52,14 +52,8 @@ dummy_symbol0:
 dummy_symbol1:	jmp     dst0
 		int3
 		.size dummy_symbol0, .-dummy_symbol0
+		mov     rax, 2
 		.size dummy_symbol1, .+7-dummy_symbol1
 		jmp     dst1
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
 		inc     rax
 text_end:

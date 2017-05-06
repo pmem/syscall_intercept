@@ -49,14 +49,8 @@ text_start:
 		nop
 dummy_symbol:	jmp     dst0
 		int3
+		mov     rax, 2
 		.size dummy_symbol, .-dummy_symbol
 		jmp     dst1
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
-		int3
 		inc     rax
 text_end:
