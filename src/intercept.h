@@ -116,6 +116,11 @@ struct patch_desc {
 
 void patch_apply(struct patch_desc *patch);
 
+struct section_list {
+	Elf64_Half count;
+	Elf64_Shdr headers[0x10];
+};
+
 struct intercept_desc {
 
 	/*
@@ -141,8 +146,8 @@ struct intercept_desc {
 	Elf64_Half text_section_index;
 	Elf64_Shdr sh_text_section;
 
-	Elf64_Half symbol_table_count;
-	Elf64_Shdr sh_symtabs[0x10];
+	struct section_list symbol_tables;
+	struct section_list rela_tables;
 
 	/* Where the text starts inside the shared object */
 	unsigned long text_offset;

@@ -66,18 +66,14 @@ open_orig_file(const struct intercept_desc *desc)
 	return fd;
 }
 
-/*
- * add_symbol_table_info -- add a symbol table for later investigation
- *  to an intercept_desc struct.
- */
 static void
-add_symbol_table_info(struct intercept_desc *desc, const Elf64_Shdr *header)
+add_table_info(struct section_list *list, const Elf64_Shdr *header)
 {
-	size_t max = sizeof(desc->sh_symtabs) / sizeof(desc->sh_symtabs[0]);
+	size_t max = sizeof(list->headers) / sizeof(list->headers[0]);
 
-	if (desc->symbol_table_count < max) {
-		desc->sh_symtabs[desc->symbol_table_count] = *header;
-		desc->symbol_table_count++;
+	if (list->count < max) {
+		list->headers[list->count] = *header;
+		list->count++;
 	}
 }
 
@@ -106,7 +102,8 @@ find_sections(struct intercept_desc *desc, long fd)
 {
 	const Elf64_Ehdr *elf_header;
 
-	desc->symbol_table_count = 0;
+	desc->symbol_tables.count = 0;
+	desc->rela_tables.count = 0;
 
 	elf_header = (const Elf64_Ehdr *)(desc->dlinfo.dli_fbase);
 
@@ -127,12 +124,18 @@ find_sections(struct intercept_desc *desc, long fd)
 		const Elf64_Shdr *section = &sec_headers[i];
 		char *name = sec_string_table + section->sh_name;
 
+		debug_dump("looking at section: \"%s\" type: %ld\n",
+		    name, (long)section->sh_type);
 		if (strcmp(name, ".text") == 0) {
 			text_section_found = true;
 			add_text_info(desc, section, i);
 		} else if (section->sh_type == SHT_SYMTAB ||
 		    section->sh_type == SHT_DYNSYM) {
-			add_symbol_table_info(desc, section);
+			debug_dump("found symbol table: %s\n", name);
+			add_table_info(&desc->symbol_tables, section);
+		} else if (section->sh_type == SHT_RELA) {
+			debug_dump("found relocation table: %s\n", name);
+			add_table_info(&desc->rela_tables, section);
 		}
 	}
 
@@ -330,6 +333,20 @@ mark_jump(const struct intercept_desc *desc, const unsigned char *addr)
  * thus their entry points are jump destinations.
  * A symbol starts at offset st_value in the file, and this is its
  * exposed entry point as well.
+ *
+ * The format of the entries:
+ *
+ * typedef struct
+ * {
+ *   Elf64_Word	st_name;            Symbol name (string tbl index)
+ *   unsigned char st_info;         Symbol type and binding
+ *   unsigned char st_other;        Symbol visibility
+ *   Elf64_Section st_shndx;        Section index
+ *   Elf64_Addr	st_value;           Symbol value
+ *   Elf64_Xword st_size;           Symbol size
+ * } Elf64_Sym;
+ *
+ * The field st_value is offset of the symbol in the object file.
  */
 static void
 find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
@@ -360,6 +377,55 @@ find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
 
 		/* a function entry point in .text, mark it */
 		mark_jump(desc, address);
+	}
+}
+
+/*
+ * find_jumps_in_section_rela - look for offsets in relocation entries
+ *
+ * The constant SHT_RELA refers to "Relocation entries with addends" -- see the
+ * elf.h header file.
+ *
+ * The format of the entries:
+ *
+ * typedef struct
+ * {
+ *   Elf64_Addr	r_offset;      Address
+ *   Elf64_Xword r_info;       Relocation type and symbol index
+ *   Elf64_Sxword r_addend;    Addend
+ * } Elf64_Rela;
+ *
+ */
+static void
+find_jumps_in_section_rela(struct intercept_desc *desc, Elf64_Shdr *section,
+				long fd)
+{
+	assert(section->sh_type == SHT_RELA);
+
+	size_t sym_count = section->sh_size / sizeof(Elf64_Rela);
+
+	Elf64_Rela syms[sym_count];
+
+	xlseek(fd, section->sh_offset, SEEK_SET);
+	xread(fd, &syms, section->sh_size);
+
+	for (size_t i = 0; i < sym_count; ++i) {
+		switch (ELF64_R_TYPE(syms[i].r_info)) {
+			case R_X86_64_RELATIVE:
+			case R_X86_64_RELATIVE64:
+				/* Relocation type: "Adjust by program base" */
+
+				debug_dump("jump target: %lx\n",
+				    (unsigned long)syms[i].r_addend);
+
+				unsigned char *address =
+				    (unsigned char *)desc->dlinfo.dli_fbase +
+				    syms[i].r_addend;
+
+				mark_jump(desc, address);
+
+				break;
+		}
 	}
 }
 
@@ -796,8 +862,13 @@ find_syscalls(struct intercept_desc *desc)
 	allocate_nop_table(desc);
 	allocate_skip_ranges(desc);
 
-	for (Elf64_Half i = 0; i < desc->symbol_table_count; ++i)
-		find_jumps_in_section_syms(desc, desc->sh_symtabs + i, fd);
+	for (Elf64_Half i = 0; i < desc->symbol_tables.count; ++i)
+		find_jumps_in_section_syms(desc,
+		    desc->symbol_tables.headers + i, fd);
+
+	for (Elf64_Half i = 0; i < desc->rela_tables.count; ++i)
+		find_jumps_in_section_rela(desc,
+		    desc->rela_tables.headers + i, fd);
 
 	syscall_no_intercept(SYS_close, fd);
 
