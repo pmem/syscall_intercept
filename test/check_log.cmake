@@ -32,11 +32,13 @@
 
 # XXX ask for a unique tempfile from cmake for LOG_OUTPUT
 set(LOG_OUTPUT .log.${TEST_NAME})
-if(HAS_SECOND_LOG)
-	set(SECOND_LOG_OUTPUT .log.2.${TEST_NAME})
-endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${LOG_OUTPUT})
+
+if(HAS_SECOND_LOG)
+	set(SECOND_LOG_OUTPUT .log.2.${TEST_NAME})
+	execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${SECOND_LOG_OUTPUT})
+endif()
 
 if(HAS_SECOND_LOG)
 	message("Executing: LD_PRELOAD=${LIB_FILE}
