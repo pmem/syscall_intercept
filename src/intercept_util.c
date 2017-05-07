@@ -298,7 +298,7 @@ print_fcntl_cmd(char *buffer, long cmd)
  * Prints SYS_clone specific flags into the buffer provided. Does not return
  * the to pointer advanced while printing.
  */
-static void
+static char *
 print_clone_flags(char buffer[static 0x100], long flags)
 {
 	char *c = buffer;
@@ -366,8 +366,10 @@ print_clone_flags(char buffer[static 0x100], long flags)
 		c -= 3;
 		*c = '\0';
 	} else {
-		sprintf(buffer, "%ld", flags);
+		c += sprintf(buffer, "%ld", flags);
 	}
+
+	return c;
 }
 
 /*
@@ -394,6 +396,9 @@ print_clone_flags(char buffer[static 0x100], long flags)
 
 /* 2nd argument of fcntl */
 #define F_FCNTL_CMD 7
+
+/* 1st argument of clone */
+#define F_CLONE_FLAGS 8
 
 /*
  * xprint_escape
@@ -512,6 +517,8 @@ print_syscall(char *b, const char *name, unsigned args, ...)
 			b = print_open_flags(b, va_arg(ap, int));
 		} else if (format == F_FCNTL_CMD) {
 			b = print_fcntl_cmd(b, va_arg(ap, long));
+		} else if (format == F_CLONE_FLAGS) {
+			b = print_clone_flags(b, va_arg(ap, long));
 		}
 
 		--args;
@@ -1057,11 +1064,13 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 	} else if (nr == SYS_exit) {
 		buf += sprintf(buf, "exit(%d)", (int)arg0);
 	} else if (nr == SYS_clone) {
-		char sflags[0x100];
-
-		print_clone_flags(sflags, arg0);
-		buf += sprintf(buf, "clone(%s, %p, %p, %p, %ld)",
-		    sflags, (void *)arg1, (void *)arg2, (void *)arg3, arg4);
+		buf = print_syscall(buf, "clone", 5,
+				F_CLONE_FLAGS, arg0,
+				F_HEX, arg1,
+				F_HEX, arg2,
+				F_HEX, arg3,
+				F_HEX, arg4,
+				result_known, result);
 	} else if (nr == SYS_fork) {
 		buf = print_syscall(buf, "fork", 0, result_known, result);
 	} else if (nr == SYS_vfork) {

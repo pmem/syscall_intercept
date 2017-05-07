@@ -210,6 +210,7 @@ main(int argc, char **argv)
 	 * assembly wrappers.
 	 */
 	patches.c_destination = (void *)(uintptr_t)init_patcher;
+	patches.c_destination_clone_child = (void *)(uintptr_t)init_patcher;
 
 	/*
 	 * Some more information about the library to be patched, normally
