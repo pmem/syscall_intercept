@@ -95,7 +95,8 @@ static unsigned char asm_wrapper_space[0x100000];
 
 static unsigned char *next_asm_wrapper_space(void);
 
-static void create_wrapper(struct patch_desc *patch, void *dest_routine,
+static void create_wrapper(struct patch_desc *patch,
+			void *dest_routine, void *dest_routine_clone_child,
 			bool use_absolute_return,
 			const char *libpath);
 
@@ -495,7 +496,8 @@ create_patch_wrappers(struct intercept_desc *desc)
 
 		mark_jump(desc, patch->return_address);
 
-		create_wrapper(patch, desc->c_destination,
+		create_wrapper(patch,
+			desc->c_destination, desc->c_destination_clone_child,
 			desc->uses_trampoline_table,
 			desc->dlinfo.dli_fname);
 	}
@@ -526,6 +528,8 @@ extern unsigned char intercept_asm_wrapper_return_and_no_syscall;
 extern unsigned char intercept_asm_wrapper_return_and_syscall;
 extern unsigned char intercept_asm_wrapper_push_stack_first_return_addr;
 extern unsigned char intercept_asm_wrapper_mov_r11_stack_first_return_addr;
+extern unsigned char intercept_asm_wrapper_clone_wrapper;
+extern unsigned char intercept_asm_wrapper_call_clone_child_intercept;
 
 extern void backtrace_placeholder();
 extern void backtrace_placeholder_2();
@@ -547,6 +551,8 @@ static ptrdiff_t o_move_phaddr_r11;
 static ptrdiff_t o_move_ph2addr_r11;
 static ptrdiff_t o_push_first_return_addr;
 static ptrdiff_t o_mov_r11_first_return_addr;
+static ptrdiff_t o_clone_wrapper;
+static ptrdiff_t o_call_clone_child_intercept;
 static size_t simd_save_YMM_size;
 static size_t simd_restore_YMM_size;
 
@@ -605,6 +611,9 @@ init_patcher(void)
 	    &intercept_asm_wrapper_mov_r11_stack_first_return_addr - begin;
 	o_push_first_return_addr =
 	    &intercept_asm_wrapper_push_stack_first_return_addr - begin;
+	o_clone_wrapper = &intercept_asm_wrapper_clone_wrapper - begin;
+	o_call_clone_child_intercept =
+	    &intercept_asm_wrapper_call_clone_child_intercept - begin;
 	simd_save_YMM_size = (size_t)(&intercept_asm_wrapper_simd_save_YMM_end -
 	    &intercept_asm_wrapper_simd_save_YMM);
 	simd_restore_YMM_size =
@@ -684,9 +693,10 @@ create_movabs_r11(unsigned char *code, uint64_t value)
  * (actually only after a call to mprotect_asm_wrappers).
  */
 static void
-create_wrapper(struct patch_desc *patch, void *dest_routine,
-			bool use_absolute_return,
-			const char *libpath)
+create_wrapper(struct patch_desc *patch,
+	void *dest_routine, void *dest_routine_clone_child,
+	bool use_absolute_return,
+	const char *libpath)
 {
 	unsigned char *begin;
 
@@ -757,6 +767,13 @@ create_wrapper(struct patch_desc *patch, void *dest_routine,
 
 	/* Create the jump instrucion calling the intended C function */
 	create_jump(JMP_OPCODE, begin + o_call, dest_routine);
+
+	/*
+	 * Create the call instrucion calling the intended C function
+	 * - clone child
+	 */
+	create_jump(CALL_OPCODE, begin + o_call_clone_child_intercept,
+	    dest_routine_clone_child);
 
 	if (must_save_ymm_registers)
 		copy_ymm_handler_code(begin);

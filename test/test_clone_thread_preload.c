@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2017, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,78 +31,63 @@
  */
 
 /*
- * logging_test.c -- dummy program, to issue some syscalls via libc
+ * This library's purpose is to hook the syscalls of the program
+ * built from test_clone_thread.c, and to check the
+ * intercept_hook_point_clone_child hook point while doing so.
  */
 
-#include <err.h>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
+#include "libsyscall_intercept_hook_point.h"
+
+#include <assert.h>
+#include <syscall.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sched.h>
-#include <sys/wait.h>
 
-#include <pthread.h>
+static long flags = -1;
 
-#include "magic_syscalls.h"
-
-static const char *log_parent;
-static const char *log_child;
-
-static void *
-busy(void *arg)
+static int
+hook(long syscall_number,
+	long arg0, long arg1,
+	long arg2, long arg3,
+	long arg4, long arg5,
+	long *result)
 {
-	FILE *f;
-	const char *path = (const char *)arg;
-	char buffer[0x100];
-	size_t s;
+	(void) arg2;
+	(void) arg3;
+	(void) arg4;
+	(void) arg5;
+	(void) result;
 
-	if ((f = fopen(path, "r")) == NULL)
-		exit(EXIT_FAILURE);
+	if (syscall_number == SYS_clone)
+		flags = arg0;
 
-	s = fread(buffer, 1, sizeof(buffer), f);
-	if (s < 4)
-		exit(EXIT_FAILURE);
-	fwrite(buffer, 1, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 2, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 3, 1, stdout);
-	fflush(stdout);
-	putchar('\n');
-	fflush(stdout);
-	puts("Done being busy here");
-	fflush(stdout);
-	fclose(f);
-
-	magic_syscall_stop_log();
-
-	return NULL;
+	return 1;
 }
 
-int
-main(int argc, char *argv[])
+/*
+ * This function is executed in the child process right after the the
+ * actual syscall returned zero. The return value of clone can not
+ * be overridden, syscall_intercept returns zero to the syscall's caller.
+ *
+ * This function is executed on the stack associated with the new thread,
+ * the top of which was passed to the kernel as the second argument (arg1 above)
+ * of the clone syscall.
+ */
+static void
+hook_child(void)
 {
-	if (argc < 4)
-		return EXIT_FAILURE;
+	static const char msg[] = "clone_hook_child called\n";
 
-	log_parent = argv[2];
-	log_child = argv[3];
+	assert(flags != -1);
+	syscall_no_intercept(SYS_write, 1, msg, sizeof(msg));
+}
 
-	magic_syscall_start_log(log_parent, "1");
-
-	int r = fork();
-	if (r < 0)
-		err(EXIT_FAILURE, "fork");
-
-	if (r == 0) {
-		magic_syscall_start_log(log_child, "1");
-		busy(argv[1]);
-	} else {
-		wait(NULL);
-		busy(argv[1]);
-	}
-
-	magic_syscall_stop_log();
-
-	return EXIT_SUCCESS;
+static __attribute__((constructor)) void
+init(void)
+{
+	intercept_hook_point = hook;
+	intercept_hook_point_clone_child = hook_child;
 }

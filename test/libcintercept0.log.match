@@ -1,5 +1,9 @@
-$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID, (nil), (nil), $(XX), $(N))
+$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID, 0x0, 0x0, $(XX), $(XX)) = ?
+$(OPT)$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID, 0x0, 0x0, $(XX), $(XX)) = 0
+$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID, 0x0, 0x0, $(XX), $(XX)) = $(N)
+$(OPT)$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID, 0x0, 0x0, $(XX), $(XX)) = 0
 $(S) $(XX) -- wait4(-1, 0x0, 0x0, 0x0) = ?
+$(OPT)$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID, 0x0, 0x0, $(XX), $(XX)) = 0
 $(S) $(XX) -- wait4(-1, 0x0, 0x0, 0x0) = $(N)
 $(S) $(XX) -- open($(S), O_RDONLY, 0666) = ?
 $(S) $(XX) -- open($(S), O_RDONLY, 0666) = $(N)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2017, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,78 +31,42 @@
  */
 
 /*
- * logging_test.c -- dummy program, to issue some syscalls via libc
+ * This program exercises thread creation. The clone syscall used for
+ * creating threads has some special code paths in libsyscall_intercept.
+ * A library built with test_clone_thread_preload.c hooks into syscalls
+ * in this executable.
  */
 
-#include <err.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sched.h>
-#include <sys/wait.h>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 
+#include <assert.h>
 #include <pthread.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-#include "magic_syscalls.h"
-
-static const char *log_parent;
-static const char *log_child;
+#define THREAD_ARG ((void *)77)
+#define THREAD_RET ((void *)99)
 
 static void *
-busy(void *arg)
+t(void *arg)
 {
-	FILE *f;
-	const char *path = (const char *)arg;
-	char buffer[0x100];
-	size_t s;
-
-	if ((f = fopen(path, "r")) == NULL)
-		exit(EXIT_FAILURE);
-
-	s = fread(buffer, 1, sizeof(buffer), f);
-	if (s < 4)
-		exit(EXIT_FAILURE);
-	fwrite(buffer, 1, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 2, 1, stdout);
-	fflush(stdout);
-	fwrite(buffer, 3, 1, stdout);
-	fflush(stdout);
-	putchar('\n');
-	fflush(stdout);
-	puts("Done being busy here");
-	fflush(stdout);
-	fclose(f);
-
-	magic_syscall_stop_log();
-
-	return NULL;
+	assert(arg == THREAD_ARG);
+	return THREAD_RET;
 }
 
 int
-main(int argc, char *argv[])
+main()
 {
-	if (argc < 4)
-		return EXIT_FAILURE;
+	pthread_t thread;
+	pthread_attr_t attr;
+	void *ret;
 
-	log_parent = argv[2];
-	log_child = argv[3];
-
-	magic_syscall_start_log(log_parent, "1");
-
-	int r = fork();
-	if (r < 0)
-		err(EXIT_FAILURE, "fork");
-
-	if (r == 0) {
-		magic_syscall_start_log(log_child, "1");
-		busy(argv[1]);
-	} else {
-		wait(NULL);
-		busy(argv[1]);
-	}
-
-	magic_syscall_stop_log();
+	assert(pthread_attr_init(&attr) == 0);
+	assert(pthread_create(&thread, &attr, t, THREAD_ARG) == 0);
+	assert(pthread_join(thread, &ret) == 0);
+	assert(ret == THREAD_RET);
 
 	return EXIT_SUCCESS;
 }

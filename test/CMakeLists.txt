@@ -171,3 +171,16 @@ add_test(NAME "filter_negative"
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
 set_tests_properties("filter_negative"
 	PROPERTIES PASS_REGULAR_EXPRESSION "disallowed")
+
+add_executable(test_clone_thread test_clone_thread.c)
+target_link_libraries(test_clone_thread PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+add_library(test_clone_thread_preload SHARED test_clone_thread_preload.c)
+target_link_libraries(test_clone_thread_preload PRIVATE syscall_intercept_shared)
+add_test(NAME "clone_thread"
+	COMMAND ${CMAKE_COMMAND}
+	-DFILTER=${test_clone_thread_filename}
+	-DTEST_PROG=$<TARGET_FILE:test_clone_thread>
+	-DLIB_FILE=$<TARGET_FILE:test_clone_thread_preload>
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_filter.cmake)
+set_tests_properties("clone_thread"
+	PROPERTIES PASS_REGULAR_EXPRESSION "clone_hook_child called")
