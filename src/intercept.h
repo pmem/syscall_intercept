@@ -169,6 +169,7 @@ struct intercept_desc {
 	struct range *nop_table;
 
 	void *c_destination;
+	void *c_destination_clone_child;
 
 	unsigned char *trampoline_table;
 	size_t trampoline_table_size;
