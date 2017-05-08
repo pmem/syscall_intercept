@@ -34,6 +34,8 @@
  * This library's purpose is to hook the syscalls of the program
  * built from test_clone_thread.c, and to check the
  * intercept_hook_point_clone_child hook point while doing so.
+ *
+ * See also: examples/fork_ban.c about forking a new process.
  */
 
 #ifdef NDEBUG
@@ -61,7 +63,24 @@ hook(long syscall_number,
 	(void) arg5;
 	(void) result;
 
-	if (syscall_number == SYS_clone)
+	/*
+	 * One can not just simply issue a clone syscall that alters
+	 * the stack pointer, as C compiler generates code that assumes
+	 * the values pushed to the stack remain there. The only options
+	 * are, to handle the situation in place (with some rather elaborate
+	 * inline assembly tricks), or let libsyscall_intercept handle
+	 * the details. This example returns 1, thus asks libsyscall_intercept
+	 * to issue the actual syscall.
+	 *
+	 * So, such a clone syscall can be observed with a hook function
+	 * before the syscall, and in the child process, after the syscall.
+	 *
+	 * At the moment, libsyscall_intercept does not provide a way to
+	 * execute a hook function after the syscall in the parent process,
+	 * therefore the return value (the child's pid) can not be observed,
+	 * or modified.
+	 */
+	if (syscall_number == SYS_clone && (arg1 != 0))
 		flags = arg0;
 
 	return 1;
