@@ -334,6 +334,17 @@ intercept_asm_wrapper_simd_save:
 
 	movq        %rbp, %rsp
 	subq        $0x548, %rsp
+
+	/*
+	 * Fix the alignmetn if needed. The C functions called
+	 * from here expect 16 byte aligned stack.
+	 *
+	 * Important! The alignment is fixed up before the function
+	 * call arguments are pushed to the stack. Therefore, the branch
+	 * below must be jz or jnz based on the number of arguments pushed.
+	 * The stack must be aligned to a 16 byte boundary right after the
+	 * push instructions, and before the call instruction.
+	 */
 	andq        $0x8, %rbp
 	jz          L3
 	subq        $0x8, %rsp
