@@ -1,0 +1,13 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBDIR@
+version=@VERSION@
+includedir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: libsyscall_intercept
+Description: libsyscall_intercept - system call intercepting library
+Version: @VERSION@
+URL: http://github.com/pmem/syscall_intercept
+Requires.private: capstone
+Libs: -L@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBDIR@ -lsyscall_intercept
+Libs.private: -ldl
+Cflags: -I@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@

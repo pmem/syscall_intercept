@@ -1,0 +1,4 @@
+usr/lib/*/pkgconfig/libsyscall_intercept.pc
+usr/lib/*/libsyscall_intercept.so
+usr/lib/*/libsyscall_intercept.a
+usr/include/libsyscall_intercept_hook_point.h

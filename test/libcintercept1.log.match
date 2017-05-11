@@ -1,0 +1,6 @@
+$(S) $(XX) -- write(1, "dummy_data\0", 11) = ?
+$(S) $(XX) -- write(1, "dummy_data\0", 11) = 99
+$(S) $(XX) -- write(1, "thin", 4) = ?
+$(S) $(XX) -- write(1, "thin", 4) = 4
+$(S) $(XX) -- write(1, "dummy_data\0", 11) = ?
+$(S) $(XX) -- write(1, "dummy_data\0", 11) = 99

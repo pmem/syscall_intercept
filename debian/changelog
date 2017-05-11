@@ -1,0 +1,5 @@
+syscall-intercept (0.1-1) UNRELEASED; urgency=medium
+
+  * Initial release.
+
+ -- Marcin Ślusarz <marcin.slusarz@intel.com>  Mon, 13 Feb 2017 13:31:12 +0100
