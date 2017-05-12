@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <syscall.h>
+#include <string.h>
 
 #include "magic_syscalls.h"
 
@@ -55,11 +56,13 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 
 	magic_syscall_start_log(argv[2], "1");
+	assert(syscall(test_magic_syscall) == test_magic_syscall_result);
 
-	assert(write(1, dummy_data, sizeof(dummy_data)) == 99);
+	assert(write(1, dummy_data, sizeof(dummy_data)) == 7);
 	assert(write(1, "thing", 4) == 4);
-	assert(write(1, dummy_data, sizeof(dummy_data)) == 99);
+	assert(write(1, dummy_data, sizeof(dummy_data)) == 7);
 
+	assert(syscall(test_magic_syscall) == test_magic_syscall_result);
 	magic_syscall_stop_log();
 
 	return EXIT_SUCCESS;
