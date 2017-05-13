@@ -34,7 +34,7 @@
  * fork_ban.c - Block forking new processes after a maximum number of
  * forks.
  * This library demonstrates a way to handle fork syscalls. In contrast
- * with thread creation (for an example see test/test_clone_thread_preload.c)
+ * to thread creation (for an example see test/test_clone_thread_preload.c)
  * the fork can be done right inside of a hook routine.
  */
 

@@ -412,7 +412,7 @@ intercept_asm_wrapper_push_origin_addr:
 	 *
 	 * To explain all this to gdb, the return address should point into
 	 * a function that uses the appropriate stack space, and the binary
-	 * has debug information associated with it. For this purpuse addresses
+	 * has debug information associated with it. For this purpose addresses
 	 * in backtrace_placeholder, or backtrace_placeholder_2 are used.
 	 * The appropriate mov instructions should be filled in the template, e.g.:
 	 * at intercept_asm_wrapper_mov_ph2addr_r11, where mov_ph2addr_r11
