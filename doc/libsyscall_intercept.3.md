@@ -92,6 +92,15 @@ convenience function is provided by the library:
 long syscall_no_intercept(long syscall_number, ...);
 ```
 
+In addition to hooking syscalls before they would be called, the API
+has one special hook point that is executed after thread creation, right
+after a clone syscall creating a thread returns in a child thread:
+```c
+void (*intercept_hook_point_clone_child)(void);
+```
+Using `intercept_hook_point_clone_child`, one can be notified of thread
+creations.
+
 # ENVIRONMENT VARIABLES #
 Three environment variables control the operation of the library:
 

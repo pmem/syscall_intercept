@@ -241,6 +241,8 @@
 .global intercept_asm_wrapper_return_and_syscall;
 .global intercept_asm_wrapper_push_stack_first_return_addr;
 .global intercept_asm_wrapper_mov_r11_stack_first_return_addr;
+.global intercept_asm_wrapper_clone_wrapper;
+.global intercept_asm_wrapper_call_clone_child_intercept;
 
 .text
 
@@ -332,8 +334,19 @@ intercept_asm_wrapper_simd_save:
 
 	movq        %rbp, %rsp
 	subq        $0x548, %rsp
+
+	/*
+	 * Fix the alignment if needed. The C functions called
+	 * from here expect 16 byte aligned stack.
+	 *
+	 * Important! The alignment is fixed up before the function
+	 * call arguments are pushed to the stack. Therefore, the branch
+	 * below must be jz or jnz based on the number of arguments pushed.
+	 * The stack must be aligned to a 16 byte boundary right after the
+	 * push instructions, and before the call instruction.
+	 */
 	andq        $0x8, %rbp
-	jnz         L3
+	jz          L3
 	subq        $0x8, %rsp
 L3:
 
@@ -346,6 +359,9 @@ L3:
 	 * See: intercept_routine in intercept.c
 	 */
 	pushq       %r11 /* rsp_in_asm_wrapper */
+
+	leaq        L7(%rip), %r11
+	pushq       %r11 /* clone_wrapper */
 
 intercept_asm_wrapper_mov_return_addr_r11_no_syscall:
 .fill 10, 1, 0x90
@@ -396,7 +412,7 @@ intercept_asm_wrapper_push_origin_addr:
 	 *
 	 * To explain all this to gdb, the return address should point into
 	 * a function that uses the appropriate stack space, and the binary
-	 * has debug information associated with it. For this purpuse addresses
+	 * has debug information associated with it. For this purpose addresses
 	 * in backtrace_placeholder, or backtrace_placeholder_2 are used.
 	 * The appropriate mov instructions should be filled in the template, e.g.:
 	 * at intercept_asm_wrapper_mov_ph2addr_r11, where mov_ph2addr_r11
@@ -482,6 +498,44 @@ intercept_asm_wrapper_postfix:
 
 intercept_asm_wrapper_return_jump:
 .fill 20, 1, 0x90
+
+L7:
+intercept_asm_wrapper_clone_wrapper:
+	/*
+	 * Called from C, as clone_wrapper(arg0, arg1, arg2, arg3, arg4, arg5)
+	 * The arguments passed from C vs. arguments of the clone syscall (in
+	 * the case of creating a new thread):
+	 *
+	 *                   C (System V ABI)  vs.  Linux syscall
+	 * syscall number       [implied]              rax
+	 *          flags         rdi                  rdi
+	 *      new stack         rsi                  rsi
+	 *     parent TID         rdx                  rdx
+	 *      child TID         rcx                  r10
+	 * thread pointer         r8                   r8
+	 *
+	 * The only two differences in the above table: the syscall number is
+	 * not in rax when this code is called from C, and arg3 must be passed
+	 * in r10 instead of rcx.
+	 *
+	 * If the syscall return value is non-zero, this subroutine behaves
+	 * as a regular function, called from C, returning to C. On the other
+	 * hand, if the return value is zero, this subroutine jumps back to
+	 * libc (without restoring any of the registers) instead of returning
+	 * to the C caller.
+	 */
+	movq        $56, %rax       /* Linux SYS_clone */
+	movq        %rcx, %r10      /* account for syscall calling convention */
+	syscall
+	testq       %rax, %rax      /* in a child thread? */
+	jz          L6              /* yes, in a new child */
+	retq                        /* no, return as normal */
+
+L6:                                 /* in a new child */
+intercept_asm_wrapper_call_clone_child_intercept:
+.fill 20, 1, 0x90                   /* placeholder for call to C hook */
+	movq        $0, %rax        /* clone - return value in child */
+	jmp         L2              /* back to libc */
 
 intercept_asm_wrapper_end:
 

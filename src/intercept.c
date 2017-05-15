@@ -63,6 +63,8 @@ int (*intercept_hook_point)(long syscall_number,
 			long arg4, long arg5,
 			long *result);
 
+void (*intercept_hook_point_clone_child)(void);
+
 bool debug_dumps_on;
 
 void
@@ -111,7 +113,10 @@ intercept_routine(long nr, long arg0, long arg1,
 			const char *libpath,
 			long return_to_asm_wrapper_syscall,
 			long return_to_asm_wrapper,
+			long (*clone_wrapper)(long, long, long, long, long),
 			long rsp_in_asm_wrapper);
+
+static void clone_child_intercept_routine(void);
 
 /*
  * intercept - This is where the highest level logic of hotpatching
@@ -134,8 +139,12 @@ intercept(void)
 
 	glibc_patches.c_destination =
 	    (void *)((uintptr_t)&intercept_routine);
+	glibc_patches.c_destination_clone_child =
+	    (void *)((uintptr_t)&clone_child_intercept_routine);
 	pthreads_patches.c_destination =
 	    (void *)((uintptr_t)&intercept_routine);
+	pthreads_patches.c_destination_clone_child =
+	    (void *)((uintptr_t)&clone_child_intercept_routine);
 	intercept_setup_log(getenv("INTERCEPT_LOG"),
 			getenv("INTERCEPT_LOG_TRUNC"));
 
@@ -282,6 +291,9 @@ xabort(void)
  *  one triggers the execution of the syscall after restoring all
  *  registers, and before actually jumping back to the subject library.
  *
+ * clone_wrapper -- the address to call in the special case of thread
+ *  creation using clone.
+ *
  * rsp_in_asm_wrapper -- the stack pointer to restore after returning
  *  from this function.
  */
@@ -293,6 +305,7 @@ intercept_routine(long nr, long arg0, long arg1,
 			const char *libpath,
 			long return_to_asm_wrapper_syscall,
 			long return_to_asm_wrapper,
+			long (*clone_wrapper)(long, long, long, long, long),
 			long rsp_in_asm_wrapper)
 {
 	long result;
@@ -308,19 +321,45 @@ intercept_routine(long nr, long arg0, long arg1,
 		forward_to_kernel = intercept_hook_point(nr,
 		    arg0, arg1, arg2, arg3, arg4, arg5, &result);
 
-	if (nr == SYS_clone ||
-	    nr == SYS_vfork ||
-	    nr == SYS_rt_sigreturn) {
+	if (nr == SYS_vfork || nr == SYS_rt_sigreturn) {
 		/* can't handle these syscall the normal way */
 		xlongjmp(return_to_asm_wrapper_syscall, rsp_in_asm_wrapper, nr);
 	}
 
-	if (forward_to_kernel)
-		result = syscall_no_intercept(nr,
-		    arg0, arg1, arg2, arg3, arg4, arg5);
+	if (forward_to_kernel) {
+		/*
+		 * The clone syscall's arg1 is a pointer to a memory region
+		 * that serves as the stack space of a new child thread.
+		 * If this is zero, the child thread uses the same address
+		 * as stack pointer as the parent does (e.g.: a copy of
+		 * of the memory area after fork).
+		 *
+		 * The code at clone_wrapper only returns to this routine
+		 * in the parent thread. In the child thread, it calls
+		 * the clone_child_intercept_routine instead, executing
+		 * it on the new child threads stack, then returns to libc.
+		 */
+		if (nr == SYS_clone && arg1 != 0)
+			result = clone_wrapper(arg0, arg1, arg2, arg3, arg4);
+		else
+			result = syscall_no_intercept(nr,
+			    arg0, arg1, arg2, arg3, arg4, arg5);
+	}
 
 	intercept_log_syscall(libpath, nr, arg0, arg1, arg2, arg3, arg4, arg5,
 	    syscall_offset, KNOWN, result);
 
 	xlongjmp(return_to_asm_wrapper, rsp_in_asm_wrapper, result);
+}
+
+/*
+ * clone_child_intercept_routine
+ * The routine called by an assembly wrapper when a clone syscall returns zero,
+ * and a new stack pointer is used in the child thread.
+ */
+static void
+clone_child_intercept_routine(void)
+{
+	if (intercept_hook_point_clone_child != NULL)
+		intercept_hook_point_clone_child();
 }

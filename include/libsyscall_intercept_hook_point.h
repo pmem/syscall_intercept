@@ -57,6 +57,8 @@ extern int (*intercept_hook_point)(long syscall_number,
 			long arg4, long arg5,
 			long *result);
 
+extern void (*intercept_hook_point_clone_child)(void);
+
 /*
  * syscall_no_intercept - syscall without interception
  *
