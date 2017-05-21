@@ -64,8 +64,11 @@ open_orig_file(const struct intercept_desc *desc)
 
 	fd = syscall_no_intercept(SYS_open, desc->path, O_RDONLY);
 
-	if (fd < 0)
-		xabort();
+	if (fd < 0) {
+		syscall_no_intercept(SYS_write, 2,
+		    desc->path, strlen(desc->path));
+		xabort(" open_orig_file");
+	}
 
 	return fd;
 }
@@ -143,7 +146,7 @@ find_sections(struct intercept_desc *desc, long fd)
 	}
 
 	if (!text_section_found)
-		xabort();
+		xabort("text section not found");
 }
 
 /*
@@ -715,14 +718,14 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	size = 64 * 0x1000; /* XXX: don't just guess */
 
 	if ((maps = fopen("/proc/self/maps", "r")) == NULL)
-		xabort();
+		xabort("fopen /proc/self/maps");
 
 	while ((fgets(line, sizeof(line), maps)) != NULL) {
 		unsigned char *start;
 		unsigned char *end;
 
 		if (sscanf(line, "%p-%p", (void **)&start, (void **)&end) != 2)
-			xabort();
+			xabort("sscanf from /proc/self/maps");
 
 		/*
 		 * Let's see if an existing mapping overlaps
@@ -744,7 +747,7 @@ allocate_trampoline_table(struct intercept_desc *desc)
 
 		if (guess + size >= desc->text_start + INT32_MAX) {
 			/* Too far away */
-			xabort();
+			xabort("unable to find place for trampoline table");
 		}
 	}
 
@@ -756,7 +759,7 @@ allocate_trampoline_table(struct intercept_desc *desc)
 					-1, 0);
 
 	if (desc->trampoline_table == MAP_FAILED)
-		xabort();
+		xabort("unable to allocate space for trampoline table");
 
 	desc->trampoline_table_size = size;
 

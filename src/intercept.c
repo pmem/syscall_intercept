@@ -442,11 +442,13 @@ log_header(void)
  * by libc.
  */
 void
-xabort(void)
+xabort(const char *msg)
 {
-	static const char msg[] = "libsyscall_intercept error\n";
+	static const char main_msg[] = " libsyscall_intercept error\n";
 
-	syscall_no_intercept(SYS_write, 2, msg, sizeof(msg));
+	if (msg != NULL)
+		syscall_no_intercept(SYS_write, 2, msg, strlen(msg));
+	syscall_no_intercept(SYS_write, 2, main_msg, sizeof(main_msg));
 	syscall_no_intercept(SYS_exit_group, 1);
 
 	__builtin_trap();

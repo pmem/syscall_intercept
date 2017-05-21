@@ -59,7 +59,7 @@ xmmap_anon(size_t size)
 				MAP_PRIVATE | MAP_ANON, -1, 0);
 
 	if (addr == MAP_FAILED)
-		xabort();
+		xabort("xmmap_anon");
 
 	return addr;
 }
@@ -71,7 +71,7 @@ xmremap(void *addr, size_t old, size_t new)
 				old, new, MREMAP_MAYMOVE);
 
 	if (addr == MAP_FAILED)
-		xabort();
+		xabort("xmremap");
 
 	return addr;
 }
@@ -80,7 +80,7 @@ void
 xmunmap(void *addr, size_t len)
 {
 	if (syscall_no_intercept(SYS_munmap, addr, len) != 0)
-		xabort();
+		xabort("xmunmap");
 }
 
 long
@@ -89,7 +89,7 @@ xlseek(long fd, unsigned long off, int whence)
 	long result = syscall_no_intercept(SYS_lseek, fd, off, whence);
 
 	if (result < 0)
-		xabort();
+		xabort("xlseek");
 
 	return result;
 }
@@ -99,7 +99,7 @@ xread(long fd, void *buffer, size_t size)
 {
 	if (syscall_no_intercept(SYS_read, fd,
 	    (long)buffer, (long)size) != (long)size)
-		xabort();
+		xabort("xread");
 }
 
 /*
@@ -133,7 +133,7 @@ intercept_setup_log(const char *path_base, const char *trunc)
 	log_fd = syscall_no_intercept(SYS_open, path, flags, 0700);
 
 	if (log_fd < 0)
-		xabort();
+		xabort("setup_log");
 }
 
 /*

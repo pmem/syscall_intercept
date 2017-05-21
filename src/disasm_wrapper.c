@@ -91,7 +91,7 @@ intercept_disasm_init(const unsigned char *begin, const unsigned char *end)
 	 * The handle here must be passed to capstone each time it is used.
 	 */
 	if (cs_open(CS_ARCH_X86, CS_MODE_64, &context->handle) != CS_ERR_OK)
-		xabort();
+		xabort("cs_open");
 
 	/*
 	 * Kindly ask capstone to return some details about the instruction.
@@ -99,7 +99,7 @@ intercept_disasm_init(const unsigned char *begin, const unsigned char *end)
 	 * to parse the resulting string.
 	 */
 	if (cs_option(context->handle, CS_OPT_DETAIL, CS_OPT_ON) != 0)
-		xabort();
+		xabort("cs_option - CS_OPT_DETAIL");
 
 	/*
 	 * Overriding the printing routine used by capstone,
@@ -112,10 +112,10 @@ intercept_disasm_init(const unsigned char *begin, const unsigned char *end)
 		.realloc = realloc,
 		.vsnprintf = nop_vsnprintf};
 	if (cs_option(context->handle, CS_OPT_MEM, (size_t)&x) != 0)
-		xabort();
+		xabort("cs_option - CS_OPT_MEM");
 
 	if ((context->insn = cs_malloc(context->handle)) == NULL)
-		xabort();
+		xabort("cs_malloc");
 
 	return context;
 }
