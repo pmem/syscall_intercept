@@ -42,8 +42,6 @@ if(",${CMAKE_SOURCE_DIR}," STREQUAL ",${CMAKE_BINARY_DIR},")
 	message(FATAL_ERROR "In-source builds are not supported.")
 endif()
 
-option(DEVELOPER_MODE "enable developer checks" OFF)
-
 set(SYSCALL_INTERCEPT_VERSION_MAJOR 0)
 set(SYSCALL_INTERCEPT_VERSION_MINOR 1)
 set(SYSCALL_INTERCEPT_VERSION_PATCH 0)
@@ -123,7 +121,7 @@ set_target_properties(syscall_intercept_shared syscall_intercept_static
 
 add_dependencies(syscall_intercept_base_c cpp_test)
 
-if(${PERL_FOUND} AND DEVELOPER_MODE)
+if(${PERL_FOUND})
 	add_custom_target(cstyle
 		COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
 		-pP ${PROJECT_SOURCE_DIR}/src/*.[ch]
