@@ -31,7 +31,8 @@
 
 find_program(PANDOC pandoc)
 if (NOT PANDOC)
-        message(WARNING "pandoc not found")
+        message(FATAL
+	    "pandoc not found, needed for generating manpages -- set WITH_INSTALL_TARGETS to OFF to disable manpage generation")
 endif()
 
 add_custom_target(manpages)
