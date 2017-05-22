@@ -44,8 +44,7 @@ fi
 
 mkdir build
 cd build
-cmake .. -DDEVELOPER_MODE=1 \
-		-DCMAKE_INSTALL_PREFIX=/tmp/syscall_intercept \
+cmake .. -DCMAKE_INSTALL_PREFIX=/tmp/syscall_intercept \
 		-DCMAKE_BUILD_TYPE=Debug \
 
 make
