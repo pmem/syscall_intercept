@@ -43,6 +43,8 @@ if(",${CMAKE_SOURCE_DIR}," STREQUAL ",${CMAKE_BINARY_DIR},")
 endif()
 
 option(DEVELOPER_MODE "enable developer checks" OFF)
+option(EXPECT_SPURIOUS_SYSCALLS
+	"account for some unexpected syscalls in tests - enable while using sanitizers, gcov" OFF)
 
 set(SYSCALL_INTERCEPT_VERSION_MAJOR 0)
 set(SYSCALL_INTERCEPT_VERSION_MINOR 1)

@@ -31,6 +31,10 @@
 
 # See: https://cmake.org/Wiki/CMake/Testing_With_CTest
 
+if(EXPECT_SPURIOUS_SYSCALLS)
+	add_definitions(-DEXPECT_SPURIOUS_SYSCALLS)
+endif()
+
 find_package(Threads)
 
 include_directories(${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/test)
