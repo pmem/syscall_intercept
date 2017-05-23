@@ -56,9 +56,11 @@ main(int argc, char *argv[])
 
 	magic_syscall_start_log(argv[2], "1");
 
-	assert(write(1, dummy_data, sizeof(dummy_data)) == 99);
-	assert(write(1, "thing", 4) == 4);
-	assert(write(1, dummy_data, sizeof(dummy_data)) == 99);
+	assert(write(hook_test_fd, dummy_data, sizeof(dummy_data)) ==
+	    hook_test_dummy_return_value);
+	assert(write(hook_test_fd, "thing", 4) == -1);
+	assert(write(hook_test_fd, dummy_data, sizeof(dummy_data)) ==
+	    hook_test_dummy_return_value);
 
 	magic_syscall_stop_log();
 

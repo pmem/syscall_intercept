@@ -59,16 +59,15 @@ hook(long syscall_number, long arg0, long arg1, long arg2, long *result)
 			/* fallthrough */
 		case 2:
 			assert(syscall_number == SYS_write);
-			assert(arg0 == 1);
+			assert(arg0 == hook_test_fd);
 			assert(strcmp((void *)(intptr_t)arg1, dummy_data) == 0);
 			assert(arg2 == (long)sizeof(dummy_data));
-			*result = 99;
+			*result = hook_test_dummy_return_value;
 			return 0;
 
 		case 1:
 			assert(syscall_number == SYS_write);
-			assert(arg0 == 1);
-			assert(arg2 == 4);
+			assert(arg0 == hook_test_fd);
 			return 1;
 
 		default:
@@ -88,6 +87,9 @@ hook_wrapper(long syscall_number,
 	(void) arg5;
 
 	if (in_hook || deinit_called)
+		return 1;
+
+	if (is_spurious_syscall(syscall_number, arg0))
 		return 1;
 
 	in_hook = true;
