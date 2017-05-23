@@ -8,6 +8,7 @@ env:
     - MAKE_PKG=0 OS=fedora OS_VER=25    COMPILER=clang
     - MAKE_PKG=0 OS=ubuntu OS_VER=16.04
     - MAKE_PKG=0 OS=fedora OS_VER=25
+    - COVERAGE=1 OS=ubuntu OS_VER=16.04
 
 before_install:
   - export HOST_WORKDIR=`pwd`
