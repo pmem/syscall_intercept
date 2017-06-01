@@ -30,40 +30,42 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * hook_test.c -- dummy program, using syscall hooking
- */
+#include "libsyscall_intercept_hook_point.h"
 
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
-
-#include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <stddef.h>
 #include <syscall.h>
-#include <string.h>
 
-#include "magic_syscalls.h"
-
-#include "hook_test_data.h"
-
-int
-main(int argc, char *argv[])
+static int
+hook(long syscall_number,
+	long arg0, long arg1,
+	long arg2, long arg3,
+	long arg4, long arg5,
+	long *result)
 {
-	if (argc < 3)
-		return EXIT_FAILURE;
+	(void) arg0;
+	(void) arg2;
+	(void) arg3;
+	(void) arg4;
+	(void) arg5;
+	(void) result;
 
-	magic_syscall_start_log(argv[2], "1");
-	assert(syscall(test_magic_syscall) == test_magic_syscall_result);
+	if (syscall_number == SYS_write) {
+		const char interc[] = "intercepted_";
+		size_t len = (size_t)arg2;
+		char *dst = (char *)arg1;
+		const char *src = interc;
 
-	assert(write(1, dummy_data, sizeof(dummy_data)) == 7);
-	assert(write(1, "thing", 4) == 4);
-	assert(write(1, dummy_data, sizeof(dummy_data)) == 7);
+		if (len > sizeof(interc)) {
+			while (*src != '\0')
+				*dst++ = *src++;
+		}
+	}
 
-	assert(syscall(test_magic_syscall) == test_magic_syscall_result);
-	magic_syscall_stop_log();
+	return 1;
+}
 
-	return EXIT_SUCCESS;
+static __attribute__((constructor)) void
+init(void)
+{
+	intercept_hook_point = hook;
 }

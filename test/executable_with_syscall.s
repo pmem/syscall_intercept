@@ -29,13 +29,42 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# A program with a syscall instruction.
+# This only serves for testing syscall_intercept's ability to
+# patch syscalls in the main executable object of a process.
 
-set(ENV{INTERCEPT_HOOK_CMDLINE_FILTER} ${FILTER})
-set(ENV{LD_PRELOAD} ${LIB_FILE})
-execute_process(COMMAND ${TEST_PROG} RESULT_VARIABLE HAD_ERROR)
-set(ENV{LD_PRELOAD} "")
-set(ENV{INTERCEPT_HOOK_CMDLINE_FILTER} "")
+.intel_syntax noprefix
 
-if(HAD_ERROR)
-	message(FATAL_ERROR "Error: ${HAD_ERROR}")
-endif()
+.global main;
+
+.text
+
+main:
+		cmp     rdi, 2         # cmp argc with 2
+		jl      0f             # jump if argc < 2
+		add     rsi, 8         # inc argv
+		mov     rsi, [rsi]     # syscall argument: argv[1]
+		mov     rdi, rsi       # copy argv[1] to rdi
+		xor     rcx, rcx
+		not     rcx
+		shr     rcx, 1         # scan -- max iteration count: SSIZE_MAX
+		sub     al, al         # scan -- byte to look for: '\0'
+		cld                    # scan -- setup direction: forward
+repne		scasb                  # scan memory to find null terminator
+		sub     rdi, rsi       # compute strlen
+		mov     rdx, rdi       # syscall argument: buffer len
+		mov     rdi, 1         # syscall argument: stdout
+		mov     rax, 1         # syscall number: SYS_write
+		syscall
+		mov     rdi, 1         # syscall argument: stdout
+		lea     rsi, [rip + newline] # syscall argument: buffer
+		mov     rdx, 1         # syscall argument: length
+		mov     rax, 1         # syscall number: SYS_write
+		syscall
+		mov     rax, 0         # return 0
+		ret
+0:		mov     rax, 1         # return 1
+		ret
+
+.data
+newline:	.byte 0xa

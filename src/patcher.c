@@ -148,7 +148,7 @@ create_jump(unsigned char opcode, unsigned char *from, void *to)
 	ptrdiff_t delta = ((unsigned char *)to) - (from + JUMP_INS_SIZE);
 
 	if (delta > ((ptrdiff_t)INT32_MAX) || delta < ((ptrdiff_t)INT32_MIN))
-		xabort();
+		xabort("create_jump distance check");
 
 	int32_t delta32 = (int32_t)delta;
 	unsigned char *d = (unsigned char *)&delta32;
@@ -181,7 +181,7 @@ check_trampoline_usage(const struct intercept_desc *desc)
 	size_t used = (size_t)(desc->next_trampoline - desc->trampoline_table);
 
 	if (used + TRAMPOLINE_SIZE >= desc->trampoline_table_size)
-		xabort();
+		xabort("trampoline space not enough");
 }
 
 /*
@@ -486,11 +486,12 @@ create_patch_wrappers(struct intercept_desc *desc)
 
 				int l = snprintf(buffer, sizeof(buffer),
 					"unintercepted syscall at: %s 0x%lx\n",
-					desc->dlinfo.dli_fname,
+					desc->path,
 					patch->syscall_offset);
 
 				intercept_log(buffer, (size_t)l);
-				xabort();
+				xabort("not enough space for patching"
+				    " around syscal");
 			}
 		}
 
@@ -499,7 +500,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 		create_wrapper(patch,
 			desc->c_destination, desc->c_destination_clone_child,
 			desc->uses_trampoline_table,
-			desc->dlinfo.dli_fname);
+			desc->path);
 	}
 }
 
@@ -719,7 +720,8 @@ create_wrapper(struct patch_desc *patch,
 	}
 
 	if (patch->syscall_offset > UINT32_MAX)
-		xabort(); /* libc larger than 2 gigabytes? wow */
+		xabort("patch->syscall_offset > UINT32_MAX");
+		/* libc larger than 2 gigabytes? wow */
 
 	/* the instruction pushing the syscall's address to the stack */
 	create_push_imm(begin + o_push_origin, (uint32_t)patch->syscall_offset);
@@ -790,7 +792,7 @@ create_short_jump(unsigned char *from, unsigned char *to)
 	ptrdiff_t d = to - (from + 2);
 
 	if (d < - 128 || d > 127)
-		xabort();
+		xabort("create_short_jump distance check");
 
 	from[0] = SHORT_JMP_OPCODE;
 	from[1] = (unsigned char)((char)d);
@@ -824,14 +826,14 @@ activate_patches(struct intercept_desc *desc)
 
 	if (syscall_no_intercept(SYS_mprotect, first_page, size,
 	    PROT_READ | PROT_WRITE | PROT_EXEC) != 0)
-		xabort();
+		xabort("mprotect PROT_READ | PROT_WRITE | PROT_EXEC");
 
 	for (unsigned i = 0; i < desc->count; ++i) {
 		const struct patch_desc *patch = desc->items + i;
 
 		if (patch->dst_jmp_patch < desc->text_start ||
 		    patch->dst_jmp_patch > desc->text_end)
-			xabort();
+			xabort("dst_jmp_patch outside text");
 
 		/*
 		 * The dst_jmp_patch pointer contains the address where
@@ -902,7 +904,7 @@ activate_patches(struct intercept_desc *desc)
 
 	if (syscall_no_intercept(SYS_mprotect, first_page, size,
 	    PROT_READ | PROT_EXEC) != 0)
-		xabort();
+		xabort("mprotect PROT_READ | PROT_EXEC");
 }
 
 /*
@@ -920,7 +922,7 @@ next_asm_wrapper_space(void)
 	unsigned char *result;
 
 	if (next + tmpl_size + PAGE_SIZE > sizeof(asm_wrapper_space))
-		xabort();
+		xabort("not enough space in asm_wrapper_space");
 
 	result = asm_wrapper_space + next;
 
@@ -943,5 +945,5 @@ mprotect_asm_wrappers(void)
 	    round_down_address(asm_wrapper_space + PAGE_SIZE),
 	    sizeof(asm_wrapper_space) - PAGE_SIZE,
 	    PROT_READ | PROT_EXEC) != 0)
-		xabort();
+		xabort("mprotect_asm_wrappers PROT_READ | PROT_EXEC");
 }

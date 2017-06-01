@@ -34,5 +34,7 @@
 #define INTERCEPT_HOOK_TEST_DATA_H
 
 static const char dummy_data[] = "dummy_data";
+static const long test_magic_syscall = 9999;
+static const long test_magic_syscall_result = 7777;
 
 #endif

@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,17 +52,23 @@
  * all this information is read from the file, thus its original place,
  * the file where the library is in an FS. The loaded library is mmaped
  * already of course, but not necceseraly the whole file is mapped as one
- * readable mem mapping.
+ * readable mem mapping -- only some segments are present in memory, but
+ * information about the file's sections, and the sections themselves might
+ * only be present in the original file.
+ * Note on naming: memory has segments, the object file has sections.
  */
 static long
 open_orig_file(const struct intercept_desc *desc)
 {
 	long fd;
 
-	fd = syscall_no_intercept(SYS_open, desc->dlinfo.dli_fname, O_RDONLY);
+	fd = syscall_no_intercept(SYS_open, desc->path, O_RDONLY);
 
-	if (fd < 0)
-		xabort();
+	if (fd < 0) {
+		syscall_no_intercept(SYS_write, 2,
+		    desc->path, strlen(desc->path));
+		xabort(" open_orig_file");
+	}
 
 	return fd;
 }
@@ -86,8 +93,7 @@ add_text_info(struct intercept_desc *desc, const Elf64_Shdr *header,
 		Elf64_Half index)
 {
 	desc->text_offset = header->sh_offset;
-	desc->text_start =
-	    (unsigned char *)(desc->dlinfo.dli_fbase) + header->sh_offset;
+	desc->text_start = desc->base_addr + header->sh_addr;
 	desc->text_end = desc->text_start + header->sh_size - 1;
 	desc->text_section_index = index;
 }
@@ -100,27 +106,27 @@ add_text_info(struct intercept_desc *desc, const Elf64_Shdr *header,
 static void
 find_sections(struct intercept_desc *desc, long fd)
 {
-	const Elf64_Ehdr *elf_header;
+	Elf64_Ehdr elf_header;
 
 	desc->symbol_tables.count = 0;
 	desc->rela_tables.count = 0;
 
-	elf_header = (const Elf64_Ehdr *)(desc->dlinfo.dli_fbase);
+	xread(fd, &elf_header, sizeof(elf_header));
 
-	Elf64_Shdr sec_headers[elf_header->e_shnum];
+	Elf64_Shdr sec_headers[elf_header.e_shnum];
 
-	xlseek(fd, elf_header->e_shoff, SEEK_SET);
-	xread(fd, sec_headers, elf_header->e_shnum * sizeof(Elf64_Shdr));
+	xlseek(fd, elf_header.e_shoff, SEEK_SET);
+	xread(fd, sec_headers, elf_header.e_shnum * sizeof(Elf64_Shdr));
 
-	char sec_string_table[sec_headers[elf_header->e_shstrndx].sh_size];
+	char sec_string_table[sec_headers[elf_header.e_shstrndx].sh_size];
 
-	xlseek(fd, sec_headers[elf_header->e_shstrndx].sh_offset, SEEK_SET);
+	xlseek(fd, sec_headers[elf_header.e_shstrndx].sh_offset, SEEK_SET);
 	xread(fd, sec_string_table,
-	    sec_headers[elf_header->e_shstrndx].sh_size);
+	    sec_headers[elf_header.e_shstrndx].sh_size);
 
 	bool text_section_found = false;
 
-	for (Elf64_Half i = 0; i < elf_header->e_shnum; ++i) {
+	for (Elf64_Half i = 0; i < elf_header.e_shnum; ++i) {
 		const Elf64_Shdr *section = &sec_headers[i];
 		char *name = sec_string_table + section->sh_name;
 
@@ -140,7 +146,7 @@ find_sections(struct intercept_desc *desc, long fd)
 	}
 
 	if (!text_section_found)
-		xabort();
+		xabort("text section not found");
 }
 
 /*
@@ -331,8 +337,9 @@ mark_jump(const struct intercept_desc *desc, const unsigned char *addr)
  * Read the .symtab or .dynsym section, which stores an array of Elf64_Sym
  * structs. Some of these symbols are functions in the .text section,
  * thus their entry points are jump destinations.
- * A symbol starts at offset st_value in the file, and this is its
- * exposed entry point as well.
+ *
+ * The st_value fields holds the virtual address of the symbol
+ * relative to the base address.
  *
  * The format of the entries:
  *
@@ -372,8 +379,7 @@ find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
 		debug_dump("jump target: %lx\n",
 		    (unsigned long)syms[i].st_value);
 
-		unsigned char *address =
-		    syms[i].st_value + (unsigned char *)desc->dlinfo.dli_fbase;
+		unsigned char *address = desc->base_addr + syms[i].st_value;
 
 		/* a function entry point in .text, mark it */
 		mark_jump(desc, address);
@@ -423,8 +429,7 @@ find_jumps_in_section_rela(struct intercept_desc *desc, Elf64_Shdr *section,
 				    (unsigned long)syms[i].r_addend);
 
 				unsigned char *address =
-				    (unsigned char *)desc->dlinfo.dli_fbase +
-				    syms[i].r_addend;
+				    desc->base_addr + syms[i].r_addend;
 
 				mark_jump(desc, address);
 
@@ -435,7 +440,7 @@ find_jumps_in_section_rela(struct intercept_desc *desc, Elf64_Shdr *section,
 
 /*
  * has_pow2_count
- * Checks if the number of patches in a struct intercept_desc
+ * Checks if the positive number of patches in a struct intercept_desc
  * is a power of two or not.
  */
 static bool
@@ -713,14 +718,14 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	size = 64 * 0x1000; /* XXX: don't just guess */
 
 	if ((maps = fopen("/proc/self/maps", "r")) == NULL)
-		xabort();
+		xabort("fopen /proc/self/maps");
 
 	while ((fgets(line, sizeof(line), maps)) != NULL) {
 		unsigned char *start;
 		unsigned char *end;
 
 		if (sscanf(line, "%p-%p", (void **)&start, (void **)&end) != 2)
-			xabort();
+			xabort("sscanf from /proc/self/maps");
 
 		/*
 		 * Let's see if an existing mapping overlaps
@@ -742,7 +747,7 @@ allocate_trampoline_table(struct intercept_desc *desc)
 
 		if (guess + size >= desc->text_start + INT32_MAX) {
 			/* Too far away */
-			xabort();
+			xabort("unable to find place for trampoline table");
 		}
 	}
 
@@ -754,7 +759,7 @@ allocate_trampoline_table(struct intercept_desc *desc)
 					-1, 0);
 
 	if (desc->trampoline_table == MAP_FAILED)
-		xabort();
+		xabort("unable to allocate space for trampoline table");
 
 	desc->trampoline_table_size = size;
 
@@ -774,8 +779,7 @@ dump_skip_ranges(const struct intercept_desc *desc)
 	size_t text_size = desc->text_end + 1 - desc->text_start;
 
 	for (const struct range *r = desc->skip_ranges; r->address; ++r) {
-		size_t offset =
-		    r->address - (unsigned char *)(desc->dlinfo.dli_fbase);
+		size_t offset = r->address - desc->base_addr;
 
 		if (r->size > 0) {
 			debug_dump("skip range at: %zx - %zx\n",
@@ -821,7 +825,7 @@ find_skip_ranges(struct intercept_desc *desc)
 		unsigned char *address = desc->text_start + i;
 
 		debug_dump("looking at jump at: %tx\n",
-		    address - (unsigned char *)desc->dlinfo.dli_fbase);
+		    address - desc->base_addr);
 
 		size = i - range_start;
 
@@ -855,13 +859,21 @@ find_skip_ranges(struct intercept_desc *desc)
 void
 find_syscalls(struct intercept_desc *desc)
 {
-	debug_dump("find_syscalls in %s\n", desc->dlinfo.dli_fname);
+	debug_dump("find_syscalls in %s "
+	    "at base_addr 0x%016" PRIxPTR "\n",
+	    desc->path,
+	    (uintptr_t)desc->base_addr);
 
 	desc->count = 0;
 
 	long fd = open_orig_file(desc);
 
 	find_sections(desc, fd);
+	debug_dump(
+	    "%s .text mapped at 0x%016" PRIxPTR " - 0x%016" PRIxPTR " \n",
+	    desc->path,
+	    (uintptr_t)desc->text_start,
+	    (uintptr_t)desc->text_end);
 	allocate_jump_table(desc);
 	allocate_nop_table(desc);
 	allocate_skip_ranges(desc);

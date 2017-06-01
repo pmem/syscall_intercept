@@ -29,10 +29,23 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-add_library(icap SHARED icap.c)
 
-target_link_libraries(icap PRIVATE syscall_intercept_shared)
+if(FILTER)
+set(ENV{INTERCEPT_HOOK_CMDLINE_FILTER} ${FILTER})
+endif()
 
-add_library(fork_ban SHARED fork_ban.c)
+if(LIB_FILE)
+set(ENV{LD_PRELOAD} ${LIB_FILE})
+endif()
 
-target_link_libraries(fork_ban PRIVATE syscall_intercept_shared)
+if(INTERCEPT_ALL)
+set(ENV{INTERCEPT_ALL_OBJS} 1)
+endif()
+
+execute_process(COMMAND ${TEST_PROG} ${TEST_PROG_ARGS} RESULT_VARIABLE HAD_ERROR)
+
+unset(ENV{LD_PRELOAD})
+
+if(HAD_ERROR)
+	message(FATAL_ERROR "Error: ${HAD_ERROR}")
+endif()
