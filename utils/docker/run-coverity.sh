@@ -1,5 +1,6 @@
+#!/bin/bash -ex
 #
-# Copyright 2016-2017, Intel Corporation
+# Copyright 2017, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -30,41 +31,20 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-# Dockerfile - a 'recipe' for Docker to build an image of ubuntu-based
-#              environment for building syscall_intercept
+# run-coverity.sh - runs the Coverity scan build
 #
 
-# Pull base image
-FROM ubuntu:16.04
-MAINTAINER gabor.buella@intel.com
+cd $WORKDIR
 
-# Update the Apt cache and install basic tools
-RUN apt-get update
-RUN apt-get install -y \
-	clang \
-	curl \
-	cmake \
-	git \
-	libcapstone-dev \
-	pandoc \
-	pkg-config \
-	debhelper \
-	devscripts \
-	ruby \
-	sudo \
-	wget \
-	whois
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug
 
+export COVERITY_SCAN_PROJECT_NAME="syscall_intercept"
+[[ "$TRAVIS_EVENT_TYPE" == "cron" ]] \
+	&& export COVERITY_SCAN_BRANCH_PATTERN="master" \
+	|| export COVERITY_SCAN_BRANCH_PATTERN="coverity_scan"
+export COVERITY_SCAN_BUILD_COMMAND="make"
 
-# Add user
-ENV USER user
-ENV USERPASS pass
-RUN useradd -m $USER -g sudo -p `mkpasswd $USERPASS`
-
-USER $USER
-
-# Set required environment variables
-ENV OS ubuntu
-ENV OS_VER 16.04
-ENV PACKAGE_MANAGER deb
-ENV NOTTY 1
+# Run the Coverity scan
+curl -s https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh | bash

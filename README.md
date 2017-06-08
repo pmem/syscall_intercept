@@ -1,5 +1,7 @@
 # syscall_intercept
 
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/12890/badge.svg)](https://scan.coverity.com/projects/syscall_intercept)
+
 Userspace syscall intercepting library.
 
 # Dependencies #
