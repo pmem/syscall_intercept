@@ -399,7 +399,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 			 * No padding space is available, so check the
 			 * instructions surrounding the syscall instruction.
 			 * If they can be relocated, then they can be
-			 * overwritten. Of course some instrucions depend
+			 * overwritten. Of course some instructions depend
 			 * on the value of the RIP register, these can not
 			 * be relocated.
 			 */
@@ -436,7 +436,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 			}
 
 			/*
-			 * If the followin instrucion is relocatable,
+			 * If the following instruction is relocatable,
 			 * add its length. This also affects the return address.
 			 * Normally, the library would return to libc after
 			 * handling the syscall by jumping to instruction
@@ -448,7 +448,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 				length += patch->following_ins.length;
 
 				/*
-				 * Address of the syscall instrucion
+				 * Address of the syscall instruction
 				 * plus 2 bytes
 				 * plus the length of the following instruction
 				 *
@@ -462,7 +462,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 				    patch->following_ins.length;
 			} else {
 				/*
-				 * Address of the syscall instrucion
+				 * Address of the syscall instruction
 				 * plus 2 bytes
 				 *
 				 * adds up to:
@@ -476,7 +476,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 			}
 
 			/*
-			 * If the length is at least 5, then a jump instrucion
+			 * If the length is at least 5, then a jump instruction
 			 * with a 32 bit displacement can fit.
 			 *
 			 * Otherwise give up
@@ -705,7 +705,7 @@ create_wrapper(struct patch_desc *patch,
 	patch->asm_wrapper = begin = next_asm_wrapper_space();
 	memcpy(begin, intercept_asm_wrapper_tmpl, tmpl_size);
 
-	/* Copy the prev/next instrucions, if they are copiable */
+	/* Copy the prev/next instructions, if they are copiable */
 	if (patch->uses_prev_ins) {
 		size_t length = patch->preceding_ins.length;
 		if (patch->uses_prev_ins_2)
@@ -745,7 +745,7 @@ create_wrapper(struct patch_desc *patch,
 
 	/*
 	 * write a 'push %r11' instruction
-	 * overwriting the 'subq $0x8, %rsp' instrucion
+	 * overwriting the 'subq $0x8, %rsp' instruction
 	 */
 	begin[o_push_first_return_addr] = 0x41;
 	begin[o_push_first_return_addr + 1] = 0x53;
@@ -760,18 +760,18 @@ create_wrapper(struct patch_desc *patch,
 
 	create_movabs_r11(begin + o_mov_libpath_r11, (uint64_t)libpath);
 
-	/* Create the jump instrucions returning to the original code */
+	/* Create the jump instructions returning to the original code */
 	if (use_absolute_return)
 		create_absolute_jump(begin + o_ret_jump, patch->return_address);
 	else
 		create_jump(JMP_OPCODE, begin + o_ret_jump,
 				patch->return_address);
 
-	/* Create the jump instrucion calling the intended C function */
+	/* Create the jump instruction calling the intended C function */
 	create_jump(JMP_OPCODE, begin + o_call, dest_routine);
 
 	/*
-	 * Create the call instrucion calling the intended C function
+	 * Create the call instruction calling the intended C function
 	 * - clone child
 	 */
 	create_jump(CALL_OPCODE, begin + o_call_clone_child_intercept,
