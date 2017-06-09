@@ -51,7 +51,7 @@
  * Instead of looking for the needed metadata in already mmap library,
  * all this information is read from the file, thus its original place,
  * the file where the library is in an FS. The loaded library is mmaped
- * already of course, but not necceseraly the whole file is mapped as one
+ * already of course, but not necessarily the whole file is mapped as one
  * readable mem mapping -- only some segments are present in memory, but
  * information about the file's sections, and the sections themselves might
  * only be present in the original file.
@@ -85,7 +85,7 @@ add_table_info(struct section_list *list, const Elf64_Shdr *header)
 }
 
 /*
- * add_text_info -- Fille the appropriate fields in an intercept_desc struct
+ * add_text_info -- Fill the appropriate fields in an intercept_desc struct
  * about the corresponding code text.
  */
 static void
@@ -308,7 +308,7 @@ set_bit(unsigned char *table, uint64_t offset)
 /*
  * has_jump - check if addr is known to be a destination of any
  * jump ( or subroutine call ) in the code. The address must be
- * the one seen by the current process, not the offset in the orignal
+ * the one seen by the current process, not the offset in the original
  * ELF file.
  */
 bool
@@ -794,7 +794,7 @@ dump_skip_ranges(const struct intercept_desc *desc)
 
 /*
  * find_skip_ranges -- find ranges in the text that can be skipped during
- *  the disassembly phase
+ *  the disassemble phase
  */
 static void
 find_skip_ranges(struct intercept_desc *desc)

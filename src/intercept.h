@@ -127,7 +127,7 @@ struct intercept_desc {
 	/*
 	 * uses_trampoline_table - For now this is decided runtime
 	 * to make it easy to compare the operation of the library
-	 * with and without it. If it is ok, we can remove this
+	 * with and without it. If it is OK, we can remove this
 	 * flag, and just always use the trampoline table.
 	 */
 	bool uses_trampoline_table;

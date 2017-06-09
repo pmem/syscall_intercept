@@ -115,7 +115,7 @@ static void clone_child_intercept_routine(void);
 static bool patch_all_objs;
 
 /*
- * Information collected during dissassembly phase, and anything else
+ * Information collected during disassemble phase, and anything else
  * needed for hotpatching are stored in this dynamically allocated
  * array of structs.
  * The number currently allocated is in the objs_count variable.
@@ -165,7 +165,7 @@ get_lib_short_name(const char *name)
  * The first string (name) is not null terminated, while
  * the second string (expected) is null terminated.
  * This allows matching e.g.: "libc-2.25.so\0" with "libc\0".
- * If name_len is 4, the comparision is between: "libc" and "libc".
+ * If name_len is 4, the comparison is between: "libc" and "libc".
  */
 static bool
 str_match(const char *name, size_t name_len,
@@ -215,7 +215,7 @@ get_name_from_proc_maps(uintptr_t addr)
 
 		if ((uintptr_t)start <= addr && addr < (uintptr_t)end) {
 			/*
-			 * Object found, settin the return value.
+			 * Object found, setting the return value.
 			 * Adjusting the next_path pointer to point past the
 			 * string found just now, to the unused space behind it.
 			 * The next string found (if this routine is called
@@ -272,8 +272,8 @@ get_any_used_vaddr(const struct dl_phdr_info *info)
  * get_object_path - attempt to find the path of the object in the
  * filesystem.
  *
- * This is usually supplied by dl_iterate_phdr the in the dl_phdr_info struct,
- * but sometimes that does not conain it.
+ * This is usually supplied by dl_iterate_phdr in the dl_phdr_info struct,
+ * but sometimes that does not contain it.
  */
 static const char *
 get_object_path(const struct dl_phdr_info *info)

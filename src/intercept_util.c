@@ -479,7 +479,7 @@ xprint_escape(char *restrict dst, const char *restrict src,
  * print_syscall
  * A more general way of printing syscalls into a buffer. The args argument
  * specifies the number of syscall arguments to be printed, the rest of the
- * arguments specifiy their format.
+ * arguments specify their format.
  *
  * Returns a pointer pointing to right after the just printed text.
  */
