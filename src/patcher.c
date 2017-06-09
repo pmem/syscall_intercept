@@ -656,10 +656,10 @@ static void
 create_push_imm(unsigned char *push, uint32_t syscall_offset)
 {
 	push[0] = PUSH_IMM_OPCODE;
-	push[1] = (unsigned char)(syscall_offset % 0x100);
-	push[2] = (unsigned char)((syscall_offset / 0x100) % 0x100);
-	push[3] = (unsigned char)((syscall_offset / 0x10000) % 0x100);
-	push[4] = (unsigned char)((syscall_offset / 0x1000000) % 0x100);
+	push[1] = (unsigned char)((syscall_offset >> 0) & 0xff);
+	push[2] = (unsigned char)((syscall_offset >> 8) & 0xff);
+	push[3] = (unsigned char)((syscall_offset >> 16) & 0xff);
+	push[4] = (unsigned char)((syscall_offset >> 24) & 0xff);
 }
 
 /*
