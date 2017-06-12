@@ -32,20 +32,19 @@
 cmake_minimum_required(VERSION 2.8.7)
 project(syscall_intercept C CXX ASM)
 
+include(FindPerl)
+
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 # Setting CMAKE_DISABLE_IN_SOURCE_BUILD to ON should
 # disallow in source builds, but in practice it doesn't seem
 # to disallow it. Check the paths as well:
-if(",${CMAKE_SOURCE_DIR}," STREQUAL ",${CMAKE_BINARY_DIR},")
+if(",${CMAKE_CURRENT_SOURCE_DIR}," STREQUAL ",${CMAKE_CURRENT_BINARY_DIR},")
 	message(FATAL_ERROR "In-source builds are not supported.")
 endif()
 
-option(PERFORM_STYLE_CHECKS
-	"check coding style, license headers (requires perl)" ON)
-option(BUILD_TESTS "build and enable tests" ON)
-option(BUILD_EXAMPLES "build examples" ON)
-option(TREAT_WARNINGS_AS_ERRORS
-	"make the build fail on any warnings during compilation, or linking" ON)
+option(DEVELOPER_MODE "enable developer checks" OFF)
+option(EXPECT_SPURIOUS_SYSCALLS
+	"account for some unexpected syscalls in tests - enable while using sanitizers, gcov" OFF)
 
 set(SYSCALL_INTERCEPT_VERSION_MAJOR 0)
 set(SYSCALL_INTERCEPT_VERSION_MINOR 1)
@@ -126,39 +125,31 @@ set_target_properties(syscall_intercept_shared syscall_intercept_static
 
 add_dependencies(syscall_intercept_base_c cpp_test)
 
-if(PERFORM_STYLE_CHECKS)
-	include(FindPerl)
-	if(${PERL_FOUND})
-		add_custom_target(cstyle
-			COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
-			-pP ${PROJECT_SOURCE_DIR}/src/*.[ch]
-			${PROJECT_SOURCE_DIR}/include/*.h
-			${PROJECT_SOURCE_DIR}/test/*.c
-			${PROJECT_SOURCE_DIR}/examples/*.c)
+if(${PERL_FOUND} AND DEVELOPER_MODE)
+	add_custom_target(cstyle
+		COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/cstyle.pl
+		-pP ${PROJECT_SOURCE_DIR}/src/*.[ch]
+		${PROJECT_SOURCE_DIR}/include/*.h
+		${PROJECT_SOURCE_DIR}/test/*.c
+		${PROJECT_SOURCE_DIR}/examples/*.c)
 
-		add_custom_target(check_whitespace
-			COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/check_whitespace.pl
-			-r ${PROJECT_SOURCE_DIR}/src)
+	add_custom_target(check_whitespace
+		COMMAND ${PERL_EXECUTABLE} ${PROJECT_SOURCE_DIR}/utils/check_whitespace.pl
+		-r ${PROJECT_SOURCE_DIR}/src)
 
-		add_dependencies(syscall_intercept_base_c cstyle check_whitespace)
-	else()
-		message(FATAL_ERROR
-			"Perl not found. Perl is required for checking coding style. "
-			"To disable such checks, build with PERFORM_STYLE_CHECKS=OFF.")
-	endif()
-
-	add_executable(check_license_executable utils/check_license/check-license.c)
-
-	add_custom_target(check-license
-		COMMAND
-		${PROJECT_SOURCE_DIR}/utils/check_license/check-headers.sh
-		${PROJECT_SOURCE_DIR}
-		$<TARGET_FILE:check_license_executable>
-		${PROJECT_SOURCE_DIR}/LICENSE -a)
-
-	add_dependencies(check-license check_license_executable)
+	add_dependencies(syscall_intercept_base_c cstyle check_whitespace)
 endif()
 
+add_executable(check_license_executable utils/check_license/check-license.c)
+
+add_custom_target(check-license
+	COMMAND
+	${PROJECT_SOURCE_DIR}/utils/check_license/check-headers.sh
+	${PROJECT_SOURCE_DIR}
+	$<TARGET_FILE:check_license_executable>
+	${PROJECT_SOURCE_DIR}/LICENSE -a)
+
+add_dependencies(check-license check_license_executable)
 configure_file(libsyscall_intercept.pc.in libsyscall_intercept.pc)
 
 install(TARGETS syscall_intercept_shared syscall_intercept_static
@@ -174,13 +165,8 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
 add_custom_target(uninstall
 	"${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake/cmake_uninstall.cmake") 
 
+enable_testing()
+
+add_subdirectory(examples)
+add_subdirectory(test)
 add_subdirectory(doc)
-
-if(BUILD_EXAMPLES)
-	add_subdirectory(examples)
-endif()
-
-if(BUILD_TESTS)
-	enable_testing()
-	add_subdirectory(test)
-endif()
