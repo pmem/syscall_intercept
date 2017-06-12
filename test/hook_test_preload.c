@@ -52,7 +52,6 @@
 static int hook_counter;
 static bool in_hook;
 static bool deinit_called;
-static bool during_test;
 
 static int
 hook(long syscall_number, long arg0, long arg1, long arg2, long *result)
@@ -62,45 +61,19 @@ hook(long syscall_number, long arg0, long arg1, long arg2, long *result)
 			/* fallthrough */
 		case 2:
 			assert(syscall_number == SYS_write);
-			assert(arg0 == 1);
+			assert(arg0 == hook_test_fd);
 			assert(strcmp((void *)(intptr_t)arg1, dummy_data) == 0);
 			assert(arg2 == (long)sizeof(dummy_data));
-			*result = 7;
+			*result = hook_test_dummy_return_value;
 			return 0;
 
 		case 1:
 			assert(syscall_number == SYS_write);
-			assert(arg0 == 1);
-			assert(arg2 == 4);
+			assert(arg0 == hook_test_fd);
 			return 1;
 
 		default:
 			assert(0);
-	}
-}
-
-/*
- * is_likely_asan_initiated
- * Filters some syscalls that are normally not happening, but are made by
- * ASAN code when ASAN does instrumenting.
- */
-static bool
-is_likely_asan_initiated(long syscall_number, long arg0)
-{
-	switch (syscall_number) {
-		case SYS_mmap:
-		case SYS_munmap:
-		case SYS_ioctl:
-		case SYS_getpid:
-		case SYS_futex:
-		case SYS_exit_group:
-			return true;
-		case SYS_write:
-			if (arg0 == 2)
-				return true;
-			/* fallthrough */
-		default:
-			return false;
 	}
 }
 
@@ -118,16 +91,7 @@ hook_wrapper(long syscall_number,
 	if (in_hook || deinit_called)
 		return 1;
 
-	if (is_likely_asan_initiated(syscall_number, arg0))
-		return 1;
-
-	if (syscall_number == test_magic_syscall) {
-		during_test = !during_test;
-		*result = test_magic_syscall_result;
-		return 0;
-	}
-
-	if (!during_test)
+	if (is_spurious_syscall(syscall_number, arg0))
 		return 1;
 
 	in_hook = true;

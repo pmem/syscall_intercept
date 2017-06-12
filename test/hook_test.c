@@ -56,13 +56,13 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 
 	magic_syscall_start_log(argv[2], "1");
-	assert(syscall(test_magic_syscall) == test_magic_syscall_result);
 
-	assert(write(1, dummy_data, sizeof(dummy_data)) == 7);
-	assert(write(1, "thing", 4) == 4);
-	assert(write(1, dummy_data, sizeof(dummy_data)) == 7);
+	assert(write(hook_test_fd, dummy_data, sizeof(dummy_data)) ==
+	    hook_test_dummy_return_value);
+	assert(write(hook_test_fd, "thing", 4) == -1);
+	assert(write(hook_test_fd, dummy_data, sizeof(dummy_data)) ==
+	    hook_test_dummy_return_value);
 
-	assert(syscall(test_magic_syscall) == test_magic_syscall_result);
 	magic_syscall_stop_log();
 
 	return EXIT_SUCCESS;
