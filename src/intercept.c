@@ -408,11 +408,9 @@ intercept(void)
 	init_patcher();
 
 	dl_iterate_phdr(analyze_object, NULL);
-	if (!libc_found) {
-		intercept_logs("libc not found");
-		intercept_log_close();
-		return;
-	}
+	if (!libc_found)
+		xabort("libc not found");
+
 	mprotect_asm_wrappers();
 	for (unsigned i = 0; i < objs_count; ++i)
 		activate_patches(objs + i);
