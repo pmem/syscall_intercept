@@ -48,12 +48,12 @@ text_start:
 		mov     rax, 1
 		mov     rax, 1
 		mov     rax, 1
-		jmp     text_end
+		jmp     0f
 		nop
 		syscall
-		jmp     text_end
+		jmp     0f
 		cmp     rax, -1
 		cmp     rax, -1
 		cmp     rax, -1
-		cmp     rax, -1
+0:		cmp     rax, -1
 text_end:
