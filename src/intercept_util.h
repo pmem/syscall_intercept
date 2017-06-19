@@ -84,7 +84,6 @@ void xread(long fd, void *buffer, size_t size);
 
 void intercept_setup_log(const char *path_base, const char *trunc);
 void intercept_log(const char *buffer, size_t len);
-void intercept_logs(const char *str);
 
 enum intercept_log_result { KNOWN, UNKNOWN };
 
