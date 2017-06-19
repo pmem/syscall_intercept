@@ -117,6 +117,15 @@ struct patch_desc {
 
 void patch_apply(struct patch_desc *patch);
 
+/*
+ * A section_list struct contains information about sections where
+ * libsyscall_intercept looks for jump destinations among symbol addresses.
+ * Generally, only two sections are used for this, so 16 should be enough
+ * for the maximum number of headers to be stored.
+ *
+ * See the calls to the add_table_info routine in the intercept_desc.c source
+ * file.
+ */
 struct section_list {
 	Elf64_Half count;
 	Elf64_Shdr headers[0x10];
