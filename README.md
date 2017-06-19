@@ -14,7 +14,7 @@ Userspace syscall intercepting library.
 
  * C99 toolchain -- tested with recent versions of GCC and clang
  * cmake
- * perl
+ * perl -- for checking coding style
  * pandoc -- for generating the man page
 
 # How to build #
