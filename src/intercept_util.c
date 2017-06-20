@@ -1249,26 +1249,6 @@ intercept_log(const char *buffer, size_t len)
 }
 
 /*
- * intercept_logs - intercept_log string
- * Similar to the above routine, except for null terminated strings.
- */
-void
-intercept_logs(const char *str)
-{
-	if (log_fd < 0)
-		return;
-
-	size_t len = strlen(str) + 1;
-	char buffer[len];
-
-	strncpy(buffer, str, len);
-	buffer[len - 1] = '\n';
-
-	syscall_no_intercept(SYS_write, log_fd,
-	    (long)buffer, (long)len);
-}
-
-/*
  * intercept_log_close
  * Closes the log, if one was open.
  */
