@@ -81,6 +81,8 @@ add_table_info(struct section_list *list, const Elf64_Shdr *header)
 	if (list->count < max) {
 		list->headers[list->count] = *header;
 		list->count++;
+	} else {
+		xabort("allocated section_list exhausted");
 	}
 }
 
