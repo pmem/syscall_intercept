@@ -4,8 +4,8 @@ env:
   matrix:
     - MAKE_PKG=1 OS=ubuntu OS_VER=16.04
     - MAKE_PKG=1 OS=fedora OS_VER=25
-    - MAKE_PKG=0 OS=ubuntu OS_VER=16.04 COMPILER=clang
-    - MAKE_PKG=0 OS=fedora OS_VER=25    COMPILER=clang
+    - MAKE_PKG=0 OS=ubuntu OS_VER=16.04 C_COMPILER=clang CPP_COMPILER=clang++
+    - MAKE_PKG=0 OS=fedora OS_VER=25    C_COMPILER=clang CPP_COMPILER=clang++
     - MAKE_PKG=0 OS=ubuntu OS_VER=16.04
     - MAKE_PKG=0 OS=fedora OS_VER=25
     - COVERITY=1 OS=ubuntu OS_VER=16.04

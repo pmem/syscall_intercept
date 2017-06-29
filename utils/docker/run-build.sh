@@ -37,8 +37,11 @@
 
 # Build all and run tests
 cd $WORKDIR
-if [ -n "$COMPILER" ]; then
-	export CC=$COMPILER
+if [ -n "$C_COMPILER" ]; then
+	export CC=$C_COMPILER
+fi
+if [ -n "$CPP_COMPILER" ]; then
+	export CXX=$CPP_COMPILER
 fi
 
 
