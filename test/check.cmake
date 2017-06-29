@@ -40,6 +40,8 @@ endif()
 
 if(INTERCEPT_ALL)
 set(ENV{INTERCEPT_ALL_OBJS} 1)
+else()
+unset(ENV{INTERCEPT_ALL_OBJS})
 endif()
 
 execute_process(COMMAND ${TEST_PROG} ${TEST_PROG_ARGS} RESULT_VARIABLE HAD_ERROR)
