@@ -114,6 +114,7 @@ set(CHECK_LOG_COMMON_ARGS
 add_executable(logging_test logging_test.c)
 add_test(NAME "logging"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_NAME=logging
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
 	-DTEST_PROG=$<TARGET_FILE:logging_test>
@@ -128,6 +129,7 @@ add_library(hook_test_preload SHARED hook_test_preload.c)
 target_link_libraries(hook_test_preload PRIVATE syscall_intercept_shared)
 add_test(NAME "hook"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_NAME=hook
 	-DLIB_FILE=$<TARGET_FILE:hook_test_preload>
 	-DTEST_PROG=$<TARGET_FILE:hook_test>
@@ -139,6 +141,7 @@ add_library(hook_test_clone_preload SHARED hook_test_clone_preload.c)
 target_link_libraries(hook_test_clone_preload PRIVATE syscall_intercept_shared)
 add_test(NAME "hook_clone"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_NAME=hook_clone
 	-DLIB_FILE=$<TARGET_FILE:hook_test_clone_preload>
 	-DTEST_PROG=$<TARGET_FILE:logging_test>
@@ -153,6 +156,7 @@ target_link_libraries(filter_test PRIVATE syscall_intercept_shared)
 
 add_test(NAME "filter_none"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_PROG=$<TARGET_FILE:filter_test>
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
 set_tests_properties("filter_none"
@@ -162,6 +166,7 @@ get_filename_component(filter_test_filename $<TARGET_FILE:filter_test> NAME)
 
 add_test(NAME "filter_positive"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DFILTER=${filter_test_filename}
 	-DTEST_PROG=$<TARGET_FILE:filter_test>
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
@@ -170,6 +175,7 @@ set_tests_properties("filter_positive"
 
 add_test(NAME "filter_negative"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DFILTER=non_matching_filter
 	-DTEST_PROG=$<TARGET_FILE:filter_test>
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
@@ -182,6 +188,7 @@ add_library(test_clone_thread_preload SHARED test_clone_thread_preload.c)
 target_link_libraries(test_clone_thread_preload PRIVATE syscall_intercept_shared)
 add_test(NAME "clone_thread"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DFILTER=${test_clone_thread_filename}
 	-DTEST_PROG=$<TARGET_FILE:test_clone_thread>
 	-DLIB_FILE=$<TARGET_FILE:test_clone_thread_preload>
@@ -221,6 +228,7 @@ endif()
 
 add_test(NAME "prog_pie_intercept_libc_only"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_PROG=$<TARGET_FILE:executable_with_syscall_pie>
 	-DLIB_FILE=$<TARGET_FILE:intercept_sys_write>
 	-DTEST_PROG_ARGS=original_syscall
@@ -230,6 +238,7 @@ set_tests_properties("prog_pie_intercept_libc_only"
 
 add_test(NAME "prog_no_pie_intercept_libc_only"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_PROG=$<TARGET_FILE:executable_with_syscall_no_pie>
 	-DLIB_FILE=$<TARGET_FILE:intercept_sys_write>
 	-DTEST_PROG_ARGS=original_syscall
@@ -239,6 +248,7 @@ set_tests_properties("prog_no_pie_intercept_libc_only"
 
 add_test(NAME "prog_pie_intercept_all"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DINTERCEPT_ALL=1
 	-DTEST_PROG=$<TARGET_FILE:executable_with_syscall_pie>
 	-DLIB_FILE=$<TARGET_FILE:intercept_sys_write>
@@ -249,6 +259,7 @@ set_tests_properties("prog_pie_intercept_all"
 
 add_test(NAME "prog_no_pie_intercept_all"
 	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DINTERCEPT_ALL=1
 	-DTEST_PROG=$<TARGET_FILE:executable_with_syscall_no_pie>
 	-DLIB_FILE=$<TARGET_FILE:intercept_sys_write>

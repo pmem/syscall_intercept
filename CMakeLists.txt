@@ -48,6 +48,7 @@ option(TREAT_WARNINGS_AS_ERRORS
 	"make the build fail on any warnings during compilation, or linking" ON)
 option(EXPECT_SPURIOUS_SYSCALLS
 	"account for some unexpected syscalls in tests - enable while using sanitizers, gcov" OFF)
+set(TEST_EXTRA_PRELOAD "" CACHE STRING "path to preloadable lib used while running tests e.g.: /usr/lib/gcc/x86_64-linux-gnu/6/libasan.so")
 
 set(SYSCALL_INTERCEPT_VERSION_MAJOR 0)
 set(SYSCALL_INTERCEPT_VERSION_MINOR 1)
