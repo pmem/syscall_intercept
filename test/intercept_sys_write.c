@@ -34,6 +34,7 @@
 
 #include <stddef.h>
 #include <syscall.h>
+#include <string.h>
 
 static int
 hook(long syscall_number,
@@ -51,13 +52,20 @@ hook(long syscall_number,
 
 	if (syscall_number == SYS_write) {
 		const char interc[] = "intercepted_";
-		size_t len = (size_t)arg2;
-		char *dst = (char *)arg1;
 		const char *src = interc;
+
+		/* write(fd, buf, len) */
+		size_t len = (size_t)arg2;
+		char *buf = (char *)arg1;
+
+#ifdef EXPECT_SPURIOUS_SYSCALLS
+		if (strcmp(buf, "original_syscall") != 0)
+			return 1;
+#endif
 
 		if (len > sizeof(interc)) {
 			while (*src != '\0')
-				*dst++ = *src++;
+				*buf++ = *src++;
 		}
 	}
 
