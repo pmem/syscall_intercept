@@ -50,6 +50,8 @@ set(asm_patterns
 	nosyscall
 	pattern1
 	pattern2
+	pattern3
+	pattern4
 	pattern_loop
 	pattern_loop2
 	pattern_symbol_boundary0
