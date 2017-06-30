@@ -1,6 +1,6 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 #
-# Copyright 2014-2016, Intel Corporation
+# Copyright 2014-2017, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -65,14 +65,19 @@
 #
 #	-d	debug -- show lots of debug output
 #
-#	-q	don't print any output on mismatch (just exit with result code)
+#	-q	don't print log files on mismatch
 #
 #	-v	verbose -- show every line as it is being matched
 #
 
 use strict;
 use Getopt::Std;
+use Encode;
+use v5.16;
+
 select STDERR;
+binmode(STDOUT, ":utf8");
+binmode(STDERR, ":utf8");
 
 my $Me = $0;
 $Me =~ s,.*/,,;
@@ -160,20 +165,20 @@ sub match {
 	my $line_out = 0;
 	my $opt = 0;
 
-	open(F, $mfile) or die "$mfile: $!\n";
-	while (<F>) {
+	my $fstr = snarf($mfile);
+	for (split /^/, $fstr) {
 		$pat = $_;
 		$line_pat++;
 		$line_out++;
 		s/([*+?|{}.\\^\$\[()])/\\$1/g;
 		s/\\\$\\\(FP\\\)/[-+]?\\d*\\.?\\d+([eE][-+]?\\d+)?/g;
-		s/\\\$\\\(N\\\)/\\d+/g;
-		s/\\\$\\\(\\\*\\\)/.*/g;
+		s/\\\$\\\(N\\\)/[-+]?\\d+/g;
+		s/\\\$\\\(\\\*\\\)/\\p{Print}*/g;
 		s/\\\$\\\(S\\\)/\\P{IsC}+/g;
-		s/\\\$\\\(X\\\)/\\p{IsXDigit}+/g;
-		s/\\\$\\\(XX\\\)/0x\\p{IsXDigit}+/g;
-		s/\\\$\\\(W\\\)/\\s*[^\n]/g;
-		s/\\\$\\\(nW\\\)/\\S*/g;
+		s/\\\$\\\(X\\\)/\\p{XPosixXDigit}+/g;
+		s/\\\$\\\(XX\\\)/0x\\p{XPosixXDigit}+/g;
+		s/\\\$\\\(W\\\)/\\p{Blank}*/g;
+		s/\\\$\\\(nW\\\)/\\p{Graph}*/g;
 		s/\\\$\\\(DD\\\)/\\d+\\+\\d+ records in\n\\d+\\+\\d+ records out\n\\d+ bytes \\\(\\d+ .B\\\) copied, [.0-9e-]+[^,]*, [.0-9]+ .B.s/g;
 		if (s/\\\$\\\(OPT\\\)//) {
 			$opt = 1;
@@ -200,7 +205,11 @@ sub match {
 				$opt = 0;
 			} else {
 				if (!$opt_v) {
-					print "[MATCHING FAILED, COMPLETE FILE ($ofile) BELOW]\n$all_lines\n[EOF]\n";
+					if ($opt_q) {
+						print "[MATCHING FAILED]\n";
+					} else {
+						print "[MATCHING FAILED, COMPLETE FILE ($ofile) BELOW]\n$all_lines\n[EOF]\n";
+					}
 					$opt_v = 1;
 					match($mfile, $ofile);
 				}
@@ -212,7 +221,11 @@ sub match {
 
 	if ($output ne '') {
 		if (!$opt_v) {
-			print "[MATCHING FAILED, COMPLETE FILE ($ofile) BELOW]\n$all_lines\n[EOF]\n";
+			if ($opt_q) {
+				print "[MATCHING FAILED]\n";
+			} else {
+				print "[MATCHING FAILED, COMPLETE FILE ($ofile) BELOW]\n$all_lines\n[EOF]\n";
+			}
 		}
 
 		# make it a little more print-friendly...
@@ -226,13 +239,26 @@ sub match {
 # snarf -- slurp an entire file into memory
 #
 sub snarf {
-	my ($fname) = @_;
+	my ($file) = @_;
+	my $fh;
+	open($fh, '<', $file) or die "$file $!\n";
+
 	local $/;
-	my $contents;
+	$_ = <$fh>;
+	close $fh;
 
-	open(R, $fname) or die "$fname: $!\n";
-	$contents = <R>;
-	close(R);
+	# check known encodings or die
+	my $decoded;
+	my @encodings = ("UTF-8", "UTF-16", "UTF-16LE", "UTF-16BE");
 
-	return $contents;
+	foreach my $enc (@encodings) {
+		eval { $decoded = decode( $enc, $_, Encode::FB_CROAK ) };
+
+		if (!$@) {
+			$decoded =~ s/\R/\n/g;
+			return $decoded;
+		}
+	}
+
+	die "$Me: ERROR: Unknown file encoding";
 }
