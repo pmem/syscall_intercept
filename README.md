@@ -1,5 +1,7 @@
 # syscall_intercept
 
+[![Build Status](https://travis-ci.org/pmem/syscall_intercept.svg)](https://travis-ci.org/pmem/syscall_intercept)
+[![Coverage Status](https://codecov.io/github/pmem/syscall_intercept/coverage.svg)](https://codecov.io/gh/pmem/syscall_intercept)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/12890/badge.svg)](https://scan.coverity.com/projects/syscall_intercept)
 
 Userspace syscall intercepting library.
