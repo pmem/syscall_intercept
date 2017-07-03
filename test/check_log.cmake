@@ -35,6 +35,8 @@ set(LOG_OUTPUT .log.${TEST_NAME})
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${LOG_OUTPUT})
 
+set(ENV{INTERCEPT_ALL_OBJS} 1)
+
 if(HAS_SECOND_LOG)
 	set(SECOND_LOG_OUTPUT .log.2.${TEST_NAME})
 	execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${SECOND_LOG_OUTPUT})
@@ -43,18 +45,26 @@ endif()
 if(HAS_SECOND_LOG)
 	message("Executing: LD_PRELOAD=${LIB_FILE}
 		${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT} ${SECOND_LOG_OUTPUT}")
-	set(ENV{LD_PRELOAD} ${LIB_FILE})
+	if(TEST_EXTRA_PRELOAD)
+		set(ENV{LD_PRELOAD} ${TEST_EXTRA_PRELOAD}:${LIB_FILE})
+	else()
+		set(ENV{LD_PRELOAD} ${LIB_FILE})
+	endif()
 	execute_process(COMMAND ${TEST_PROG}
 		${TEST_PROG_ARG} ${LOG_OUTPUT} ${SECOND_LOG_OUTPUT}
 		RESULT_VARIABLE HAD_ERROR)
-	set(ENV{LD_PRELOAD} "")
+	unset(ENV{LD_PRELOAD})
 else()
 	message("Executing: LD_PRELOAD=${LIB_FILE}
 		${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT}")
-	set(ENV{LD_PRELOAD} ${LIB_FILE})
+	if(TEST_EXTRA_PRELOAD)
+		set(ENV{LD_PRELOAD} ${TEST_EXTRA_PRELOAD}:${LIB_FILE})
+	else()
+		set(ENV{LD_PRELOAD} ${LIB_FILE})
+	endif()
 	execute_process(COMMAND ${TEST_PROG} ${TEST_PROG_ARG} ${LOG_OUTPUT}
 		RESULT_VARIABLE HAD_ERROR)
-	set(ENV{LD_PRELOAD} "")
+	unset(ENV{LD_PRELOAD})
 endif()
 
 if(HAD_ERROR)
