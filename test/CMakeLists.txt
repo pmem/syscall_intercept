@@ -110,8 +110,8 @@ endforeach()
 
 set(CHECK_LOG_COMMON_ARGS
 	-DMATCH_SCRIPT=${PROJECT_SOURCE_DIR}/utils/match.pl
+	-DEXPECT_SPURIOUS_SYSCALLS=${EXPECT_SPURIOUS_SYSCALLS}
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_log.cmake)
-
 
 add_executable(logging_test logging_test.c)
 add_test(NAME "logging"

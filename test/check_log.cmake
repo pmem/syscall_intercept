@@ -61,19 +61,21 @@ if(HAD_ERROR)
 	message(FATAL_ERROR "Test failed: ${HAD_ERROR}")
 endif()
 
-execute_process(COMMAND
-	${MATCH_SCRIPT} -o ${LOG_OUTPUT} ${MATCH_FILE}
-	RESULT_VARIABLE MATCH_ERROR)
-
-if(MATCH_ERROR)
-	message(FATAL_ERROR "Log does not match! ${MATCH_ERROR}")
-endif()
-
-if(HAS_SECOND_LOG)
+if(NOT EXPECT_SPURIOUS_SYSCALLS)
 	execute_process(COMMAND
-		${MATCH_SCRIPT} -o ${SECOND_LOG_OUTPUT} ${SECOND_MATCH_FILE}
+		${MATCH_SCRIPT} -o ${LOG_OUTPUT} ${MATCH_FILE}
 		RESULT_VARIABLE MATCH_ERROR)
+
 	if(MATCH_ERROR)
-		message(FATAL_ERROR "Second log does not match! ${MATCH_ERROR}")
+		message(FATAL_ERROR "Log does not match! ${MATCH_ERROR}")
+	endif()
+
+	if(HAS_SECOND_LOG)
+		execute_process(COMMAND
+			${MATCH_SCRIPT} -o ${SECOND_LOG_OUTPUT} ${SECOND_MATCH_FILE}
+			RESULT_VARIABLE MATCH_ERROR)
+		if(MATCH_ERROR)
+			message(FATAL_ERROR "Second log does not match! ${MATCH_ERROR}")
+		endif()
 	endif()
 endif()
