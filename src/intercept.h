@@ -190,10 +190,6 @@ struct intercept_desc {
 	unsigned char *trampoline_table;
 	size_t trampoline_table_size;
 
-	size_t skip_range_count;
-	size_t max_skip_range_count;
-	struct range *skip_ranges;
-
 	unsigned char *next_trampoline;
 };
 
