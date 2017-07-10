@@ -171,7 +171,7 @@ allocate_jump_table(struct intercept_desc *desc)
 
 /*
  * calculate_table_count - estimate the number of entries
- * that might be used for nop table, skip range table.
+ * that might be used for nop table.
  */
 static size_t
 calculate_table_count(const struct intercept_desc *desc)
@@ -189,7 +189,6 @@ calculate_table_count(const struct intercept_desc *desc)
 	 * If more nops than this estimate are found (not likely), than the
 	 * code just continues without remembering those nops - this does
 	 * not break the patching process.
-	 * Same is true about skip ranges.
 	 */
 	if (bytes > 0x10000)
 		return bytes / 64;
@@ -207,71 +206,6 @@ allocate_nop_table(struct intercept_desc *desc)
 	desc->nop_count = 0;
 	desc->nop_table =
 	    xmmap_anon(desc->max_nop_count * sizeof(desc->nop_table[0]));
-}
-
-/*
- * allocate_skip_ranges - allocates desc->skip_ranges
- */
-static void
-allocate_skip_ranges(struct intercept_desc *desc)
-{
-	desc->max_skip_range_count = calculate_table_count(desc);
-	desc->skip_range_count = 0;
-	desc->skip_ranges = xmmap_anon(
-	    desc->max_skip_range_count * sizeof(desc->skip_ranges[0]));
-}
-
-/*
- * mark_skip_range - mark a range in a text section for skipping
- * This range is not going to be disassembled.
- */
-static void
-mark_skip_range(struct intercept_desc *desc,
-	unsigned char *address, size_t size)
-{
-	if (desc->skip_range_count == desc->max_skip_range_count - 1)
-		return;
-
-	if (size == 0)
-		return;
-
-	if (desc->skip_range_count > 0) {
-		struct range *last =
-		    desc->skip_ranges + (desc->skip_range_count - 1);
-
-		assert(last->address < address);
-		assert(last->address + last->size <= address);
-
-		if (last->address + last->size == address) {
-			last->size += size;
-			return;
-		}
-	}
-
-	desc->skip_ranges[desc->skip_range_count].address = address;
-	desc->skip_ranges[desc->skip_range_count].size = size;
-	desc->skip_range_count++;
-}
-
-/*
- * has_no_syscall -
- * Returns true if the given memory range definitely
- * does not contain a syscall instruction.
- * Returning false does not necessarily mean there is at least a syscall
- * in the given memory range.
- */
-static bool
-has_no_syscall(unsigned char *address, size_t size)
-{
-	if (size <= 1)
-		return false;
-
-	while (size > 1 && (address[0] != 0x0f || address[1] != 0x05)) {
-		++address;
-		--size;
-	}
-
-	return size <= 1;
 }
 
 /*
@@ -533,9 +467,6 @@ crawl_text(struct intercept_desc *desc)
 	 */
 	struct intercept_disasm_result prevs[3] = {{0, }};
 
-	/* an iterator pointing to a skip range */
-	struct range *skip = desc->skip_ranges;
-
 	/*
 	 * How many previous instructions were decoded before this one,
 	 * and stored in the prevs array. Usually three, except for the
@@ -547,33 +478,6 @@ crawl_text(struct intercept_desc *desc)
 	    intercept_disasm_init(desc->text_start, desc->text_end);
 
 	while (code <= desc->text_end) {
-		/*
-		 * First, check if the code pointer points to a range
-		 * that can be skipped (as there can not be a syscall
-		 * instruction in such a range).
-		 */
-		while (skip->address != NULL && code > skip->address)
-			++skip; /* update the iterator for skip ranges */
-
-		if (code == skip->address) {
-			/*
-			 * When at the start of a skippable range, just
-			 * advance the code pointer - without disassembling
-			 * anything in this range.
-			 */
-			if (skip->size > 0) {
-				code += skip->size;
-				has_prevs = 0;
-				prevs[0].is_set = false;
-				prevs[1].is_set = false;
-				prevs[2].is_set = false;
-			}
-			++skip;
-			continue;
-		}
-
-		assert(skip->address == NULL || code < skip->address);
-
 		struct intercept_disasm_result result;
 
 		result = intercept_disasm_next_instruction(context, code);
@@ -769,87 +673,6 @@ allocate_trampoline_table(struct intercept_desc *desc)
 }
 
 /*
- * dump_skip_ranges -- dump skip ranges as debug info
- */
-static void
-dump_skip_ranges(const struct intercept_desc *desc)
-{
-	if (!debug_dumps_on)
-		return;
-
-	size_t skip_sum = 0;
-	size_t text_size = desc->text_end + 1 - desc->text_start;
-
-	for (const struct range *r = desc->skip_ranges; r->address; ++r) {
-		size_t offset = r->address - desc->base_addr;
-
-		if (r->size > 0) {
-			debug_dump("skip range at: %zx - %zx\n",
-			    offset, offset + r->size);
-
-			skip_sum += r->size;
-		}
-	}
-	debug_dump("skip ranges: %zu bytes of %zu -- %zu%%\n",
-	    skip_sum, text_size, (skip_sum * 100) / text_size);
-}
-
-/*
- * find_skip_ranges -- find ranges in the text that can be skipped during
- *  the disassemble phase
- */
-static void
-find_skip_ranges(struct intercept_desc *desc)
-{
-	size_t bytes = (size_t)(desc->text_end - desc->text_start + 1);
-
-	size_t range_start = 0;
-	size_t size;
-	unsigned char vector = desc->jump_table[0];
-
-	assert(bytes > 0);
-
-	for (size_t i = 0; i < bytes; ) {
-		if (i % 8 == 0) {
-			vector = desc->jump_table[i / 8];
-			if (vector == 0) {
-				i += 8;
-				continue;
-			}
-		}
-
-		if (!(vector & (1 << (i % 8)))) {
-			++i;
-			continue;
-		}
-
-		unsigned char *start_address = desc->text_start + range_start;
-		unsigned char *address = desc->text_start + i;
-
-		debug_dump("looking at jump at: %tx\n",
-		    address - desc->base_addr);
-
-		size = i - range_start;
-
-		if (size > 0)
-			if (has_no_syscall(start_address, size))
-				mark_skip_range(desc, start_address, size);
-
-		range_start = i;
-		++i;
-	}
-
-	size = bytes - range_start;
-	unsigned char *start_address = desc->text_start + range_start;
-
-	if (has_no_syscall(start_address, size))
-		mark_skip_range(desc, start_address, size);
-
-	desc->skip_ranges[desc->skip_range_count].address = NULL;
-	desc->skip_ranges[desc->skip_range_count].size = 0;
-}
-
-/*
  * find_syscalls
  * The routine that disassembles a text section. Here is some higher level
  * logic for finding syscalls, finding overwritable NOP instructions, and
@@ -878,7 +701,6 @@ find_syscalls(struct intercept_desc *desc)
 	    (uintptr_t)desc->text_end);
 	allocate_jump_table(desc);
 	allocate_nop_table(desc);
-	allocate_skip_ranges(desc);
 
 	for (Elf64_Half i = 0; i < desc->symbol_tables.count; ++i)
 		find_jumps_in_section_syms(desc,
@@ -889,10 +711,6 @@ find_syscalls(struct intercept_desc *desc)
 		    desc->rela_tables.headers + i, fd);
 
 	syscall_no_intercept(SYS_close, fd);
-
-	find_skip_ranges(desc);
-
-	dump_skip_ranges(desc);
 
 	crawl_text(desc);
 }

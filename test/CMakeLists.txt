@@ -57,6 +57,7 @@ set(asm_patterns
 	pattern_symbol_boundary0
 	pattern_symbol_boundary1
 	pattern_symbol_boundary2
+	pattern_symbol_boundary3
 	pattern_nop_padding0
 	pattern_nop_padding1
 	pattern_nop_padding2
