@@ -311,8 +311,10 @@ should_patch_object(uintptr_t addr, const char *path)
 	static const char pthr[] = "libpthread";
 	static const char caps[] = "libcapstone";
 
-	if (is_vdso(addr, path))
+	if (is_vdso(addr, path)) {
+		debug_dump(" - skipping: is_vdso\n");
 		return false;
+	}
 
 	const char *name = get_lib_short_name(path);
 	size_t len = strcspn(name, "-.");
@@ -320,10 +322,18 @@ should_patch_object(uintptr_t addr, const char *path)
 	if (len == 0)
 		return false;
 
-	if (str_match(name, len, self) || str_match(name, len, caps))
+	if (str_match(name, len, self)) {
+		debug_dump(" - skipping: matches self\n");
 		return false;
+	}
+
+	if (str_match(name, len, caps)) {
+		debug_dump(" - skipping: matches capstone\n");
+		return false;
+	}
 
 	if (str_match(name, len, libc)) {
+		debug_dump(" - libc found\n");
 		libc_found = true;
 		return true;
 	}
@@ -331,9 +341,12 @@ should_patch_object(uintptr_t addr, const char *path)
 	if (patch_all_objs)
 		return true;
 
-	if (str_match(name, len, pthr))
+	if (str_match(name, len, pthr)) {
+		debug_dump(" - libpthread found\n");
 		return true;
+	}
 
+	debug_dump(" - skipping, patch_all_objs == false\n");
 	return false;
 }
 
