@@ -38,6 +38,7 @@
 #define SARGS(name, r, ...) \
 	[SYS_##name] = {#name, r, {__VA_ARGS__, }}
 
+/* Linux syscalls on X86_64 */
 static const struct syscall_desc table[] = {
 	SARGS(read, rdec, arg_fd, arg_, arg_),
 	SARGS(write, rdec, arg_fd, arg_, arg_),
@@ -99,7 +100,7 @@ static const struct syscall_desc table[] = {
 	SARGS(fork, rdec, arg_none),
 	SARGS(vfork, rdec, arg_none),
 	SARGS(execve, rdec, arg_, arg_, arg_),
-	SARGS(exit, rdec, arg_),
+	SARGS(exit, rdec, arg_), /* XXX */
 	SARGS(wait4, rdec, arg_, arg_, arg_, arg_),
 	SARGS(kill, rdec, arg_, arg_),
 	SARGS(uname, rdec, arg_),
@@ -248,8 +249,147 @@ static const struct syscall_desc table[] = {
 	SARGS(timer_settime, rdec, arg_, arg_, arg_, arg_),
 	SARGS(timer_gettime, rdec, arg_, arg_),
 	SARGS(timer_getoverrun, rdec, arg_),
-	SARGS(timer_delete, rdec, arg_)
-	/* to be continued... at this point I got tired */
+	SARGS(timer_delete, rdec, arg_),
+	SARGS(clock_settime, rdec, arg_, arg_),
+	SARGS(clock_gettime, rdec, arg_, arg_),
+	SARGS(clock_getres, rdec, arg_, arg_),
+	SARGS(clock_nanosleep, rdec, arg_, arg_, arg_, arg_),
+	SARGS(exit_group, rdec, arg_), /* XXX */
+	SARGS(epoll_wait, rdec, arg_fd, arg_, arg_, arg_),
+	SARGS(epoll_ctl, rdec, arg_fd, arg_, arg_fd, arg_),
+	SARGS(tgkill, rdec, arg_, arg_, arg_),
+	SARGS(utimes, rdec, arg_cstr, arg_),
+	SARGS(mbind, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(set_mempolicy, rdec, arg_, arg_, arg_),
+	SARGS(get_mempolicy, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(mq_open, rdec, arg_cstr, arg_, arg_, arg_, arg_),
+	SARGS(mq_unlink, rdec, arg_cstr),
+	SARGS(mq_timedsend, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(mq_timedreceive, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(mq_notify, rdec, arg_, arg_),
+	SARGS(mq_getsetattr, rdec, arg_, arg_, arg_),
+	SARGS(kexec_load, rdec, arg_, arg_, arg_, arg_),
+	SARGS(waitid, rdec, arg_, arg_, arg_, arg_),
+	SARGS(add_key, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(request_key, rdec, arg_, arg_, arg_, arg_),
+	SARGS(keyctl, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(ioprio_set, rdec, arg_, arg_, arg_),
+	SARGS(ioprio_get, rdec, arg_, arg_),
+	SARGS(inotify_init, rdec, arg_none),
+	SARGS(inotify_add_watch, rdec, arg_fd, arg_cstr, arg_),
+	SARGS(inotify_rm_watch, rdec, arg_fd, arg_),
+	SARGS(migrate_pages, rdec, arg_, arg_, arg_, arg_),
+	SARGS(openat, rdec, arg_atfd, arg_cstr, arg_, arg_),
+	SARGS(mkdirat, rdec, arg_atfd, arg_cstr, arg_),
+	SARGS(mknodat, rdec, arg_atfd, arg_cstr, arg_, arg_),
+	SARGS(fchownat, rdec, arg_atfd, arg_cstr, arg_, arg_, arg_),
+	SARGS(futimesat, rdec, arg_atfd, arg_cstr, arg_),
+	SARGS(newfstatat, rdec, arg_atfd, arg_cstr, arg_, arg_),
+	SARGS(unlinkat, rdec, arg_atfd, arg_cstr, arg_),
+	SARGS(renameat, rdec, arg_atfd, arg_cstr, arg_atfd, arg_cstr),
+	SARGS(linkat, rdec, arg_atfd, arg_cstr, arg_atfd, arg_cstr, arg_),
+	SARGS(symlinkat, rdec, arg_atfd, arg_cstr, arg_cstr),
+	SARGS(readlinkat, rdec, arg_atfd, arg_cstr, arg_, arg_),
+	SARGS(fchmodat, rdec, arg_atfd, arg_cstr, arg_),
+	SARGS(faccessat, rdec, arg_atfd, arg_cstr, arg_),
+	SARGS(pselect6, rdec, arg_, arg_, arg_, arg_, arg_, arg_),
+	SARGS(ppoll, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(unshare, rdec, arg_),
+	SARGS(set_robust_list, rdec, arg_, arg_),
+	SARGS(get_robust_list, rdec, arg_, arg_, arg_),
+	SARGS(splice, rdec, arg_fd, arg_, arg_fd, arg_, arg_, arg_),
+	SARGS(tee, rdec, arg_fd, arg_fd, arg_, arg_),
+	SARGS(sync_file_range, rdec, arg_fd, arg_, arg_, arg_),
+	SARGS(vmsplice, rdec, arg_fd, arg_, arg_, arg_),
+	SARGS(move_pages, rdec, arg_, arg_, arg_, arg_, arg_, arg_),
+	SARGS(utimensat, rdec, arg_atfd, arg_cstr, arg_, arg_),
+	SARGS(epoll_pwait, rdec, arg_fd, arg_, arg_, arg_, arg_, arg_),
+	SARGS(signalfd, rdec, arg_fd, arg_, arg_),
+	SARGS(timerfd_create, rdec, arg_, arg_),
+	SARGS(eventfd, rdec, arg_),
+	SARGS(fallocate, rdec, arg_fd, arg_, arg_, arg_),
+	SARGS(timerfd_settime, rdec, arg_fd, arg_, arg_, arg_),
+	SARGS(timerfd_gettime, rdec, arg_fd, arg_),
+	SARGS(accept4, rdec, arg_fd, arg_, arg_, arg_, arg_),
+	SARGS(signalfd4, rdec, arg_fd, arg_, arg_, arg_, arg_),
+	SARGS(eventfd2, rdec, arg_, arg_),
+	SARGS(epoll_create1, rdec, arg_),
+	SARGS(dup3, rdec, arg_fd, arg_fd, arg_),
+	SARGS(pipe2, rdec, arg_, arg_),
+	SARGS(inotify_init1, rdec, arg_),
+	SARGS(preadv, rdec, arg_fd, arg_, arg_, arg_),
+	SARGS(pwritev, rdec, arg_fd, arg_, arg_, arg_),
+	SARGS(rt_tgsigqueueinfo, rdec, arg_, arg_, arg_, arg_),
+	SARGS(perf_event_open, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(recvmmsg, rdec, arg_fd, arg_, arg_, arg_, arg_),
+	SARGS(fanotify_init, rdec, arg_, arg_),
+	SARGS(fanotify_mark, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(prlimit64, rdec, arg_, arg_, arg_, arg_),
+	SARGS(name_to_handle_at, rdec, arg_atfd, arg_cstr, arg_, arg_, arg_),
+	SARGS(open_by_handle_at, rdec, arg_atfd, arg_cstr, arg_),
+	SARGS(clock_adjtime, rdec, arg_, arg_),
+	SARGS(syncfs, rdec, arg_fd),
+	SARGS(sendmmsg, rdec, arg_fd, arg_, arg_, arg_),
+	SARGS(setns, rdec, arg_fd, arg_),
+	SARGS(getcpu, rdec, arg_, arg_, arg_),
+	SARGS(process_vm_readv, rdec, arg_, arg_, arg_, arg_, arg_, arg_),
+	SARGS(process_vm_writev, rdec, arg_, arg_, arg_, arg_, arg_, arg_),
+	SARGS(kcmp, rdec, arg_, arg_, arg_, arg_, arg_),
+	SARGS(finit_module, rdec, arg_fd, arg_, arg_),
+#ifdef SYS_sched_setattr
+	SARGS(sched_setattr, rdec, arg_, arg_, arg_),
+#endif
+#ifdef SYS_sched_getattr
+	SARGS(sched_getattr, rdec, arg_, arg_, arg_, arg_),
+#endif
+#ifdef SYS_renameat2
+	SARGS(renameat2, rdec, arg_atfd, arg_cstr, arg_atfd, arg_cstr, arg_),
+#endif
+#ifdef SYS_seccomp
+	SARGS(seccomp, rdec, arg_, arg_, arg_),
+#endif
+#ifdef SYS_getrandom
+	SARGS(getrandom, rdec, arg_, arg_, arg_),
+#endif
+#ifdef SYS_memfd_create
+	SARGS(memfd_create, rdec, arg_cstr, arg_),
+#endif
+#ifdef SYS_kexec_file_load
+	SARGS(kexec_file_load, rdec, arg_, arg_, arg_, arg_, arg_),
+#endif
+#ifdef SYS_bpf
+	SARGS(bpf, rdec, arg_, arg_, arg_),
+#endif
+#ifdef SYS_execveat
+	SARGS(execveat, rdec, arg_atfd, arg_cstr, arg_, arg_, arg_),
+#endif
+#ifdef SYS_userfaultfd
+	SARGS(userfaultfd, rdec, arg_),
+#endif
+#ifdef SYS_membarrier
+	SARGS(membarrier, rdec, arg_, arg_),
+#endif
+#ifdef SYS_mlock2
+	SARGS(mlock2, rdec, arg_, arg_, arg_),
+#endif
+#ifdef SYS_copy_file_range
+	SARGS(copy_file_range, rdec, arg_fd, arg_, arg_fd, arg_, arg_, arg_),
+#endif
+#ifdef SYS_preadv2
+	SARGS(preadv2, rdec, arg_fd, arg_, arg_, arg_, arg_),
+#endif
+#ifdef SYS_pwritev2
+	SARGS(pwritev2, rdec, arg_fd, arg_, arg_, arg_, arg_),
+#endif
+#ifdef SYS_pkey_mprotect
+	SARGS(pkey_mprotect, rdec, arg_, arg_, arg_, arg_),
+#endif
+#ifdef SYS_pkey_alloc
+	SARGS(pkey_alloc, rdec, arg_, arg_),
+#endif
+#ifdef SYS_pkey_free
+	SARGS(pkey_free, rdec, arg_),
+#endif
 };
 
 #undef SARGS

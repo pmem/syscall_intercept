@@ -112,6 +112,12 @@ print_signed_dec(long n)
 static void
 print_fd(long n)
 {
+	print_signed_dec(n);
+}
+
+static void
+print_atfd(long n)
+{
 	if (n == AT_FDCWD)
 		print_cstr("AT_FDCWD");
 	else
@@ -624,6 +630,9 @@ print_known_syscall(const struct syscall_desc *desc,
 		switch (desc->args[i]) {
 		case arg_fd:
 			print_fd(args[i]);
+			break;
+		case arg_atfd:
+			print_atfd(args[i]);
 			break;
 		case arg_cstr:
 			print_hex(args[i]);
