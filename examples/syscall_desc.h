@@ -39,6 +39,7 @@ enum arg_type {
 	arg_atfd,
 	arg_cstr,
 	arg_open_flags,
+	arg_mode,
 	arg_ /* no special formatting implemented yet, print as hex number */
 };
 
@@ -46,7 +47,7 @@ enum return_type {
 	rhex,
 	rdec,
 	runsigned,
-	roct
+	rmode
 };
 
 struct syscall_desc {
@@ -55,6 +56,7 @@ struct syscall_desc {
 	enum arg_type args[6];
 };
 
-const struct syscall_desc *get_syscall_desc(long syscall_number);
+const struct syscall_desc *get_syscall_desc(long syscall_number,
+					const long args[static 6]);
 
 #endif

@@ -714,9 +714,13 @@ print_runsigned(char *dst, long n)
 }
 
 static char *
-print_roct(char *dst, long n)
+print_mode_t(char *dst, long n)
 {
 	*dst++ = '0';
+	if (n < 0100)
+		*dst++ = '0';
+	if (n < 0010)
+		*dst++ = '0';
 	return print_number(dst, (unsigned long)n, 8);
 }
 
@@ -762,6 +766,9 @@ print_known_syscall(char *dst, const struct syscall_desc *desc,
 		case arg_open_flags:
 			dst = print_open_flags(dst, args[i]);
 			break;
+		case arg_mode:
+			dst = print_mode_t(dst, result);
+			break;
 		default:
 			dst = print_hex(dst, args[i]);
 			break;
@@ -779,8 +786,8 @@ print_known_syscall(char *dst, const struct syscall_desc *desc,
 	case runsigned:
 		dst = print_runsigned(dst, result);
 		break;
-	case roct:
-		dst = print_roct(dst, result);
+	case rmode:
+		dst = print_mode_t(dst, result);
 		break;
 	}
 
@@ -788,9 +795,11 @@ print_known_syscall(char *dst, const struct syscall_desc *desc,
 }
 
 static ssize_t
-print_syscall(char *dst, long syscall_number, const long args[6], long result)
+print_syscall(char *dst, long syscall_number, long args[6], long result)
 {
-	const struct syscall_desc *desc = get_syscall_desc(syscall_number);
+	const struct syscall_desc *desc =
+		get_syscall_desc(syscall_number, args);
+
 	char *c;
 
 	if (desc != NULL)
