@@ -34,6 +34,7 @@
 
 #include <stddef.h>
 #include <syscall.h>
+#include <fcntl.h>
 
 #define SARGS(name, r, ...) \
 	[SYS_##name] = {#name, r, {__VA_ARGS__, }}
@@ -42,7 +43,7 @@
 static const struct syscall_desc table[] = {
 	SARGS(read, rdec, arg_fd, arg_, arg_),
 	SARGS(write, rdec, arg_fd, arg_, arg_),
-	SARGS(open, rdec, arg_cstr, arg_open_flags, arg_),
+	SARGS(open, rdec, arg_cstr, arg_open_flags, arg_mode),
 	SARGS(close, rdec, arg_fd),
 	SARGS(stat, rdec, arg_cstr, arg_),
 	SARGS(fstat, rdec, arg_fd, arg_),
@@ -61,7 +62,7 @@ static const struct syscall_desc table[] = {
 	SARGS(pwrite64, rdec, arg_fd, arg_, arg_, arg_),
 	SARGS(readv, rdec, arg_fd, arg_, arg_),
 	SARGS(writev, rdec, arg_fd, arg_, arg_),
-	SARGS(access, rdec, arg_cstr, arg_),
+	SARGS(access, rdec, arg_cstr, arg_mode),
 	SARGS(pipe, rdec, arg_),
 	SARGS(select, rdec, arg_, arg_, arg_, arg_, arg_),
 	SARGS(sched_yield, rdec, arg_none),
@@ -123,19 +124,19 @@ static const struct syscall_desc table[] = {
 	SARGS(chdir, rdec, arg_cstr),
 	SARGS(fchdir, rdec, arg_fd),
 	SARGS(rename, rdec, arg_cstr, arg_cstr),
-	SARGS(mkdir, rdec, arg_cstr, arg_),
+	SARGS(mkdir, rdec, arg_cstr, arg_mode),
 	SARGS(rmdir, rdec, arg_cstr),
-	SARGS(creat, rdec, arg_cstr, arg_),
+	SARGS(creat, rdec, arg_cstr, arg_mode),
 	SARGS(link, rdec, arg_cstr, arg_cstr),
 	SARGS(unlink, rdec, arg_cstr),
 	SARGS(symlink, rdec, arg_cstr, arg_cstr),
 	SARGS(readlink, rdec, arg_cstr, arg_, arg_),
-	SARGS(chmod, rdec, arg_cstr, arg_),
-	SARGS(fchmod, rdec, arg_fd, arg_),
+	SARGS(chmod, rdec, arg_cstr, arg_mode),
+	SARGS(fchmod, rdec, arg_fd, arg_mode),
 	SARGS(chown, rdec, arg_cstr, arg_, arg_),
 	SARGS(fchown, rdec, arg_fd, arg_, arg_),
 	SARGS(lchown, rdec, arg_cstr, arg_, arg_),
-	SARGS(umask, roct, arg_),
+	SARGS(umask, rmode, arg_mode),
 	SARGS(gettimeofday, rdec, arg_, arg_),
 	SARGS(getrlimit, rdec, arg_, arg_),
 	SARGS(getrusage, rdec, arg_, arg_),
@@ -279,9 +280,9 @@ static const struct syscall_desc table[] = {
 	SARGS(inotify_add_watch, rdec, arg_fd, arg_cstr, arg_),
 	SARGS(inotify_rm_watch, rdec, arg_fd, arg_),
 	SARGS(migrate_pages, rdec, arg_, arg_, arg_, arg_),
-	SARGS(openat, rdec, arg_atfd, arg_cstr, arg_open_flags, arg_),
-	SARGS(mkdirat, rdec, arg_atfd, arg_cstr, arg_),
-	SARGS(mknodat, rdec, arg_atfd, arg_cstr, arg_, arg_),
+	SARGS(openat, rdec, arg_atfd, arg_cstr, arg_open_flags, arg_mode),
+	SARGS(mkdirat, rdec, arg_atfd, arg_cstr, arg_mode),
+	SARGS(mknodat, rdec, arg_atfd, arg_cstr, arg_mode, arg_),
 	SARGS(fchownat, rdec, arg_atfd, arg_cstr, arg_, arg_, arg_),
 	SARGS(futimesat, rdec, arg_atfd, arg_cstr, arg_),
 	SARGS(newfstatat, rdec, arg_atfd, arg_cstr, arg_, arg_),
@@ -290,8 +291,8 @@ static const struct syscall_desc table[] = {
 	SARGS(linkat, rdec, arg_atfd, arg_cstr, arg_atfd, arg_cstr, arg_),
 	SARGS(symlinkat, rdec, arg_atfd, arg_cstr, arg_cstr),
 	SARGS(readlinkat, rdec, arg_atfd, arg_cstr, arg_, arg_),
-	SARGS(fchmodat, rdec, arg_atfd, arg_cstr, arg_),
-	SARGS(faccessat, rdec, arg_atfd, arg_cstr, arg_),
+	SARGS(fchmodat, rdec, arg_atfd, arg_cstr, arg_mode),
+	SARGS(faccessat, rdec, arg_atfd, arg_cstr, arg_mode),
 	SARGS(pselect6, rdec, arg_, arg_, arg_, arg_, arg_, arg_),
 	SARGS(ppoll, rdec, arg_, arg_, arg_, arg_, arg_),
 	SARGS(unshare, rdec, arg_),
@@ -394,14 +395,32 @@ static const struct syscall_desc table[] = {
 
 #undef SARGS
 
+static const struct syscall_desc open_without_mode = {
+	.name = "open",
+	.return_type = rdec,
+	.args = {arg_cstr, arg_open_flags, }
+};
+
+static const struct syscall_desc openat_without_mode = {
+	.name = "openat",
+	.return_type = rdec,
+	.args = {arg_atfd, arg_cstr, arg_open_flags, }
+};
+
 const struct syscall_desc *
-get_syscall_desc(long syscall_number)
+get_syscall_desc(long syscall_number, const long args[6])
 {
 	if (syscall_number < 0)
 		return NULL;
 
 	if ((size_t)syscall_number >= (sizeof(table) / sizeof(table[0])))
 		return NULL;
+
+	if (syscall_number == SYS_open && (args[1] & O_CREAT) == 0)
+		return &open_without_mode;
+
+	if (syscall_number == SYS_openat && (args[2] & O_CREAT) == 0)
+		return &openat_without_mode;
 
 	return table + syscall_number;
 }
