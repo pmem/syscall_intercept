@@ -48,43 +48,81 @@
 long log_fd;
 
 static char buffer[0x20000];
-static char *nextc;
+static size_t buffer_offset;
 
-static size_t
-buffer_avaliable(void)
+static bool
+exchange_buffer_offset(size_t *expected, size_t new)
 {
-	return (size_t)(sizeof(buffer) - (size_t)(nextc - buffer));
+	return __atomic_compare_exchange_n(&buffer_offset, expected, new, false,
+			__ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
+#define DUMP_TRESHOLD (sizeof(buffer) - 0x1000)
+
 static void
-print_cstr(const char *name)
+append_buffer(const char *data, ssize_t len)
 {
-	while (*name != '\0')
-		*nextc++ = *name++;
+	static long writers;
+	size_t offset = buffer_offset;
+
+	while (true) {
+		while (offset >= DUMP_TRESHOLD) {
+			syscall_no_intercept(SYS_sched_yield);
+			offset = buffer_offset;
+		}
+
+		__atomic_fetch_add(&writers, 1, __ATOMIC_SEQ_CST);
+
+		if (exchange_buffer_offset(&offset, offset + len)) {
+			memcpy(buffer + offset, data, len);
+			break;
+		}
+
+		__atomic_fetch_sub(&writers, 1, __ATOMIC_SEQ_CST);
+	}
+
+	if (offset + len > DUMP_TRESHOLD) {
+		while (__atomic_load_n(&writers, __ATOMIC_SEQ_CST) != 0)
+			syscall_no_intercept(SYS_sched_yield);
+
+		syscall_no_intercept(SYS_write, log_fd, buffer, buffer_offset);
+		__atomic_store_n(&buffer_offset, 0, __ATOMIC_SEQ_CST);
+	}
+}
+
+static char *
+print_cstr(char *dst, const char *str)
+{
+	while (*str != '\0')
+		*dst++ = *str++;
+
+	return dst;
 }
 
 static const char xdigit[16] = "0123456789abcdef";
 
-static void
-print_hex(long n)
+static char *
+print_hex(char *dst, long n)
 {
-	*nextc++ = '0';
-	*nextc++ = 'x';
+	*dst++ = '0';
+	*dst++ = 'x';
 
 	int shift = 64;
 	do {
 		shift -= 4;
-		*nextc++ = xdigit[(n >> shift) % 0x10];
+		*dst++ = xdigit[(n >> shift) % 0x10];
 	} while (shift > 0);
+
+	return dst;
 }
 
-static void
-print_number(unsigned long n, long base)
+static char *
+print_number(char *dst, unsigned long n, long base)
 {
 	char digits[0x40];
 
 	digits[sizeof(digits) - 1] = '\0';
-	char *c = digits + sizeof(digits) - 2;
+	char *c = digits + sizeof(digits) - 1;
 
 	do {
 		*--c = xdigit[n % base];
@@ -92,89 +130,79 @@ print_number(unsigned long n, long base)
 	} while (n > 0);
 
 	while (*c != '\0')
-		*nextc++ = *c++;
+		*dst++ = *c++;
+
+	return dst;
 }
 
-static void
-print_signed_dec(long n)
+static char *
+print_signed_dec(char *dst, long n)
 {
 	unsigned long nu;
 	if (n >= 0) {
 		nu = (unsigned long)n;
 	} else {
-		*nextc++ = '-';
+		*dst++ = '-';
 		nu = ((unsigned long)((0l - 1L) - n)) + 1LU;
 	}
 
-	print_number(nu, 10);
+	return print_number(dst, nu, 10);
 }
 
-static void
-print_fd(long n)
+static char *
+print_fd(char *dst, long n)
 {
-	print_signed_dec(n);
+	return print_signed_dec(dst, n);
 }
 
-static void
-print_atfd(long n)
+static char *
+print_atfd(char *dst, long n)
 {
 	if (n == AT_FDCWD)
-		print_cstr("AT_FDCWD");
+		return print_cstr(dst, "AT_FDCWD");
 	else
-		print_signed_dec(n);
+		return print_signed_dec(dst, n);
 }
 
 #define CSTR_MAX_LEN 0x100
 
-static void
-print_cstr_escaped(const char *path)
+static char *
+print_cstr_escaped(char *dst, const char *str)
 {
 	size_t len = 0;
-	*nextc++ = '"';
-	while (*path != '\0' && len < CSTR_MAX_LEN) {
-		if (*path == '\n') {
-			*nextc++ = '\\';
-			*nextc++ = 'n';
-		} else if (*path == '\\') {
-			*nextc++ = '\\';
-			*nextc++ = '\\';
-		} else if (*path == '\t') {
-			*nextc++ = '\\';
-			*nextc++ = 't';
-		} else if (*path == '\"') {
-			*nextc++ = '\\';
-			*nextc++ = '"';
-		} else if (isprint((unsigned char)*path)) {
-			*nextc++ = *path;
+	*dst++ = '"';
+	while (*str != '\0' && len < CSTR_MAX_LEN) {
+		if (*str == '\n') {
+			*dst++ = '\\';
+			*dst++ = 'n';
+		} else if (*str == '\\') {
+			*dst++ = '\\';
+			*dst++ = '\\';
+		} else if (*str == '\t') {
+			*dst++ = '\\';
+			*dst++ = 't';
+		} else if (*str == '\"') {
+			*dst++ = '\\';
+			*dst++ = '"';
+		} else if (isprint((unsigned char)*str)) {
+			*dst++ = *str;
 		} else {
-			*nextc++ = '\\';
-			*nextc++ = 'x';
-			*nextc++ = xdigit[((unsigned char)*path) / 0x10];
-			*nextc++ = xdigit[((unsigned char)*path) % 0x10];
+			*dst++ = '\\';
+			*dst++ = 'x';
+			*dst++ = xdigit[((unsigned char)*str) / 0x10];
+			*dst++ = xdigit[((unsigned char)*str) % 0x10];
 		}
 
 		++len;
-		++path;
+		++str;
 	}
 
-	if (*path != '\0') {
-		*nextc++ = '.';
-		*nextc++ = '.';
-		*nextc++ = '.';
-	}
+	if (*str != '\0')
+		dst = print_cstr(dst, "...");
 
-	*nextc++ = '"';
-}
+	*dst++ = '"';
 
-static void
-dump_log(void)
-{
-	if (nextc == buffer)
-		return;
-
-	syscall_no_intercept(SYS_write, log_fd, buffer, nextc - buffer);
-
-	nextc = buffer;
+	return dst;
 }
 
 static const char *const error_codes[] = {
@@ -573,93 +601,112 @@ static const char *const error_codes[] = {
 #endif
 };
 
-static void
-print_rdec(long n)
+static char *
+print_rdec(char *dst, long n)
 {
-	print_signed_dec(n);
+	dst = print_signed_dec(dst, n);
 
 	if (n < 0 && n >= -((long)ARRAY_SIZE(error_codes))) {
 		if (error_codes[-n] != NULL) {
-			print_cstr(" (");
-			print_cstr(error_codes[-n]);
-			print_cstr(")");
+			dst = print_cstr(dst, " (");
+			dst = print_cstr(dst, error_codes[-n]);
+			dst = print_cstr(dst, ")");
 		}
 	}
+
+	return dst;
 }
 
-static void
-print_runsigned(long n)
+static char *
+print_runsigned(char *dst, long n)
 {
-	print_number((unsigned long)n, 10);
+	return print_number(dst, (unsigned long)n, 10);
 }
 
-static void
-print_roct(long n)
+static char *
+print_roct(char *dst, long n)
 {
-	nextc += '0';
-	print_number((unsigned long)n, 8);
+	*dst++ = '0';
+	return print_number(dst, (unsigned long)n, 8);
 }
 
 #define MIN_AVAILABLE_REQUIRED (0x100 + 8 * CSTR_MAX_LEN)
 
-static void
-print_unknown_syscall(long syscall_number, long args[static 6], long result)
-{
-	print_cstr("syscall(");
-	print_number(syscall_number, 10);
-	for (unsigned i = 0; i < 6; ++i) {
-		print_cstr(", ");
-		print_hex(args[i]);
-	}
-	print_cstr(") = ");
-	print_hex(result);
-	print_cstr("\n");
-}
-
-static void
-print_known_syscall(const struct syscall_desc *desc,
+static char *
+print_unknown_syscall(char *dst, long syscall_number,
 			const long args[static 6], long result)
 {
-	print_cstr(desc->name);
-	*nextc++ = '(';
+	dst = print_cstr(dst, "syscall(");
+	dst = print_number(dst, syscall_number, 10);
+	for (unsigned i = 0; i < 6; ++i) {
+		dst = print_cstr(dst, ", ");
+		dst = print_hex(dst, args[i]);
+	}
+	dst = print_cstr(dst, ") = ");
+	dst = print_hex(dst, result);
+	return dst;
+}
+
+static char *
+print_known_syscall(char *dst, const struct syscall_desc *desc,
+			const long args[static 6], long result)
+{
+	dst = print_cstr(dst, desc->name);
+	*dst++ = '(';
 
 	for (unsigned i = 0; desc->args[i] != arg_none; ++i) {
 		if (i > 0)
-			print_cstr(", ");
+			dst = print_cstr(dst, ", ");
 
 		switch (desc->args[i]) {
 		case arg_fd:
-			print_fd(args[i]);
+			dst = print_fd(dst, args[i]);
 			break;
 		case arg_atfd:
-			print_atfd(args[i]);
+			dst = print_atfd(dst, args[i]);
 			break;
 		case arg_cstr:
-			print_hex(args[i]);
-			print_cstr_escaped((const char *)(args[i]));
+			dst = print_hex(dst, args[i]);
+			dst = print_cstr_escaped(dst, (const char *)(args[i]));
 			break;
 		default:
-			print_hex(args[i]);
+			dst = print_hex(dst, args[i]);
 			break;
 		}
 	}
 
-	print_cstr(") = ");
+	dst = print_cstr(dst, ") = ");
 	switch (desc->return_type) {
 	case rhex:
-		print_hex(result);
+		dst = print_hex(dst, result);
 		break;
 	case rdec:
-		print_rdec(result);
+		dst = print_rdec(dst, result);
 		break;
 	case runsigned:
-		print_runsigned(result);
+		dst = print_runsigned(dst, result);
 		break;
 	case roct:
-		print_roct(result);
+		dst = print_roct(dst, result);
 		break;
 	}
-	*nextc++ = '\n';
+
+	return dst;
+}
+
+static ssize_t
+print_syscall(char *dst, long syscall_number, const long args[6], long result)
+{
+	const struct syscall_desc *desc = get_syscall_desc(syscall_number);
+	char *c;
+
+	if (desc != NULL)
+		c = print_known_syscall(dst, desc, args, result);
+	else
+		c = print_unknown_syscall(dst, syscall_number, args, result);
+
+	*c++ = '\n';
+	return c - dst;
 }
 
 static int
@@ -674,15 +721,12 @@ hook(long syscall_number,
 
 	long args[6] = {arg0, arg1, arg2, arg3, arg4, arg5};
 
-	const struct syscall_desc *desc = get_syscall_desc(syscall_number);
+	char local_buffer[0x300];
+	ssize_t len;
 
-	if (desc != NULL)
-		print_known_syscall(desc, args, *result);
-	else
-		print_unknown_syscall(syscall_number, args, *result);
+	len = print_syscall(local_buffer, syscall_number, args, *result);
 
-	if (buffer_avaliable() < MIN_AVAILABLE_REQUIRED)
-		dump_log();
+	append_buffer(local_buffer, len);
 
 	return 0;
 }
@@ -691,8 +735,6 @@ static __attribute__((constructor)) void
 start(void)
 {
 	const char *path = getenv("SYSCALL_LOG_PATH");
-
-	nextc = buffer;
 
 	if (path == NULL)
 		syscall_no_intercept(SYS_exit_group, 3);
@@ -708,5 +750,6 @@ start(void)
 static __attribute__((destructor)) void
 end(void)
 {
-	dump_log();
+	if (buffer_offset > 0)
+		syscall_no_intercept(SYS_write, log_fd, buffer, buffer_offset);
 }
