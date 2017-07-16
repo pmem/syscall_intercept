@@ -42,7 +42,7 @@
 static const struct syscall_desc table[] = {
 	SARGS(read, rdec, arg_fd, arg_, arg_),
 	SARGS(write, rdec, arg_fd, arg_, arg_),
-	SARGS(open, rdec, arg_cstr, arg_, arg_),
+	SARGS(open, rdec, arg_cstr, arg_open_flags, arg_),
 	SARGS(close, rdec, arg_fd),
 	SARGS(stat, rdec, arg_cstr, arg_),
 	SARGS(fstat, rdec, arg_fd, arg_),
@@ -279,7 +279,7 @@ static const struct syscall_desc table[] = {
 	SARGS(inotify_add_watch, rdec, arg_fd, arg_cstr, arg_),
 	SARGS(inotify_rm_watch, rdec, arg_fd, arg_),
 	SARGS(migrate_pages, rdec, arg_, arg_, arg_, arg_),
-	SARGS(openat, rdec, arg_atfd, arg_cstr, arg_, arg_),
+	SARGS(openat, rdec, arg_atfd, arg_cstr, arg_open_flags, arg_),
 	SARGS(mkdirat, rdec, arg_atfd, arg_cstr, arg_),
 	SARGS(mknodat, rdec, arg_atfd, arg_cstr, arg_, arg_),
 	SARGS(fchownat, rdec, arg_atfd, arg_cstr, arg_, arg_, arg_),

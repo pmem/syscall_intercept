@@ -38,6 +38,7 @@ enum arg_type {
 	arg_fd,
 	arg_atfd,
 	arg_cstr,
+	arg_open_flags,
 	arg_ /* no special formatting implemented yet, print as hex number */
 };
 
