@@ -775,40 +775,44 @@ print_known_syscall(char *dst, const struct syscall_desc *desc,
 		}
 	}
 
-	dst = print_cstr(dst, ") = ");
-	switch (desc->return_type) {
-	case rhex:
-		dst = print_hex(dst, result);
-		break;
-	case rdec:
-		dst = print_rdec(dst, result);
-		break;
-	case runsigned:
-		dst = print_runsigned(dst, result);
-		break;
-	case rmode:
-		dst = print_mode_t(dst, result);
-		break;
+	*dst++ = ')';
+	if (desc->return_type != rnoreturn) {
+		dst = print_cstr(dst, " = ");
+		switch (desc->return_type) {
+		default:
+		case rhex:
+			dst = print_hex(dst, result);
+			break;
+		case rdec:
+			dst = print_rdec(dst, result);
+			break;
+		case runsigned:
+			dst = print_runsigned(dst, result);
+			break;
+		case rmode:
+			dst = print_mode_t(dst, result);
+			break;
+		}
 	}
 
 	return dst;
 }
 
-static ssize_t
-print_syscall(char *dst, long syscall_number, long args[6], long result)
+static void
+print_syscall(const struct syscall_desc *desc,
+		long syscall_number, const long args[6], long result)
 {
-	const struct syscall_desc *desc =
-		get_syscall_desc(syscall_number, args);
-
+	char local_buffer[0x300];
 	char *c;
 
 	if (desc != NULL)
-		c = print_known_syscall(dst, desc, args, result);
+		c = print_known_syscall(local_buffer, desc, args, result);
 	else
-		c = print_unknown_syscall(dst, syscall_number, args, result);
+		c = print_unknown_syscall(local_buffer, syscall_number,
+					args, result);
 
 	*c++ = '\n';
-	return c - dst;
+	append_buffer(local_buffer, c - local_buffer);
 }
 
 static int
@@ -818,17 +822,21 @@ hook(long syscall_number,
 		long arg4, long arg5,
 		long *result)
 {
+	long args[6] = {arg0, arg1, arg2, arg3, arg4, arg5};
+	const struct syscall_desc *desc =
+		get_syscall_desc(syscall_number, args);
+
+	if (desc != NULL && desc->return_type == rnoreturn) {
+		print_syscall(desc, syscall_number, args, 0);
+		if (syscall_number == SYS_exit_group && buffer_offset > 0)
+			syscall_no_intercept(SYS_write, log_fd,
+						buffer, buffer_offset);
+	}
+
 	*result = syscall_no_intercept(syscall_number,
 					arg0, arg1, arg2, arg3, arg4, arg5);
 
-	long args[6] = {arg0, arg1, arg2, arg3, arg4, arg5};
-
-	char local_buffer[0x300];
-	ssize_t len;
-
-	len = print_syscall(local_buffer, syscall_number, args, *result);
-
-	append_buffer(local_buffer, len);
+	print_syscall(desc, syscall_number, args, *result);
 
 	return 0;
 }
@@ -847,11 +855,4 @@ start(void)
 		syscall_no_intercept(SYS_exit_group, 4);
 
 	intercept_hook_point = &hook;
-}
-
-static __attribute__((destructor)) void
-end(void)
-{
-	if (buffer_offset > 0)
-		syscall_no_intercept(SYS_write, log_fd, buffer, buffer_offset);
 }

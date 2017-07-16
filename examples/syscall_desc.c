@@ -56,7 +56,7 @@ static const struct syscall_desc table[] = {
 	SARGS(brk, rdec, arg_),
 	SARGS(rt_sigaction, rdec, arg_, arg_, arg_),
 	SARGS(rt_sigprocmask, rdec, arg_, arg_, arg_, arg_),
-	SARGS(rt_sigreturn, rdec, arg_none),
+	SARGS(rt_sigreturn, rnoreturn, arg_none),
 	SARGS(ioctl, rdec, arg_fd, arg_, arg_),
 	SARGS(pread64, rdec, arg_fd, arg_, arg_, arg_),
 	SARGS(pwrite64, rdec, arg_fd, arg_, arg_, arg_),
@@ -101,7 +101,7 @@ static const struct syscall_desc table[] = {
 	SARGS(fork, rdec, arg_none),
 	SARGS(vfork, rdec, arg_none),
 	SARGS(execve, rdec, arg_, arg_, arg_),
-	SARGS(exit, rdec, arg_), /* XXX */
+	SARGS(exit, rnoreturn, arg_),
 	SARGS(wait4, rdec, arg_, arg_, arg_, arg_),
 	SARGS(kill, rdec, arg_, arg_),
 	SARGS(uname, rdec, arg_),
@@ -255,7 +255,7 @@ static const struct syscall_desc table[] = {
 	SARGS(clock_gettime, rdec, arg_, arg_),
 	SARGS(clock_getres, rdec, arg_, arg_),
 	SARGS(clock_nanosleep, rdec, arg_, arg_, arg_, arg_),
-	SARGS(exit_group, rdec, arg_), /* XXX */
+	SARGS(exit_group, rnoreturn, arg_),
 	SARGS(epoll_wait, rdec, arg_fd, arg_, arg_, arg_),
 	SARGS(epoll_ctl, rdec, arg_fd, arg_, arg_fd, arg_),
 	SARGS(tgkill, rdec, arg_, arg_, arg_),

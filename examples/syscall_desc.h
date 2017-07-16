@@ -47,7 +47,8 @@ enum return_type {
 	rhex,
 	rdec,
 	runsigned,
-	rmode
+	rmode,
+	rnoreturn
 };
 
 struct syscall_desc {
