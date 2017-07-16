@@ -164,6 +164,96 @@ print_atfd(char *dst, long n)
 		return print_signed_dec(dst, n);
 }
 
+static char *
+print_open_flags(char *dst, long flags)
+{
+	char *c = dst;
+
+	*c = 0;
+
+	if (flags == 0)
+		return print_cstr(c, "O_RDONLY");
+
+#ifdef O_EXEC
+	if ((flags & O_EXEC) == O_EXEC)
+		c = print_cstr(c, "O_EXEC | ");
+#endif
+	if ((flags & O_RDWR) == O_RDWR)
+		c = print_cstr(c, "O_RDWR | ");
+	if ((flags & O_WRONLY) == O_WRONLY)
+		c = print_cstr(c, "O_WRONLY | ");
+	if ((flags & (O_WRONLY|O_RDWR)) == 0)
+		c = print_cstr(c, "O_RDONLY | ");
+#ifdef O_SEARCH
+	if ((flags & O_SEARCH) = O_SEARCH)
+		c = print_cstr(c, "O_SEARCH | ");
+#endif
+	if ((flags & O_APPEND) == O_APPEND)
+		c = print_cstr(c, "O_APPEND | ");
+	if ((flags & O_CLOEXEC) == O_CLOEXEC)
+		c = print_cstr(c, "O_CLOEXEC | ");
+	if ((flags & O_CREAT) == O_CREAT)
+		c = print_cstr(c, "O_CREAT | ");
+	if ((flags & O_DIRECTORY) == O_DIRECTORY)
+		c = print_cstr(c, "O_DIRECTORY | ");
+	if ((flags & O_DSYNC) == O_DSYNC)
+		c = print_cstr(c, "O_DSYNC | ");
+	if ((flags & O_EXCL) == O_EXCL)
+		c = print_cstr(c, "O_EXCL | ");
+	if ((flags & O_NOCTTY) == O_NOCTTY)
+		c = print_cstr(c, "O_NOCTTY | ");
+	if ((flags & O_NOFOLLOW) == O_NOFOLLOW)
+		c = print_cstr(c, "O_NOFOLLOW | ");
+	if ((flags & O_NONBLOCK) == O_NONBLOCK)
+		c = print_cstr(c, "O_NONBLOCK | ");
+	if ((flags & O_RSYNC) == O_RSYNC)
+		c = print_cstr(c, "O_RSYNC | ");
+	if ((flags & O_SYNC) == O_SYNC)
+		c = print_cstr(c, "O_SYNC | ");
+	if ((flags & O_TRUNC) == O_TRUNC)
+		c = print_cstr(c, "O_TRUNC | ");
+#ifdef O_TTY_INIT
+	if ((flags & O_TTY_INIT) == O_TTY_INIT)
+		c = print_cstr(c, "O_TTY_INIT | ");
+#endif
+
+#ifdef O_EXEC
+	flags &= ~O_EXEC;
+#endif
+#ifdef O_TTY_INIT
+	flags &= ~O_TTY_INIT;
+#endif
+#ifdef O_SEARCH
+	flags &= ~O_SEARCH;
+#endif
+
+	flags &= ~(O_RDONLY | O_RDWR | O_WRONLY | O_APPEND |
+	    O_CLOEXEC | O_CREAT | O_DIRECTORY | O_DSYNC | O_EXCL |
+	    O_NOCTTY | O_NOFOLLOW | O_NONBLOCK | O_RSYNC | O_SYNC |
+	    O_TRUNC);
+
+	if (flags != 0) {
+		/*
+		 * Some values in the flag were not recognized, just print the
+		 * raw number.
+		 * e.g.: "O_RDONLY | O_NONBLOCK | 0x9876"
+		 */
+		c = print_hex(c, flags);
+	} else if (c != dst) {
+		/*
+		 * All bits in flag were parsed, and the pointer c does not
+		 * point to the start of the buffer, therefore some text was
+		 * written already, with a separator on the end. Remove the
+		 * trailing three characters: " | "
+		 *
+		 * e.g.: "O_RDONLY | O_NONBLOCK | " -> "O_RDONLY | O_NONBLOCK"
+		 */
+		c -= 3;
+	}
+
+	return c;
+}
+
 #define CSTR_MAX_LEN 0x100
 
 static char *
@@ -668,6 +758,9 @@ print_known_syscall(char *dst, const struct syscall_desc *desc,
 		case arg_cstr:
 			dst = print_hex(dst, args[i]);
 			dst = print_cstr_escaped(dst, (const char *)(args[i]));
+			break;
+		case arg_open_flags:
+			dst = print_open_flags(dst, args[i]);
 			break;
 		default:
 			dst = print_hex(dst, args[i]);
