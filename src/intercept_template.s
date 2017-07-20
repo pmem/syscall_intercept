@@ -259,7 +259,7 @@ backtrace_placeholder:
 
 backtrace_placeholder_2:
 	.cfi_startproc
-	.cfi_def_cfa_offset 0x578
+	.cfi_def_cfa_offset 0x588
 	nop
 	nop
 	nop
@@ -306,8 +306,6 @@ intercept_asm_wrapper_push_stack_first_return_addr:
 
 	movq        %rsp, %rbx
 
-	orq         $0x1f, %rsp
-	subq        $0x3f, %rsp
 	/*
 	 * Reserve stack for SIMD registers.
 	 * Largest space is used in the AVX512 case, 32 * 32 bytes.
@@ -319,14 +317,14 @@ intercept_asm_wrapper_simd_save:
 	 * these nops are going to be replace with CPU
 	 * dependent code.
 	 */
-	movaps      %xmm0, (%rsp)
-	movaps      %xmm1, 0x10 (%rsp)
-	movaps      %xmm2, 0x20 (%rsp)
-	movaps      %xmm3, 0x30 (%rsp)
-	movaps      %xmm4, 0x40 (%rsp)
-	movaps      %xmm5, 0x50 (%rsp)
-	movaps      %xmm6, 0x60 (%rsp)
-	movaps      %xmm7, 0x70 (%rsp)
+	movups      %xmm0, (%rsp)
+	movups      %xmm1, 0x10 (%rsp)
+	movups      %xmm2, 0x20 (%rsp)
+	movups      %xmm3, 0x30 (%rsp)
+	movups      %xmm4, 0x40 (%rsp)
+	movups      %xmm5, 0x50 (%rsp)
+	movups      %xmm6, 0x60 (%rsp)
+	movups      %xmm7, 0x70 (%rsp)
 .fill 32, 1, 0x90
 
 	pushq       %rbx
@@ -452,14 +450,14 @@ L1:
 	popq        %rbx
 
 intercept_asm_wrapper_simd_restore:
-	movaps      (%rsp), %xmm0
-	movaps      0x10 (%rsp), %xmm1
-	movaps      0x20 (%rsp), %xmm2
-	movaps      0x30 (%rsp), %xmm3
-	movaps      0x40 (%rsp), %xmm4
-	movaps      0x50 (%rsp), %xmm5
-	movaps      0x60 (%rsp), %xmm6
-	movaps      0x70 (%rsp), %xmm7
+	movups      (%rsp), %xmm0
+	movups      0x10 (%rsp), %xmm1
+	movups      0x20 (%rsp), %xmm2
+	movups      0x30 (%rsp), %xmm3
+	movups      0x40 (%rsp), %xmm4
+	movups      0x50 (%rsp), %xmm5
+	movups      0x60 (%rsp), %xmm6
+	movups      0x70 (%rsp), %xmm7
 .fill 32, 1, 0x90
 
 
@@ -540,23 +538,23 @@ intercept_asm_wrapper_call_clone_child_intercept:
 intercept_asm_wrapper_end:
 
 intercept_asm_wrapper_simd_save_YMM:
-	vmovaps     %ymm0, (%rsp)
-	vmovaps     %ymm1, 0x20 (%rsp)
-	vmovaps     %ymm2, 0x40 (%rsp)
-	vmovaps     %ymm3, 0x60 (%rsp)
-	vmovaps     %ymm4, 0x80 (%rsp)
-	vmovaps     %ymm5, 0xa0 (%rsp)
-	vmovaps     %ymm6, 0xc0 (%rsp)
-	vmovaps     %ymm7, 0xe0 (%rsp)
+	vmovups     %ymm0, (%rsp)
+	vmovups     %ymm1, 0x20 (%rsp)
+	vmovups     %ymm2, 0x40 (%rsp)
+	vmovups     %ymm3, 0x60 (%rsp)
+	vmovups     %ymm4, 0x80 (%rsp)
+	vmovups     %ymm5, 0xa0 (%rsp)
+	vmovups     %ymm6, 0xc0 (%rsp)
+	vmovups     %ymm7, 0xe0 (%rsp)
 intercept_asm_wrapper_simd_save_YMM_end:
 
 intercept_asm_wrapper_simd_restore_YMM:
-	vmovaps     (%rsp), %ymm0
-	vmovaps     0x20 (%rsp), %ymm1
-	vmovaps     0x40 (%rsp), %ymm2
-	vmovaps     0x60 (%rsp), %ymm3
-	vmovaps     0x80 (%rsp), %ymm4
-	vmovaps     0xa0 (%rsp), %ymm5
-	vmovaps     0xc0 (%rsp), %ymm6
-	vmovaps     0xe0 (%rsp), %ymm7
+	vmovups     (%rsp), %ymm0
+	vmovups     0x20 (%rsp), %ymm1
+	vmovups     0x40 (%rsp), %ymm2
+	vmovups     0x60 (%rsp), %ymm3
+	vmovups     0x80 (%rsp), %ymm4
+	vmovups     0xa0 (%rsp), %ymm5
+	vmovups     0xc0 (%rsp), %ymm6
+	vmovups     0xe0 (%rsp), %ymm7
 intercept_asm_wrapper_simd_restore_YMM_end:
