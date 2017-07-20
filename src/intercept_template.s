@@ -248,7 +248,25 @@
 
 backtrace_placeholder:
 	.cfi_startproc
+	/*
+	 * Call Frame Information. The stack size is 0x580,
+	 * and the cfi_offset entries mark the place of a each
+	 * register's previous value in the call frame.
+	 */
 	.cfi_def_cfa_offset 0x580
+	.cfi_offset 6, -136    /* rbp */
+	.cfi_offset 15, -152   /* r15 */
+	.cfi_offset 14, -160   /* r14 */
+	.cfi_offset 13, -168   /* r13 */
+	.cfi_offset 12, -176   /* r12 */
+	.cfi_offset 10, -184   /* r10 */
+	.cfi_offset 9, -192    /* r9  */
+	.cfi_offset 8, -200    /* r8  */
+	.cfi_offset 2, -208    /* rcx */
+	.cfi_offset 4, -216    /* rdx */
+	/* rsi at -224 */
+	/* rdi at -232 */
+	.cfi_offset 3, -240    /* rbx */
 	nop
 	nop
 	nop
@@ -260,6 +278,19 @@ backtrace_placeholder:
 backtrace_placeholder_2:
 	.cfi_startproc
 	.cfi_def_cfa_offset 0x588
+	.cfi_offset 6, -136    /* rbp */
+	.cfi_offset 15, -152   /* r15 */
+	.cfi_offset 14, -160   /* r14 */
+	.cfi_offset 13, -168   /* r13 */
+	.cfi_offset 12, -176   /* r12 */
+	.cfi_offset 10, -184   /* r10 */
+	.cfi_offset 9, -192    /* r9  */
+	.cfi_offset 8, -200    /* r8  */
+	.cfi_offset 2, -208    /* rcx */
+	.cfi_offset 4, -216    /* rdx */
+	/* rsi at -224 */
+	/* rdi at -232 */
+	.cfi_offset 3, -240    /* rbx */
 	nop
 	nop
 	nop
