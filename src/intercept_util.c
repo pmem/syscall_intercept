@@ -746,7 +746,8 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 				result_known, result);
 	} else if (nr == SYS_getcwd) {
 		buf = print_syscall(buf, "getcwd", 2,
-				F_STR, arg0,
+				F_STR, result_known == KNOWN ? arg0 :
+						(intptr_t)"???",
 				F_DEC, arg1,
 				result_known, result);
 	} else if (nr == SYS_chdir) {
