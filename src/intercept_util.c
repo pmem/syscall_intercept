@@ -32,6 +32,7 @@
 
 #include "intercept_util.h"
 #include "intercept.h"
+#include "libsyscall_intercept_hook_point.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -53,34 +54,33 @@ static int log_fd = -1;
 void *
 xmmap_anon(size_t size)
 {
-	void *addr = (void *) syscall_no_intercept(SYS_mmap,
+	long addr = syscall_no_intercept(SYS_mmap,
 				NULL, size,
 				PROT_READ | PROT_WRITE,
 				MAP_PRIVATE | MAP_ANON, -1, (off_t)0);
 
-	if (addr == MAP_FAILED)
-		xabort("xmmap_anon");
+	xabort_on_syserror(addr, __func__);
 
-	return addr;
+	return (void *) addr;
 }
 
 void *
 xmremap(void *addr, size_t old, size_t new)
 {
-	addr = (void *) syscall_no_intercept(SYS_mremap, addr,
+	long new_addr = syscall_no_intercept(SYS_mremap, addr,
 				old, new, MREMAP_MAYMOVE);
 
-	if (addr == MAP_FAILED)
-		xabort("xmremap");
+	xabort_on_syserror(new_addr, __func__);
 
-	return addr;
+	return (void *) new_addr;
 }
 
 void
 xmunmap(void *addr, size_t len)
 {
-	if (syscall_no_intercept(SYS_munmap, addr, len) != 0)
-		xabort("xmunmap");
+	long result = syscall_no_intercept(SYS_munmap, addr, len);
+
+	xabort_on_syserror(result, __func__);
 }
 
 long
@@ -88,8 +88,7 @@ xlseek(long fd, unsigned long off, int whence)
 {
 	long result = syscall_no_intercept(SYS_lseek, fd, off, whence);
 
-	if (result < 0)
-		xabort("xlseek");
+	xabort_on_syserror(result, __func__);
 
 	return result;
 }
@@ -97,9 +96,10 @@ xlseek(long fd, unsigned long off, int whence)
 void
 xread(long fd, void *buffer, size_t size)
 {
-	if (syscall_no_intercept(SYS_read, fd,
-	    buffer, size) != (ssize_t)size)
-		xabort("xread");
+	long result = syscall_no_intercept(SYS_read, fd, buffer, size);
+
+	if (result != (long)size)
+		xabort_errno(syscall_error_code(result), __func__);
 }
 
 /*
@@ -132,8 +132,7 @@ intercept_setup_log(const char *path_base, const char *trunc)
 
 	log_fd = (int)syscall_no_intercept(SYS_open, path, flags, (mode_t)0700);
 
-	if (log_fd < 0)
-		xabort("setup_log");
+	xabort_on_syserror(log_fd, "opening log");
 }
 
 /*

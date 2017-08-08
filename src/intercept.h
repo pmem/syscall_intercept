@@ -62,7 +62,11 @@ void intercept_patch_with_postfix(unsigned char *syscall_addr,
 
 #define INTERCEPTOR_EXIT_CODE 111
 
-__attribute__((noreturn)) void xabort(const char *);
+__attribute__((noreturn)) void xabort_errno(int error_code, const char *msg);
+
+__attribute__((noreturn)) void xabort(const char *msg);
+
+void xabort_on_syserror(long syscall_result, const char *msg);
 
 struct range {
 	unsigned char *address;

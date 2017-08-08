@@ -448,21 +448,65 @@ log_header(void)
 }
 
 /*
- * xabort - speaks for itself
+ * xabort_errno - print a message to stderr, and exit the process.
  * Calling abort() in libc might result other syscalls being called
  * by libc.
+ *
+ * If error_code is not zero, it is also printed.
+ */
+void
+xabort_errno(int error_code, const char *msg)
+{
+	static const char main_msg[] = " libsyscall_intercept error\n";
+
+	if (msg != NULL) {
+		/* not using libc - inline strlen */
+		size_t len = 0;
+		while (msg[len] != '\0')
+			++len;
+		syscall_no_intercept(SYS_write, 2, msg, len);
+	}
+
+	if (error_code != 0) {
+		char buf[0x10];
+		size_t len = 1;
+		char *c = buf + sizeof(buf) - 1;
+
+		/* not using libc - inline sprintf */
+		do {
+			*c-- = error_code % 10;
+			++len;
+			error_code /= 10;
+		} while (error_code != 0);
+		*c = ' ';
+
+		syscall_no_intercept(SYS_write, 2, c, len);
+	}
+
+	syscall_no_intercept(SYS_write, 2, main_msg, sizeof(main_msg) - 1);
+	syscall_no_intercept(SYS_exit_group, 1);
+
+	__builtin_unreachable();
+}
+
+/*
+ * xabort - print a message to stderr, and exit the process.
  */
 void
 xabort(const char *msg)
 {
-	static const char main_msg[] = " libsyscall_intercept error\n";
+	xabort_errno(0, msg);
+}
 
-	if (msg != NULL)
-		syscall_no_intercept(SYS_write, 2, msg, strlen(msg));
-	syscall_no_intercept(SYS_write, 2, main_msg, sizeof(main_msg));
-	syscall_no_intercept(SYS_exit_group, 1);
-
-	__builtin_trap();
+/*
+ * xabort_on_syserror -- examines the return value of syscall_no_intercept,
+ * and calls xabort_errno if the said return value indicates an error.
+ */
+void
+xabort_on_syserror(long syscall_result, const char *msg)
+{
+	if (syscall_error_code(syscall_result) != 0)
+		xabort_errno(syscall_error_code(syscall_result), msg);
 }
 
 /*

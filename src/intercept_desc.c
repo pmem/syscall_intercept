@@ -64,11 +64,7 @@ open_orig_file(const struct intercept_desc *desc)
 
 	fd = syscall_no_intercept(SYS_open, desc->path, O_RDONLY);
 
-	if (fd < 0) {
-		syscall_no_intercept(SYS_write, 2,
-		    desc->path, strlen(desc->path));
-		xabort(" open_orig_file");
-	}
+	xabort_on_syserror(fd, __func__);
 
 	return fd;
 }
