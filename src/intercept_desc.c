@@ -57,10 +57,10 @@
  * only be present in the original file.
  * Note on naming: memory has segments, the object file has sections.
  */
-static long
+static int
 open_orig_file(const struct intercept_desc *desc)
 {
-	long fd;
+	int fd;
 
 	fd = syscall_no_intercept(SYS_open, desc->path, O_RDONLY);
 
@@ -106,7 +106,7 @@ add_text_info(struct intercept_desc *desc, const Elf64_Shdr *header,
  * See: man elf
  */
 static void
-find_sections(struct intercept_desc *desc, long fd)
+find_sections(struct intercept_desc *desc, int fd)
 {
 	Elf64_Ehdr elf_header;
 
@@ -293,7 +293,7 @@ mark_jump(const struct intercept_desc *desc, const unsigned char *addr)
  */
 static void
 find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
-				long fd)
+				int fd)
 {
 	assert(section->sh_type == SHT_SYMTAB ||
 		section->sh_type == SHT_DYNSYM);
@@ -344,7 +344,7 @@ find_jumps_in_section_syms(struct intercept_desc *desc, Elf64_Shdr *section,
  */
 static void
 find_jumps_in_section_rela(struct intercept_desc *desc, Elf64_Shdr *section,
-				long fd)
+				int fd)
 {
 	assert(section->sh_type == SHT_RELA);
 
@@ -691,7 +691,7 @@ find_syscalls(struct intercept_desc *desc)
 
 	desc->count = 0;
 
-	long fd = open_orig_file(desc);
+	int fd = open_orig_file(desc);
 
 	find_sections(desc, fd);
 	debug_dump(

@@ -48,7 +48,7 @@
 #include <sched.h>
 #include <linux/limits.h>
 
-static long log_fd = -1;
+static int log_fd = -1;
 
 void *
 xmmap_anon(size_t size)
@@ -56,7 +56,7 @@ xmmap_anon(size_t size)
 	void *addr = (void *) syscall_no_intercept(SYS_mmap,
 				NULL, size,
 				PROT_READ | PROT_WRITE,
-				MAP_PRIVATE | MAP_ANON, -1, 0);
+				MAP_PRIVATE | MAP_ANON, -1, (off_t)0);
 
 	if (addr == MAP_FAILED)
 		xabort("xmmap_anon");
@@ -98,7 +98,7 @@ void
 xread(long fd, void *buffer, size_t size)
 {
 	if (syscall_no_intercept(SYS_read, fd,
-	    (long)buffer, (long)size) != (long)size)
+	    buffer, size) != (ssize_t)size)
 		xabort("xread");
 }
 
@@ -130,7 +130,7 @@ intercept_setup_log(const char *path_base, const char *trunc)
 
 	intercept_log_close();
 
-	log_fd = syscall_no_intercept(SYS_open, path, flags, 0700);
+	log_fd = (int)syscall_no_intercept(SYS_open, path, flags, (mode_t)0700);
 
 	if (log_fd < 0)
 		xabort("setup_log");
@@ -1520,7 +1520,7 @@ intercept_log(const char *buffer, size_t len)
 {
 	if (log_fd >= 0)
 		syscall_no_intercept(SYS_write, log_fd,
-		    (long)buffer, (long)len);
+		    buffer, len);
 }
 
 /*
