@@ -70,6 +70,20 @@ extern void (*intercept_hook_point_clone_child)(void);
 long syscall_no_intercept(long syscall_number, ...);
 
 /*
+ * syscall_error_code - examines a return value from
+ * syscall_no_intercept, and returns an error code if said
+ * return value indicates an error.
+ */
+static inline int
+syscall_error_code(long result)
+{
+	if (result < 0 && result >= -0x1000)
+		return (int)-result;
+
+	return 0;
+}
+
+/*
  * The syscall intercepting library checks for the
  * INTERCEPT_HOOK_CMDLINE_FILTER environment variable, with which one can
  * control in which processes interception should actually happen.

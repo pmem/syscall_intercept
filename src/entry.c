@@ -66,7 +66,7 @@ entry_point(void)
  * chars at a time. See syscall_hook_in_process_allowed below.
  */
 static bool
-match_with_file_end(const char *expected, long fd)
+match_with_file_end(const char *expected, int fd)
 {
 	char file_c; /* next character from file */
 	const char *c; /* next character from the expected string */
@@ -76,7 +76,8 @@ match_with_file_end(const char *expected, long fd)
 
 	c = expected;
 
-	while (syscall_no_intercept(SYS_read, fd, &file_c, 1) == 1) {
+	while (syscall_no_intercept(SYS_read, fd, &file_c, (size_t)1)
+			== (ssize_t)1) {
 		if (file_c == '\0') /* this probably never happens */
 			break;
 
@@ -98,7 +99,7 @@ match_with_file_end(const char *expected, long fd)
 int
 syscall_hook_in_process_allowed(void)
 {
-	long fd;
+	int fd;
 	bool result;
 	const char *filter;
 
@@ -106,7 +107,8 @@ syscall_hook_in_process_allowed(void)
 	if (filter == NULL)
 		return 1;
 
-	fd = syscall_no_intercept(SYS_open, "/proc/self/cmdline", O_RDONLY, 0);
+	fd = (int)syscall_no_intercept(SYS_open,
+			"/proc/self/cmdline", O_RDONLY, (mode_t)0);
 
 	if (fd < 0)
 		return 0;

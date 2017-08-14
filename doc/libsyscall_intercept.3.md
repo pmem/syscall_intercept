@@ -101,6 +101,19 @@ void (*intercept_hook_point_clone_child)(void);
 Using `intercept_hook_point_clone_child`, one can be notified of thread
 creations.
 
+To make it easy to detect syscall return values indicating errors, one
+can use the syscall_error_code function:
+```c
+int syscall_error_code(long result);
+```
+When passed a return value from syscall_no_intercept, this function
+can translate it to an error code equivalent to a libc error code:
+```c
+int fd = (int)syscall_no_intercept(SYS_open, "file", O_RDWR);
+if (syscall_error_code(fd) != 0)
+	fprintf(stderr, strerror(syscall_error_code(fd)));
+```
+
 # ENVIRONMENT VARIABLES #
 Three environment variables control the operation of the library:
 

@@ -45,7 +45,7 @@
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
-long log_fd;
+int log_fd;
 
 static char buffer[0x20000];
 static size_t buffer_offset;
@@ -849,7 +849,8 @@ start(void)
 	if (path == NULL)
 		syscall_no_intercept(SYS_exit_group, 3);
 
-	log_fd = syscall_no_intercept(SYS_open, path, O_CREAT | O_RDWR, 0700);
+	log_fd = (int)syscall_no_intercept(SYS_open,
+			path, O_CREAT | O_RDWR, (mode_t)0700);
 
 	if (log_fd < 0)
 		syscall_no_intercept(SYS_exit_group, 4);

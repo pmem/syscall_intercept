@@ -98,17 +98,32 @@ after a clone syscall creating a thread returns in a child thread:
 .IP
 .nf
 \f[C]
-long\ (*intercept_hook_point_clone_child)(void);
+void\ (*intercept_hook_point_clone_child)(void);
 \f[]
 .fi
 .PP
 Using \f[C]intercept_hook_point_clone_child\f[], one can be notified of
-thread creations easily, and even override the syscall\[aq]s return
-value in the child thread (which is normally zero).
-Note: overriding the zero return value is discouraged \-\- this syscall
-is usually issued by libc, and a non\-zero return value is interpreted
-as the execution remaining in the parent thread, thus using attempting
-to use the same stack space as the actual parent thread.
+thread creations.
+.PP
+To make it easy to detect syscall return values indicating errors, one
+can use the syscall_error_code function:
+.IP
+.nf
+\f[C]
+int\ syscall_error_code(long\ result);
+\f[]
+.fi
+.PP
+When passed a return value from syscall_no_intercept, this function can
+translate it to an error code equivalent to a libc error code:
+.IP
+.nf
+\f[C]
+int\ fd\ =\ (int)syscall_no_intercept(SYS_open,\ "file",\ O_RDWR);
+if\ (syscall_error_code(fd)\ !=\ 0)
+\ \ \ \ fprintf(stderr,\ strerror(syscall_error_code(fd)));
+\f[]
+.fi
 .SH ENVIRONMENT VARIABLES
 .PP
 Three environment variables control the operation of the library:
