@@ -103,12 +103,11 @@ intercept.log-123.
 is not truncated.
 
 *INTERCEPT_HOOK_CMDLINE_FILTER* -- when set, the library
-checks the contents of the /proc/self/cmdline file.
+checks the command line used to start the program.
 Hotpatching, and syscall intercepting is only done, if the
-last component of the first zero terminated string in
-/proc/self/cmdline matches the string provided
-in the environment variable. This can also be queried
-by the user of the library:
+last component of the command used to start the program
+is the same as the string provided in the environment variable.
+This can also be queried by the user of the library:
 ```c
 int syscall_hook_in_process_allowed(void);
 ```
