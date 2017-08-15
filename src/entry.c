@@ -35,6 +35,7 @@
  *  expected to be executed by the loader while using LD_PRELOAD
  */
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syscall.h>
@@ -43,6 +44,8 @@
 
 #include "libsyscall_intercept_hook_point.h"
 #include "intercept.h"
+
+static const char *cmdline;
 
 /*
  * entry_point - the main entry point for syscall_intercept
@@ -53,41 +56,45 @@
  * called intercept.
  */
 static __attribute__((constructor)) void
-entry_point(void)
+entry_point(int argc, char **argv)
 {
+	if (argc < 1)
+		return;
+
+	cmdline = argv[0];
+
 	if (syscall_hook_in_process_allowed())
 		intercept();
 }
 
 /*
- * match_with_file_end
- * Compare a string with the end of a file's contents.
- * Reads only char by char, but it is expected to be used only for a dozen or so
- * chars at a time. See syscall_hook_in_process_allowed below.
+ * cmdline_match - match the last component of the path in cmdline
  */
-static bool
-match_with_file_end(const char *expected, int fd)
+static int
+cmdline_match(const char *filter)
 {
-	char file_c; /* next character from file */
-	const char *c; /* next character from the expected string */
+	if (filter == NULL)
+		return 1;
 
-	if (expected[0] == '\0')
-		return false;
+	size_t flen = strlen(filter);
+	size_t clen = strlen(cmdline);
 
-	c = expected;
+	if (flen > clen)
+		return 0; /* cmdline can't contain filter */
 
-	while (syscall_no_intercept(SYS_read, fd, &file_c, (size_t)1)
-			== (ssize_t)1) {
-		if (file_c == '\0') /* this probably never happens */
-			break;
+	/*
+	 * If cmdline is longer, it must end with a slash + filter:
+	 * "./somewhere/a.out" matches "a.out"
+	 * "./a.out" matches "a.out"
+	 * "./xa.out" does not match "a.out"
+	 *
+	 * Of course if cmdline is not longer, the slash is not needed:
+	 * "a.out" matches "a.out"
+	 */
+	if (clen > flen && cmdline[clen - flen - 1] != '/')
+		return 0;
 
-		if (file_c != *c)
-			c = expected; /* start from the beginning */
-		else
-			++c; /* match next char */
-	}
-
-	return *c == '\0';
+	return strcmp(cmdline + clen - flen, filter) == 0;
 }
 
 /*
@@ -99,23 +106,14 @@ match_with_file_end(const char *expected, int fd)
 int
 syscall_hook_in_process_allowed(void)
 {
-	int fd;
-	bool result;
-	const char *filter;
+	static bool is_decided;
+	static int result;
 
-	filter = getenv("INTERCEPT_HOOK_CMDLINE_FILTER");
-	if (filter == NULL)
-		return 1;
+	if (is_decided)
+		return result;
 
-	fd = (int)syscall_no_intercept(SYS_open,
-			"/proc/self/cmdline", O_RDONLY, (mode_t)0);
-
-	if (fd < 0)
-		return 0;
-
-	result = match_with_file_end(filter, fd);
-
-	(void) syscall_no_intercept(SYS_close, fd);
+	result = cmdline_match(getenv("INTERCEPT_HOOK_CMDLINE_FILTER"));
+	is_decided = true;
 
 	return result;
 }
