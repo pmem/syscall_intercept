@@ -68,6 +68,8 @@ int (*intercept_hook_point)(long syscall_number,
 
 void (*intercept_hook_point_clone_child)(void)
 	__attribute__((visibility("default")));
+void (*intercept_hook_point_clone_parent)(long)
+	__attribute__((visibility("default")));
 
 bool debug_dumps_on;
 
@@ -100,18 +102,30 @@ static void log_header(void);
 
 void __attribute__((noreturn)) xlongjmp(long rip, long rsp, long rax);
 
-static void
-intercept_routine(long nr, long arg0, long arg1,
-			long arg2, long arg3,
-			long arg4, long arg5,
-			uint32_t syscall_offset,
-			const char *libpath,
-			long return_to_asm_wrapper_syscall,
-			long return_to_asm_wrapper,
-			long (*clone_wrapper)(long, long, long, long, long),
-			long rsp_in_asm_wrapper);
+/* Kernel can clobber rcx and r11 while serving a syscall, those are ignored */
+struct context {
+	long rax;
+	long rdx;
+	long rbx;
+	long rsi;
+	long rdi;
+	long rbp;
+	long rsp;
+	long r8;
+	long r9;
+	long r10;
+	long r12;
+	long r13;
+	long r14;
+	long r15;
+	long rip;
+	struct patch_desc *patch_desc;
+};
 
-static void clone_child_intercept_routine(void);
+struct wrapper_ret {
+	long rax;
+	long rdx;
+};
 
 /* Should all objects be patched, or only libc and libpthread? */
 static bool patch_all_objs;
@@ -403,9 +417,6 @@ analyze_object(struct dl_phdr_info *info, size_t size, void *data)
 
 	patches->base_addr = (unsigned char *)info->dlpi_addr;
 	patches->path = path;
-	patches->c_destination = (void *)((uintptr_t)&intercept_routine);
-	patches->c_destination_clone_child =
-	    (void *)((uintptr_t)&clone_child_intercept_routine);
 	find_syscalls(patches);
 	allocate_trampoline_table(patches);
 	create_patch_wrappers(patches);
@@ -532,6 +543,18 @@ xabort_on_syserror(long syscall_result, const char *msg)
 		xabort_errno(syscall_error_code(syscall_result), msg);
 }
 
+static void
+get_syscall_in_context(struct context *context, struct syscall_desc *sys)
+{
+	sys->nr = (int)context->rax; /* ignore higher 32 bits */
+	sys->args[0] = context->rdi;
+	sys->args[1] = context->rsi;
+	sys->args[2] = context->rdx;
+	sys->args[3] = context->r10;
+	sys->args[4] = context->r8;
+	sys->args[5] = context->r9;
+}
+
 /*
  * intercept_routine(...)
  * This is the function called from the asm wrappers,
@@ -563,33 +586,38 @@ xabort_on_syserror(long syscall_result, const char *msg)
  * rsp_in_asm_wrapper -- the stack pointer to restore after returning
  *  from this function.
  */
-static void
-intercept_routine(long nr, long arg0, long arg1,
-			long arg2, long arg3,
-			long arg4, long arg5,
-			uint32_t syscall_offset,
-			const char *libpath,
-			long return_to_asm_wrapper_syscall,
-			long return_to_asm_wrapper,
-			long (*clone_wrapper)(long, long, long, long, long),
-			long rsp_in_asm_wrapper)
+struct wrapper_ret
+intercept_routine(struct context *context)
 {
 	long result;
 	int forward_to_kernel = true;
+	struct syscall_desc desc;
+	struct patch_desc *patch = context->patch_desc;
 
-	if (handle_magic_syscalls(nr, arg0, arg1, arg2, arg3, arg4, arg5) == 0)
-		xlongjmp(return_to_asm_wrapper_syscall, rsp_in_asm_wrapper, 0);
+	get_syscall_in_context(context, &desc);
 
-	intercept_log_syscall(libpath, nr, arg0, arg1, arg2, arg3, arg4, arg5,
-	    syscall_offset, UNKNOWN, 0);
+	if (handle_magic_syscalls(&desc, &result) == 0)
+		return (struct wrapper_ret){.rax = result, .rdx = 1 };
+
+	intercept_log_syscall(
+		patch->containing_lib_path,
+		patch->syscall_offset,
+		&desc,
+		UNKNOWN, 0);
 
 	if (intercept_hook_point != NULL)
-		forward_to_kernel = intercept_hook_point(nr,
-		    arg0, arg1, arg2, arg3, arg4, arg5, &result);
+		forward_to_kernel = intercept_hook_point(desc.nr,
+		    desc.args[0],
+		    desc.args[1],
+		    desc.args[2],
+		    desc.args[3],
+		    desc.args[4],
+		    desc.args[5],
+		    &result);
 
-	if (nr == SYS_vfork || nr == SYS_rt_sigreturn) {
-		/* can't handle these syscall the normal way */
-		xlongjmp(return_to_asm_wrapper_syscall, rsp_in_asm_wrapper, nr);
+	if (desc.nr == SYS_vfork || desc.nr == SYS_rt_sigreturn) {
+		/* can't handle these syscalls the normal way */
+		return (struct wrapper_ret){.rax = context->rax, .rdx = 0 };
 	}
 
 	if (forward_to_kernel) {
@@ -605,27 +633,43 @@ intercept_routine(long nr, long arg0, long arg1,
 		 * the clone_child_intercept_routine instead, executing
 		 * it on the new child threads stack, then returns to libc.
 		 */
-		if (nr == SYS_clone && arg1 != 0)
-			result = clone_wrapper(arg0, arg1, arg2, arg3, arg4);
+		if (desc.nr == SYS_clone && desc.args[1] != 0)
+			return (struct wrapper_ret){
+				.rax = context->rax, .rdx = 2 };
 		else
-			result = syscall_no_intercept(nr,
-			    arg0, arg1, arg2, arg3, arg4, arg5);
+			result = syscall_no_intercept(desc.nr,
+					desc.args[0],
+					desc.args[1],
+					desc.args[2],
+					desc.args[3],
+					desc.args[4],
+					desc.args[5]);
 	}
 
-	intercept_log_syscall(libpath, nr, arg0, arg1, arg2, arg3, arg4, arg5,
-	    syscall_offset, KNOWN, result);
+	intercept_log_syscall(
+		patch->containing_lib_path,
+		patch->syscall_offset,
+		&desc,
+		KNOWN, result);
 
-	xlongjmp(return_to_asm_wrapper, rsp_in_asm_wrapper, result);
+	return (struct wrapper_ret){ .rax = result, .rdx = 1 };
 }
 
 /*
- * clone_child_intercept_routine
+ * intercept_routine_post_clone
  * The routine called by an assembly wrapper when a clone syscall returns zero,
  * and a new stack pointer is used in the child thread.
  */
-static void
-clone_child_intercept_routine(void)
+struct wrapper_ret
+intercept_routine_post_clone(struct context *context)
 {
-	if (intercept_hook_point_clone_child != NULL)
-		intercept_hook_point_clone_child();
+	if (context->rax == 0) {
+		if (intercept_hook_point_clone_child != NULL)
+			intercept_hook_point_clone_child();
+	} else {
+		if (intercept_hook_point_clone_parent != NULL)
+			intercept_hook_point_clone_parent(context->rax);
+	}
+
+	return (struct wrapper_ret){.rax = context->rax, .rdx = 1 };
 }

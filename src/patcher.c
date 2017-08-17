@@ -93,12 +93,9 @@ round_down_address(unsigned char *address)
 
 static unsigned char asm_wrapper_space[0x100000];
 
-static unsigned char *next_asm_wrapper_space(void);
+static unsigned char *next_asm_wrapper_space = asm_wrapper_space + PAGE_SIZE;
 
-static void create_wrapper(struct patch_desc *patch,
-			void *dest_routine, void *dest_routine_clone_child,
-			bool use_absolute_return,
-			const char *libpath);
+static void create_wrapper(struct patch_desc *patch);
 
 /*
  * create_absolute_jump(from, to)
@@ -109,26 +106,28 @@ static void create_wrapper(struct patch_desc *patch,
  * This uses up 6 bytes for the jump instruction, and another 8 bytes
  * for the pointer right after the instruction.
  */
-static void
+static unsigned char *
 create_absolute_jump(unsigned char *from, void *to)
 {
-	from[0] = 0xff; /* opcode of RIP based indirect jump */
-	from[1] = 0x25; /* opcode of RIP based indirect jump */
-	from[2] = 0; /* 32 bit zero offset */
-	from[3] = 0; /* this means zero relative to the value */
-	from[4] = 0; /* of RIP, which during the execution of the jump */
-	from[5] = 0; /* points to right after the jump instruction */
+	*from++ = 0xff; /* opcode of RIP based indirect jump */
+	*from++ = 0x25; /* opcode of RIP based indirect jump */
+	*from++ = 0; /* 32 bit zero offset */
+	*from++ = 0; /* this means zero relative to the value */
+	*from++ = 0; /* of RIP, which during the execution of the jump */
+	*from++ = 0; /* points to right after the jump instruction */
 
 	unsigned char *d = (unsigned char *)&to;
 
-	from[6] = d[0]; /* so, this is where (RIP + 0) points to, */
-	from[7] = d[1]; /* jump reads the destination address */
-	from[8] = d[2]; /* from here */
-	from[9] = d[3];
-	from[10] = d[4];
-	from[11] = d[5];
-	from[12] = d[6];
-	from[13] = d[7];
+	*from++ = d[0]; /* so, this is where (RIP + 0) points to, */
+	*from++ = d[1]; /* jump reads the destination address */
+	*from++ = d[2]; /* from here */
+	*from++ = d[3];
+	*from++ = d[4];
+	*from++ = d[5];
+	*from++ = d[6];
+	*from++ = d[7];
+
+	return from;
 }
 
 /*
@@ -497,10 +496,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 
 		mark_jump(desc, patch->return_address);
 
-		create_wrapper(patch,
-			desc->c_destination, desc->c_destination_clone_child,
-			desc->uses_trampoline_table,
-			desc->path);
+		create_wrapper(patch);
 	}
 }
 
@@ -508,56 +504,24 @@ create_patch_wrappers(struct intercept_desc *desc)
  * Referencing symbols defined in intercept_template.s
  */
 extern unsigned char intercept_asm_wrapper_tmpl[];
-extern unsigned char intercept_asm_wrapper_end;
-extern unsigned char intercept_asm_wrapper_prefix;
-extern unsigned char intercept_asm_wrapper_postfix;
-extern unsigned char intercept_asm_wrapper_call;
-extern unsigned char intercept_asm_wrapper_simd_save;
-extern unsigned char intercept_asm_wrapper_simd_restore;
-extern unsigned char intercept_asm_wrapper_return_jump;
-extern unsigned char intercept_asm_wrapper_push_origin_addr;
-extern unsigned char intercept_asm_wrapper_mov_return_addr_r11_no_syscall;
-extern unsigned char intercept_asm_wrapper_mov_return_addr_r11_syscall;
-extern unsigned char intercept_asm_wrapper_mov_libpath_r11;
-extern unsigned char intercept_asm_wrapper_mov_phaddr_r11;
-extern unsigned char intercept_asm_wrapper_mov_ph2addr_r11;
-extern unsigned char intercept_asm_wrapper_simd_save_YMM;
-extern unsigned char intercept_asm_wrapper_simd_save_YMM_end;
-extern unsigned char intercept_asm_wrapper_simd_restore_YMM;
-extern unsigned char intercept_asm_wrapper_simd_restore_YMM_end;
-extern unsigned char intercept_asm_wrapper_return_and_no_syscall;
-extern unsigned char intercept_asm_wrapper_return_and_syscall;
-extern unsigned char intercept_asm_wrapper_push_stack_first_return_addr;
-extern unsigned char intercept_asm_wrapper_mov_r11_stack_first_return_addr;
-extern unsigned char intercept_asm_wrapper_clone_wrapper;
-extern unsigned char intercept_asm_wrapper_call_clone_child_intercept;
-
-extern void backtrace_placeholder();
-extern void backtrace_placeholder_2();
+extern unsigned char intercept_asm_wrapper_tmpl_end;
+extern unsigned char intercept_asm_wrapper_patch_desc_addr;
+extern unsigned char intercept_asm_wrapper_wrapper_level1_addr;
+extern unsigned char intercept_wrapper;
 
 static size_t tmpl_size;
-static ptrdiff_t o_prefix;
-static ptrdiff_t o_postfix;
-static ptrdiff_t o_call;
-static ptrdiff_t o_ret_no_syscall;
-static ptrdiff_t o_ret_syscall;
-static ptrdiff_t o_ret_jump;
-static ptrdiff_t o_push_origin;
-static ptrdiff_t o_simd_save;
-static ptrdiff_t o_simd_restore;
-static ptrdiff_t o_mov_return_r11_no_syscall;
-static ptrdiff_t o_mov_return_r11_syscall;
-static ptrdiff_t o_mov_libpath_r11;
-static ptrdiff_t o_move_phaddr_r11;
-static ptrdiff_t o_move_ph2addr_r11;
-static ptrdiff_t o_push_first_return_addr;
-static ptrdiff_t o_mov_r11_first_return_addr;
-static ptrdiff_t o_clone_wrapper;
-static ptrdiff_t o_call_clone_child_intercept;
-static size_t simd_save_YMM_size;
-static size_t simd_restore_YMM_size;
+static ptrdiff_t o_patch_desc_addr;
+static ptrdiff_t o_wrapper_level1_addr;
 
-static bool must_save_ymm_registers;
+bool must_save_ymm_registers;
+
+static bool
+is_asm_wrapper_space_full(void)
+{
+	return next_asm_wrapper_space + tmpl_size + 256 >
+			asm_wrapper_space + sizeof(asm_wrapper_space);
+}
+
 
 /*
  * init_patcher
@@ -569,57 +533,18 @@ init_patcher(void)
 {
 	unsigned char *begin = &intercept_asm_wrapper_tmpl[0];
 
-	assert(&intercept_asm_wrapper_end > begin);
-	assert(&intercept_asm_wrapper_prefix > begin);
-	assert(&intercept_asm_wrapper_postfix > begin);
-	assert(&intercept_asm_wrapper_call > begin);
-	assert(&intercept_asm_wrapper_return_and_no_syscall > begin);
-	assert(&intercept_asm_wrapper_return_and_syscall > begin);
-	assert(&intercept_asm_wrapper_return_jump > begin);
-	assert(&intercept_asm_wrapper_push_origin_addr > begin);
-	assert(&intercept_asm_wrapper_simd_save > begin);
-	assert(&intercept_asm_wrapper_simd_restore > begin);
-	assert(&intercept_asm_wrapper_mov_return_addr_r11_no_syscall > begin);
-	assert(&intercept_asm_wrapper_mov_return_addr_r11_syscall > begin);
-	assert(&intercept_asm_wrapper_mov_libpath_r11 > begin);
-	assert(&intercept_asm_wrapper_mov_phaddr_r11 > begin);
-	assert(&intercept_asm_wrapper_mov_ph2addr_r11 > begin);
-	assert(&intercept_asm_wrapper_mov_r11_stack_first_return_addr > begin);
-	assert(&intercept_asm_wrapper_push_stack_first_return_addr > begin);
-	assert(&intercept_asm_wrapper_simd_save_YMM_end >
-	    &intercept_asm_wrapper_simd_save_YMM);
-	assert(&intercept_asm_wrapper_simd_restore_YMM_end >
-	    &intercept_asm_wrapper_simd_restore_YMM);
+	assert(&intercept_asm_wrapper_tmpl_end > begin);
+	assert(&intercept_asm_wrapper_patch_desc_addr > begin);
+	assert(&intercept_asm_wrapper_wrapper_level1_addr > begin);
+	assert(&intercept_asm_wrapper_patch_desc_addr <
+		&intercept_asm_wrapper_tmpl_end);
+	assert(&intercept_asm_wrapper_wrapper_level1_addr <
+		&intercept_asm_wrapper_tmpl_end);
 
-	tmpl_size = (size_t)(&intercept_asm_wrapper_end - begin);
-	o_prefix = &intercept_asm_wrapper_prefix - begin;
-	o_postfix = &intercept_asm_wrapper_postfix - begin;
-	o_call = &intercept_asm_wrapper_call - begin;
-	o_ret_no_syscall = &intercept_asm_wrapper_return_and_no_syscall - begin;
-	o_ret_syscall = &intercept_asm_wrapper_return_and_syscall - begin;
-	o_ret_jump = &intercept_asm_wrapper_return_jump - begin;
-	o_push_origin = &intercept_asm_wrapper_push_origin_addr - begin;
-	o_simd_save = &intercept_asm_wrapper_simd_save - begin;
-	o_simd_restore = &intercept_asm_wrapper_simd_restore - begin;
-	o_mov_return_r11_no_syscall =
-	    &intercept_asm_wrapper_mov_return_addr_r11_no_syscall - begin;
-	o_mov_return_r11_syscall =
-	    &intercept_asm_wrapper_mov_return_addr_r11_syscall - begin;
-	o_mov_libpath_r11 = &intercept_asm_wrapper_mov_libpath_r11 - begin;
-	o_move_phaddr_r11 = &intercept_asm_wrapper_mov_phaddr_r11 - begin;
-	o_move_ph2addr_r11 = &intercept_asm_wrapper_mov_ph2addr_r11 - begin;
-	o_mov_r11_first_return_addr =
-	    &intercept_asm_wrapper_mov_r11_stack_first_return_addr - begin;
-	o_push_first_return_addr =
-	    &intercept_asm_wrapper_push_stack_first_return_addr - begin;
-	o_clone_wrapper = &intercept_asm_wrapper_clone_wrapper - begin;
-	o_call_clone_child_intercept =
-	    &intercept_asm_wrapper_call_clone_child_intercept - begin;
-	simd_save_YMM_size = (size_t)(&intercept_asm_wrapper_simd_save_YMM_end -
-	    &intercept_asm_wrapper_simd_save_YMM);
-	simd_restore_YMM_size =
-	    (size_t)(&intercept_asm_wrapper_simd_restore_YMM_end -
-	    &intercept_asm_wrapper_simd_restore_YMM);
+	tmpl_size = (size_t)(&intercept_asm_wrapper_tmpl_end - begin);
+	o_patch_desc_addr = &intercept_asm_wrapper_patch_desc_addr - begin;
+	o_wrapper_level1_addr =
+		&intercept_asm_wrapper_wrapper_level1_addr - begin;
 
 	/*
 	 * has_ymm_registers -- checks if AVX instructions are supported,
@@ -630,36 +555,6 @@ init_patcher(void)
 	extern bool has_ymm_registers(void);
 
 	must_save_ymm_registers = has_ymm_registers();
-}
-
-/*
- * copy_ymm_handler_code
- * This routine copies the code saving/restoring the YMM (256 bit wide )
- * registers in an assembly wrapper template. Without this, the default
- * code for saving/restoring the XMM (128 bit wide) registers stays
- * in the generated code.
- */
-static void
-copy_ymm_handler_code(unsigned char *asm_wrapper)
-{
-	memcpy(asm_wrapper + o_simd_save,
-	    &intercept_asm_wrapper_simd_save_YMM, simd_save_YMM_size);
-	memcpy(asm_wrapper + o_simd_restore,
-	    &intercept_asm_wrapper_simd_restore_YMM, simd_restore_YMM_size);
-}
-
-/*
- * create_push_imm
- * Generates a push instruction, that pushes a 32 bit constant to the stack.
- */
-static void
-create_push_imm(unsigned char *push, uint32_t syscall_offset)
-{
-	push[0] = PUSH_IMM_OPCODE;
-	push[1] = (unsigned char)((syscall_offset >> 0) & 0xff);
-	push[2] = (unsigned char)((syscall_offset >> 8) & 0xff);
-	push[3] = (unsigned char)((syscall_offset >> 16) & 0xff);
-	push[4] = (unsigned char)((syscall_offset >> 24) & 0xff);
 }
 
 /*
@@ -694,91 +589,43 @@ create_movabs_r11(unsigned char *code, uint64_t value)
  * (actually only after a call to mprotect_asm_wrappers).
  */
 static void
-create_wrapper(struct patch_desc *patch,
-	void *dest_routine, void *dest_routine_clone_child,
-	bool use_absolute_return,
-	const char *libpath)
+create_wrapper(struct patch_desc *patch)
 {
-	unsigned char *begin;
+	unsigned char *dst;
+
+	if (is_asm_wrapper_space_full())
+		xabort("not enough space in asm_wrapper_space");
 
 	/* Create a new copy of the template */
-	patch->asm_wrapper = begin = next_asm_wrapper_space();
-	memcpy(begin, intercept_asm_wrapper_tmpl, tmpl_size);
+	patch->asm_wrapper = dst = next_asm_wrapper_space;
 
-	/* Copy the prev/next instructions, if they are copiable */
+	/* Copy the previous instruction(s) */
 	if (patch->uses_prev_ins) {
 		size_t length = patch->preceding_ins.length;
 		if (patch->uses_prev_ins_2)
 			length += patch->preceding_ins_2.length;
 
-		memcpy(begin + o_prefix, patch->syscall_addr - length, length);
+		memcpy(dst, patch->syscall_addr - length, length);
+		dst += length;
 	}
+
+	memcpy(dst, intercept_asm_wrapper_tmpl, tmpl_size);
+	create_movabs_r11(dst + o_patch_desc_addr, (uintptr_t)patch);
+	create_movabs_r11(dst + o_wrapper_level1_addr,
+				(uintptr_t)&intercept_wrapper);
+	dst += tmpl_size;
+
+	/* Copy the following instruction */
 	if (patch->uses_next_ins) {
-		memcpy(begin + o_postfix,
+		memcpy(dst,
 		    patch->syscall_addr + SYSCALL_INS_SIZE,
 		    patch->following_ins.length);
+		dst += patch->following_ins.length;
 	}
 
-	if (patch->syscall_offset > UINT32_MAX)
-		xabort("patch->syscall_offset > UINT32_MAX");
-		/* libc larger than 2 gigabytes? wow */
+	dst = create_absolute_jump(dst, patch->return_address);
 
-	/* the instruction pushing the syscall's address to the stack */
-	create_push_imm(begin + o_push_origin, (uint32_t)patch->syscall_offset);
-
-	create_movabs_r11(begin + o_mov_return_r11_no_syscall,
-	    (uint64_t)(begin + o_ret_no_syscall));
-
-	create_movabs_r11(begin + o_mov_return_r11_syscall,
-	    (uint64_t)(begin + o_ret_syscall));
-
-	create_movabs_r11(begin + o_move_phaddr_r11,
-	    (uint64_t)&backtrace_placeholder + 1);
-
-	create_movabs_r11(begin + o_move_ph2addr_r11,
-	    (uint64_t)&backtrace_placeholder_2 + 1);
-
-#ifndef NDEBUG
-
-	create_movabs_r11(begin + o_mov_r11_first_return_addr,
-	    ((uint64_t)patch->syscall_addr) + 2);
-
-	/*
-	 * write a 'push %r11' instruction
-	 * overwriting the 'subq $0x8, %rsp' instruction
-	 */
-	begin[o_push_first_return_addr] = 0x41;
-	begin[o_push_first_return_addr + 1] = 0x53;
-	begin[o_push_first_return_addr + 2] = 0x90;
-	begin[o_push_first_return_addr + 3] = 0x90;
-	begin[o_push_first_return_addr + 4] = 0x90;
-	begin[o_push_first_return_addr + 5] = 0x90;
-	begin[o_push_first_return_addr + 6] = 0x90;
-	begin[o_push_first_return_addr + 7] = 0x90;
-
-#endif
-
-	create_movabs_r11(begin + o_mov_libpath_r11, (uint64_t)libpath);
-
-	/* Create the jump instructions returning to the original code */
-	if (use_absolute_return)
-		create_absolute_jump(begin + o_ret_jump, patch->return_address);
-	else
-		create_jump(JMP_OPCODE, begin + o_ret_jump,
-				patch->return_address);
-
-	/* Create the jump instruction calling the intended C function */
-	create_jump(JMP_OPCODE, begin + o_call, dest_routine);
-
-	/*
-	 * Create the call instruction calling the intended C function
-	 * - clone child
-	 */
-	create_jump(CALL_OPCODE, begin + o_call_clone_child_intercept,
-	    dest_routine_clone_child);
-
-	if (must_save_ymm_registers)
-		copy_ymm_handler_code(begin);
+	next_asm_wrapper_space = dst;
 }
 
 /*
@@ -914,30 +761,6 @@ activate_patches(struct intercept_desc *desc)
 	mprotect_no_intercept(first_page, size,
 	    PROT_READ | PROT_EXEC,
 	    "mprotect PROT_READ | PROT_EXEC");
-}
-
-/*
- * next_asm_wrapper_space
- * Assigns a memory region in syscall_intercept's memory region
- * for an asm wrapper instance.
- * This is trivial memory allocation, using the asm_wrapper_space
- * array as a memory pool.
- */
-static unsigned char *
-next_asm_wrapper_space(void)
-{
-	static size_t next = 0x1000;
-
-	unsigned char *result;
-
-	if (next + tmpl_size + PAGE_SIZE > sizeof(asm_wrapper_space))
-		xabort("not enough space in asm_wrapper_space");
-
-	result = asm_wrapper_space + next;
-
-	next += tmpl_size;
-
-	return result;
 }
 
 /*
