@@ -71,7 +71,8 @@ set(SOURCES_C
 
 set(SOURCES_ASM
 	src/intercept_template.s
-	src/util.s)
+	src/util.s
+	src/intercept_wrapper.s)
 
 
 include_directories(include)

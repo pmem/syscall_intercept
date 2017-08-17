@@ -36,6 +36,7 @@
 #include <string.h>
 
 #include "magic_syscalls.h"
+#include "intercept.h"
 #include "intercept_util.h"
 
 /*
@@ -46,30 +47,28 @@
  * -1 otherwise (i.e.: the syscall shall be treated as a regular syscall).
  */
 int
-handle_magic_syscalls(long nr, long arg0, long arg1,
-			long arg2, long arg3,
-			long arg4, long arg5)
+handle_magic_syscalls(struct syscall_desc *desc, long *result)
 {
-	(void) arg5;
-
-	if (nr != SYS_write)
+	if (desc->nr != SYS_write)
 		return -1;
 
-	if (arg0 != SYSCALL_INT_MAGIC_WRITE_FD)
+	if (desc->args[0] != SYSCALL_INT_MAGIC_WRITE_FD)
 		return -1;
 
-	const char *message = (void *)(uintptr_t)arg1;
-	size_t len = (size_t)arg2;
+	const char *message = (void *)(uintptr_t)desc->args[1];
+	size_t len = (size_t)desc->args[2];
 
 	if (strncmp(message, start_log_message, len) == 0) {
-		const char *path = (const void *)(uintptr_t)arg3;
-		const char *trunc = (const void *)(uintptr_t)arg4;
+		const char *path = (const void *)(uintptr_t)desc->args[3];
+		const char *trunc = (const void *)(uintptr_t)desc->args[4];
 		intercept_setup_log(path, trunc);
+		*result = (long)len;
 		return 0;
 	}
 
 	if (strncmp(message, stop_log_message, len) == 0) {
 		intercept_log_close();
+		*result = (long)len;
 		return 0;
 	}
 

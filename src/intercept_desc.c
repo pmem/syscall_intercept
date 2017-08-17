@@ -519,6 +519,7 @@ crawl_text(struct intercept_desc *desc)
 		if (has_prevs >= 1 && prevs[2].is_syscall) {
 			struct patch_desc *patch = add_new_patch(desc);
 
+			patch->containing_lib_path = desc->path;
 			patch->preceding_ins_2 = prevs[0];
 			patch->preceding_ins = prevs[1];
 			patch->following_ins = result;
