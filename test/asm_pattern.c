@@ -203,16 +203,6 @@ main(int argc, char **argv)
 	init_patcher();
 
 	/*
-	 * patches.c_destination - The routine that would be called from the
-	 * assembly wrapper templates.
-	 * This is never called while this testing, so the only thing
-	 * that matters here, is that it is a 2GB range of the generated
-	 * assembly wrappers.
-	 */
-	patches.c_destination = (void *)(uintptr_t)init_patcher;
-	patches.c_destination_clone_child = (void *)(uintptr_t)init_patcher;
-
-	/*
 	 * Some more information about the library to be patched, normally
 	 * these variables would refer to libc.
 	 */

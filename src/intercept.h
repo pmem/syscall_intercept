@@ -68,6 +68,11 @@ __attribute__((noreturn)) void xabort(const char *msg);
 
 void xabort_on_syserror(long syscall_result, const char *msg);
 
+struct syscall_desc {
+	int nr;
+	long args[6];
+};
+
 struct range {
 	unsigned char *address;
 	size_t size;
@@ -87,6 +92,8 @@ struct range {
 struct patch_desc {
 	/* the original syscall instruction */
 	unsigned char *syscall_addr;
+
+	const char *containing_lib_path;
 
 	/* the offset of the original syscall instruction */
 	unsigned long syscall_offset;
@@ -187,9 +194,6 @@ struct intercept_desc {
 	size_t nop_count;
 	size_t max_nop_count;
 	struct range *nop_table;
-
-	void *c_destination;
-	void *c_destination_clone_child;
 
 	unsigned char *trampoline_table;
 	size_t trampoline_table_size;

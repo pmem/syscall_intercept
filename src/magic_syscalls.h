@@ -64,6 +64,8 @@
 #include <syscall.h>
 #include <unistd.h>
 
+struct syscall_desc;
+
 enum { SYSCALL_INT_MAGIC_WRITE_FD = 123 };
 
 static const char start_log_message[] = "SYSCALL_INTERCEPT_TEST_START_LOG";
@@ -84,10 +86,7 @@ magic_syscall_stop_log(void)
 	    stop_log_message, sizeof(stop_log_message));
 }
 
-int
-handle_magic_syscalls(long nr, long arg0, long arg1,
-			long arg2, long arg3,
-			long arg4, long arg5);
+int handle_magic_syscalls(struct syscall_desc *desc, long *result);
 
 
 #else /* SYSCALL_INTERCEPT_WITHOUT_MAGIC_SYSCALLS */
@@ -105,17 +104,10 @@ magic_syscall_stop_log(void)
 }
 
 static inline int
-handle_magic_syscalls(long nr, long arg0, long arg1,
-			long arg2, long arg3,
-			long arg4, long arg5)
+handle_magic_syscalls(struct syscall_desc *desc, long *result);
 {
-	(void) nr;
-	(void) arg0;
-	(void) arg1;
-	(void) arg2;
-	(void) arg3;
-	(void) arg4;
-	(void) arg5;
+	(void) result;
+	(void) desc;
 
 	return -1;
 }
