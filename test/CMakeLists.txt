@@ -129,18 +129,36 @@ add_test(NAME "logging"
 	-DSECOND_MATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0_child.log.match
 	${CHECK_LOG_COMMON_ARGS})
 
+add_library(hook_test_preload_o OBJECT hook_test_preload.c)
+
 add_executable(hook_test hook_test.c)
-add_library(hook_test_preload SHARED hook_test_preload.c)
-target_link_libraries(hook_test_preload PRIVATE syscall_intercept_shared)
-add_test(NAME "hook"
+
+add_library(hook_test_preload_with_shared SHARED
+	$<TARGET_OBJECTS:hook_test_preload_o>)
+target_link_libraries(hook_test_preload_with_shared PRIVATE syscall_intercept_shared)
+add_test(NAME "hook_with_shared"
 	COMMAND ${CMAKE_COMMAND}
 	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_NAME=hook
-	-DLIB_FILE=$<TARGET_FILE:hook_test_preload>
+	-DLIB_FILE=$<TARGET_FILE:hook_test_preload_with_shared>
 	-DTEST_PROG=$<TARGET_FILE:hook_test>
 	-DTEST_PROG_ARG=None
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept1.log.match
 	${CHECK_LOG_COMMON_ARGS})
+
+add_library(hook_test_preload_with_static SHARED
+	$<TARGET_OBJECTS:hook_test_preload_o>)
+target_link_libraries(hook_test_preload_with_static PRIVATE syscall_intercept_static)
+add_test(NAME "hook_with_static"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
+	-DTEST_NAME=hook
+	-DLIB_FILE=$<TARGET_FILE:hook_test_preload_with_static>
+	-DTEST_PROG=$<TARGET_FILE:hook_test>
+	-DTEST_PROG_ARG=None
+	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept1.log.match
+	${CHECK_LOG_COMMON_ARGS})
+
 
 add_library(hook_test_clone_preload SHARED hook_test_clone_preload.c)
 target_link_libraries(hook_test_clone_preload PRIVATE syscall_intercept_shared)
