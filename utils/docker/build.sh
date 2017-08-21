@@ -50,6 +50,8 @@ if [[ -z "$HOST_WORKDIR" ]]; then
 	exit 1
 fi
 
+sudo chown 1000:1000 $HOST_WORKDIR
+
 if [[ "$TRAVIS_EVENT_TYPE" == "cron" || "$TRAVIS_BRANCH" == "coverity_scan" ]]; then
 	if [[ $COVERITY -eq 1 ]]; then
 		command="./run-coverity.sh"
