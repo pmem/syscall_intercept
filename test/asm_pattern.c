@@ -234,3 +234,18 @@ main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
+
+/*
+ * syscall_hook_in_process_allowed - this symbol must be provided to
+ * be able to link with syscall_intercept's objects (other then the one
+ * created from cmdline_filter.c).
+ * This symbol is referenced from intercept.c,
+ * defined once in cmdline_filter.c, and defined here as well.
+ *
+ * Note: this function is actually never called in this test.
+ */
+int
+syscall_hook_in_process_allowed(void)
+{
+	return 0;
+}

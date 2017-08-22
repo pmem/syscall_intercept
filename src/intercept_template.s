@@ -214,35 +214,61 @@
  */
 
 .global backtrace_placeholder;
+.hidden backtrace_placeholder;
 .type   backtrace_placeholder, @function
 
 .global backtrace_placeholder_2;
+.hidden backtrace_placeholder_2;
 .type   backtrace_placeholder_2, @function
 
 .global intercept_asm_wrapper_tmpl;
+.hidden intercept_asm_wrapper_tmpl;
 .global intercept_asm_wrapper_simd_save;
+.hidden intercept_asm_wrapper_simd_save;
 .global intercept_asm_wrapper_prefix;
+.hidden intercept_asm_wrapper_prefix;
 .global intercept_asm_wrapper_push_origin_addr;
+.hidden intercept_asm_wrapper_push_origin_addr;
 .global intercept_asm_wrapper_mov_return_addr_r11_no_syscall;
+.hidden intercept_asm_wrapper_mov_return_addr_r11_no_syscall;
 .global intercept_asm_wrapper_mov_return_addr_r11_syscall;
+.hidden intercept_asm_wrapper_mov_return_addr_r11_syscall;
 .global intercept_asm_wrapper_mov_libpath_r11;
+.hidden intercept_asm_wrapper_mov_libpath_r11;
 .global intercept_asm_wrapper_mov_phaddr_r11;
+.hidden intercept_asm_wrapper_mov_phaddr_r11;
 .global intercept_asm_wrapper_mov_ph2addr_r11;
+.hidden intercept_asm_wrapper_mov_ph2addr_r11;
 .global intercept_asm_wrapper_call;
+.hidden intercept_asm_wrapper_call;
 .global intercept_asm_wrapper_simd_restore;
+.hidden intercept_asm_wrapper_simd_restore;
 .global intercept_asm_wrapper_postfix;
+.hidden intercept_asm_wrapper_postfix;
 .global intercept_asm_wrapper_return_jump;
+.hidden intercept_asm_wrapper_return_jump;
 .global intercept_asm_wrapper_end;
+.hidden intercept_asm_wrapper_end;
 .global intercept_asm_wrapper_simd_save_YMM;
+.hidden intercept_asm_wrapper_simd_save_YMM;
 .global intercept_asm_wrapper_simd_save_YMM_end;
+.hidden intercept_asm_wrapper_simd_save_YMM_end;
 .global intercept_asm_wrapper_simd_restore_YMM;
+.hidden intercept_asm_wrapper_simd_restore_YMM;
 .global intercept_asm_wrapper_simd_restore_YMM_end;
+.hidden intercept_asm_wrapper_simd_restore_YMM_end;
 .global intercept_asm_wrapper_return_and_no_syscall;
+.hidden intercept_asm_wrapper_return_and_no_syscall;
 .global intercept_asm_wrapper_return_and_syscall;
+.hidden intercept_asm_wrapper_return_and_syscall;
 .global intercept_asm_wrapper_push_stack_first_return_addr;
+.hidden intercept_asm_wrapper_push_stack_first_return_addr;
 .global intercept_asm_wrapper_mov_r11_stack_first_return_addr;
+.hidden intercept_asm_wrapper_mov_r11_stack_first_return_addr;
 .global intercept_asm_wrapper_clone_wrapper;
+.hidden intercept_asm_wrapper_clone_wrapper;
 .global intercept_asm_wrapper_call_clone_child_intercept;
+.hidden intercept_asm_wrapper_call_clone_child_intercept;
 
 .text
 

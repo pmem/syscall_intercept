@@ -30,11 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * entry.c -- the entry point for libsyscall_intercept
- *  expected to be executed by the loader while using LD_PRELOAD
- */
-
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syscall.h>
@@ -42,22 +38,6 @@
 #include <unistd.h>
 
 #include "libsyscall_intercept_hook_point.h"
-#include "intercept.h"
-
-/*
- * entry_point - the main entry point for syscall_intercept
- *
- * The loader calls this routine once the library is loaded, except in certain
- * cases when testing -- see asm_wrapper.c for more details.
- * The actual work of hotpatching libraries is done the routine
- * called intercept.
- */
-static __attribute__((constructor)) void
-entry_point(void)
-{
-	if (syscall_hook_in_process_allowed())
-		intercept();
-}
 
 /*
  * match_with_file_end
