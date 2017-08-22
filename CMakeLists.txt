@@ -116,8 +116,9 @@ foreach(target syscall_intercept_shared syscall_intercept_static)
 	POST_BUILD COMMAND ${CMAKE_OBJCOPY}
 	--localize-hidden
 	-G intercept_hook_point
+	-G intercept_hook_point_clone_child
 	-G syscall_no_intercept
-	-G libc_hook_in_process_allowed
+	-G syscall_hook_in_process_allowed
 	$<TARGET_FILE:${target}>)
 endforeach()
 endif()
