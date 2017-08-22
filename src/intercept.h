@@ -225,6 +225,4 @@ bool is_overwritable_nop(const struct intercept_disasm_result *ins);
 
 void create_jump(unsigned char opcode, unsigned char *from, void *to);
 
-void intercept(void);
-
 #endif

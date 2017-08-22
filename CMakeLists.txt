@@ -60,7 +60,7 @@ include(GNUInstallDirs)
 include(cmake/toolchain_features.cmake)
 include(cmake/find_capstone.cmake)
 
-# main source files - intentionally excluding src/entry.c
+# main source files - intentionally excluding src/cmdline_filter.c
 set(SOURCES_C
 	src/disasm_wrapper.c
 	src/intercept.c
@@ -85,7 +85,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # the library trying to hotpatch libc every time.
 add_library(syscall_intercept_base_c OBJECT ${SOURCES_C})
 add_library(syscall_intercept_base_asm OBJECT ${SOURCES_ASM})
-add_library(syscall_intercept_base_entry OBJECT src/entry.c)
+add_library(syscall_intercept_base_clf OBJECT src/cmdline_filter.c)
 
 if(HAS_NOUNUSEDARG)
 	target_compile_options(syscall_intercept_base_asm BEFORE
@@ -99,11 +99,14 @@ set_property(TARGET syscall_intercept_base_c
 add_library(syscall_intercept_shared SHARED
 		$<TARGET_OBJECTS:syscall_intercept_base_c>
 		$<TARGET_OBJECTS:syscall_intercept_base_asm>
-		$<TARGET_OBJECTS:syscall_intercept_base_entry>)
+		$<TARGET_OBJECTS:syscall_intercept_base_clf>)
 add_library(syscall_intercept_static STATIC
 		$<TARGET_OBJECTS:syscall_intercept_base_c>
 		$<TARGET_OBJECTS:syscall_intercept_base_asm>
-		$<TARGET_OBJECTS:syscall_intercept_base_entry>)
+		$<TARGET_OBJECTS:syscall_intercept_base_clf>)
+
+set_target_properties(syscall_intercept_base_c
+		PROPERTIES C_VISIBILITY_PRESET hidden)
 
 target_link_libraries(syscall_intercept_shared
 	PRIVATE ${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
@@ -116,19 +119,6 @@ set_target_properties(syscall_intercept_shared
 		   SOVERSION ${SYSCALL_INTERCEPT_VERSION_MAJOR})
 
 add_executable(cpp_test src/cpp_compile_test.cc src/cpp_compile_mock.c)
-
-if(CMAKE_OBJCOPY)
-foreach(target syscall_intercept_shared syscall_intercept_static)
-	add_custom_command(TARGET ${target}
-	POST_BUILD COMMAND ${CMAKE_OBJCOPY}
-	--localize-hidden
-	-G intercept_hook_point
-	-G intercept_hook_point_clone_child
-	-G syscall_no_intercept
-	-G syscall_hook_in_process_allowed
-	$<TARGET_FILE:${target}>)
-endforeach()
-endif()
 
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES

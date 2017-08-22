@@ -63,9 +63,11 @@ int (*intercept_hook_point)(long syscall_number,
 			long arg0, long arg1,
 			long arg2, long arg3,
 			long arg4, long arg5,
-			long *result);
+			long *result)
+	__attribute__((visibility("default")));
 
-void (*intercept_hook_point_clone_child)(void);
+void (*intercept_hook_point_clone_child)(void)
+	__attribute__((visibility("default")));
 
 bool debug_dumps_on;
 
@@ -306,7 +308,14 @@ is_vdso(uintptr_t addr, const char *path)
 static bool
 should_patch_object(uintptr_t addr, const char *path)
 {
-	static const char self[] = "libsyscall_intercept";
+	static uintptr_t self_addr;
+	if (self_addr == 0) {
+		Dl_info self;
+		if (!dladdr((void *)&syscall_no_intercept, &self))
+			xabort("self dladdr failure");
+		self_addr = (uintptr_t)self.dli_fbase;
+	}
+
 	static const char libc[] = "libc";
 	static const char pthr[] = "libpthread";
 	static const char caps[] = "libcapstone";
@@ -322,7 +331,7 @@ should_patch_object(uintptr_t addr, const char *path)
 	if (len == 0)
 		return false;
 
-	if (str_match(name, len, self)) {
+	if (addr == self_addr) {
 		debug_dump(" - skipping: matches self\n");
 		return false;
 	}
@@ -408,10 +417,18 @@ analyze_object(struct dl_phdr_info *info, size_t size, void *data)
  * is described. Upon startup, this routine looks for libc, and libpthread.
  * If these libraries are found in the process's address space, they are
  * patched.
+ *
+ * This is init routine of syscall_intercept. This library constructor
+ * must be in a TU which also contains public symbols, otherwise linkers
+ * might just get rid of the whole object file containing it, when linking
+ * statically with libsyscall_intercept.
  */
-void
+static __attribute__((constructor)) void
 intercept(void)
 {
+	if (!syscall_hook_in_process_allowed())
+		return;
+
 	vdso_addr = (void *)(uintptr_t)getauxval(AT_SYSINFO_EHDR);
 	debug_dumps_on = getenv("INTERCEPT_DEBUG_DUMP") != NULL;
 	patch_all_objs = (getenv("INTERCEPT_ALL_OBJS") != NULL);
