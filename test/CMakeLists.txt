@@ -41,10 +41,12 @@ include_directories(${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/test)
 
 set(CMAKE_ASM_CREATE_SHARED_LIBRARY ${CMAKE_C_CREATE_SHARED_LIBRARY})
 
-add_executable(asm_pattern asm_pattern.c)
+add_executable(asm_pattern asm_pattern.c
+		$<TARGET_OBJECTS:syscall_intercept_base_c>
+		$<TARGET_OBJECTS:syscall_intercept_base_asm>)
+
 target_link_libraries(asm_pattern
-	PRIVATE ${CMAKE_DL_LIBS} ${capstone_LDFLAGS}
-	syscall_intercept_base_c syscall_intercept_base_asm)
+	PRIVATE ${CMAKE_DL_LIBS} ${capstone_LDFLAGS})
 
 set(asm_patterns
 	nosyscall
