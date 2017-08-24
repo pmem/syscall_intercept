@@ -75,6 +75,8 @@ fi
 
 WORKDIR=/${PROJECT}
 
+chmod a+w $HOST_WORKDIR
+
 # Run a container with
 #  - environment variables set (--env)
 #  - host directory containing source mounted (-v)
