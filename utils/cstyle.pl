@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 #
 # CDDL HEADER START
 #
@@ -22,6 +22,8 @@
 #
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
+#
+# Portions copyright 2017, Intel Corporation.
 #
 # @(#)cstyle 1.58 98/09/09 (from shannon)
 #ident	"%Z%%M%	%I%	%E% SMI"
@@ -54,6 +56,7 @@ require 5.0;
 use IO::File;
 use Getopt::Std;
 use strict;
+use warnings;
 
 my $usage =
 "usage: cstyle [-chpvCP] [-o constructs] file ...
@@ -328,7 +331,21 @@ line: while (<$filehandle>) {
 		1 while $eline =~
 		    s/\t+/' ' x (length($&) * 8 - length($`) % 8)/e;
 		if (length($eline) > 80) {
-			err("line > 80 characters");
+			# allow long line if it is user visible string
+			# find if line start from " and ends
+			# with " + 2 optional characters
+			# (these characters can be i.e. '");' '" \' or '",' etc...)
+			if($eline =~ /^ *".*"[^"]{0,2}$/) {
+				# check if entire line is one string literal
+				$eline =~ s/^ *"//;
+				$eline =~ s/"[^"]{0,2}$//;
+
+				if($eline =~ /[^\\]"|[^\\](\\\\)+"/) {
+					err("line > 80 characters");
+				}
+			} else {
+				err("line > 80 characters");
+			}
 		}
 	}
 
@@ -513,8 +530,8 @@ line: while (<$filehandle>) {
 	# ".*?" is a non-greedy match, so that we don't get confused by
 	# multiple comments on the same line.
 	#
-	s/\/\*.*?\*\///g;
-	s/\/\/.*$//;		# C++ comments
+	s/\/\*.*?\*\//\x01/g;
+	s/\/\/.*$/\x01/;		# C++ comments
 
 	# delete any trailing whitespace; we have already checked for that.
 	s/\s*$//;
@@ -606,6 +623,8 @@ line: while (<$filehandle>) {
 		s/\w\s\(+\*/XXX(*/g;
 		s/\b($typename|void)\s+\(+/XXX(/og;
 		s/\btypedef\s($typename|void)\s+\(+/XXX(/og;
+		# do not match "__attribute__ ((format (...)))"
+		s/\b__attribute__\s*\(\(format\s*\(/__attribute__((XXX(/g;
 		if (/\w\s\(/) {
 			err("extra space between function name and left paren");
 		}
@@ -614,12 +633,12 @@ line: while (<$filehandle>) {
 	# try to detect "int foo(x)", but not "extern int foo(x);"
 	# XXX - this still trips over too many legitimate things,
 	# like "int foo(x,\n\ty);"
-#		if (/^(\w+(\s|\*)+)+\w+\(/ && !/\)[;,](\s|)*$/ &&
+#		if (/^(\w+(\s|\*)+)+\w+\(/ && !/\)[;,](\s|\x01)*$/ &&
 #		    !/^(extern|static)\b/) {
 #			err("return type of function not on separate line");
 #		}
 	# this is a close approximation
-	if (/^(\w+(\s|\*)+)+\w+\(.*\)(\s|)*$/ &&
+	if (/^(\w+(\s|\*)+)+\w+\(.*\)(\s|\x01)*$/ &&
 	    !/^(extern|static)\b/) {
 		err("return type of function not on separate line");
 	}
@@ -649,7 +668,7 @@ line: while (<$filehandle>) {
 	if (/^\s*\(void\)[^ ]/) {
 		err("missing space after (void) cast");
 	}
-	if (/\S\{/ && !/\{\{/) {
+	if (/\S\{/ && !/\{\{/ && !/\(struct \w+\)\{/) {
 		err("missing space before left brace");
 	}
 	if ($in_function && /^\s+{/ &&
@@ -729,7 +748,7 @@ line: while (<$filehandle>) {
 	if ($heuristic) {
 		# cannot check this everywhere due to "struct {\n...\n} foo;"
 		if ($in_function && !$in_declaration &&
-		    /}./ && !/}\s+=/ && !/{.*}[;,]$/ && !/}(\s|)*$/ &&
+		    /}./ && !/}\s+=/ && !/{.*}[;,]$/ && !/}(\s|\x01)*$/ &&
 		    !/} (else|while)/ && !/}}/) {
 			err("possible bad text following right brace");
 		}
@@ -814,7 +833,7 @@ process_indent($)
 	require strict;
 	local $_ = $_[0];			# preserve the global $_
 
-	s///g;	# No comments
+	s/\x01//g;	# No comments
 	s/\s+$//;	# Strip trailing whitespace
 
 	return			if (/^$/);	# skip empty lines
@@ -826,7 +845,7 @@ process_indent($)
 
 	# skip over enumerations, array definitions, initializers, etc.
 	if ($cont_off <= 0 && !/^\s*$special/ &&
-	    (/(?:(?:\b(?:enum|struct|union)\s*[^\{]*)|(?:\s+=\s*)){/ ||
+	    (/(?:(?:\b(?:enum|struct|union)\s*[^\{]*)|(?:\s+=\s*))\{/ ||
 	    (/^\s*{/ && $prev =~ /=\s*(?:\/\*.*\*\/\s*)*$/))) {
 		$cont_in = 0;
 		$cont_off = tr/{/{/ - tr/}/}/;
