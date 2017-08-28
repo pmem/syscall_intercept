@@ -95,15 +95,23 @@ endif()
 set_property(TARGET syscall_intercept_base_c
 	APPEND PROPERTY COMPILE_FLAGS ${capstone_CFLAGS})
 
+add_library(syscall_intercept_unscoped STATIC
+		$<TARGET_OBJECTS:syscall_intercept_base_c>
+		$<TARGET_OBJECTS:syscall_intercept_base_asm>
+		$<TARGET_OBJECTS:syscall_intercept_base_clf>)
 
-add_library(syscall_intercept_shared SHARED
-		$<TARGET_OBJECTS:syscall_intercept_base_c>
-		$<TARGET_OBJECTS:syscall_intercept_base_asm>
-		$<TARGET_OBJECTS:syscall_intercept_base_clf>)
-add_library(syscall_intercept_static STATIC
-		$<TARGET_OBJECTS:syscall_intercept_base_c>
-		$<TARGET_OBJECTS:syscall_intercept_base_asm>
-		$<TARGET_OBJECTS:syscall_intercept_base_clf>)
+set(syscall_intercept_unscoped_a $<TARGET_FILE:syscall_intercept_unscoped>)
+
+add_custom_command(
+	OUTPUT syscall_intercept_scoped.o
+	COMMAND ${CMAKE_LINKER}
+		-r --whole-archive ${syscall_intercept_unscoped_a}
+		-o syscall_intercept_scoped.o
+	COMMAND ${CMAKE_OBJCOPY} --localize-hidden syscall_intercept_scoped.o
+	COMMENT "Hiding symbols")
+
+add_library(syscall_intercept_shared SHARED syscall_intercept_scoped.o)
+add_library(syscall_intercept_static STATIC syscall_intercept_scoped.o)
 
 set_target_properties(syscall_intercept_base_c
 		PROPERTIES C_VISIBILITY_PRESET hidden)
@@ -122,6 +130,7 @@ add_executable(cpp_test src/cpp_compile_test.cc src/cpp_compile_mock.c)
 
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
+	LINKER_LANGUAGE C
 	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
 	OUTPUT_NAME syscall_intercept)
 
