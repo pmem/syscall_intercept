@@ -165,12 +165,10 @@ add_test(NAME "filter_none"
 set_tests_properties("filter_none"
 	PROPERTIES PASS_REGULAR_EXPRESSION "hooked - allowed")
 
-get_filename_component(filter_test_filename $<TARGET_FILE:filter_test> NAME)
-
 add_test(NAME "filter_positive"
 	COMMAND ${CMAKE_COMMAND}
 	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
-	-DFILTER=${filter_test_filename}
+	-DFILTER=$<TARGET_FILE_NAME:filter_test>
 	-DTEST_PROG=$<TARGET_FILE:filter_test>
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
 set_tests_properties("filter_positive"
@@ -183,6 +181,26 @@ add_test(NAME "filter_negative"
 	-DTEST_PROG=$<TARGET_FILE:filter_test>
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
 set_tests_properties("filter_negative"
+	PROPERTIES PASS_REGULAR_EXPRESSION "disallowed")
+
+# the filter is a substring of the executable name
+add_test(NAME "filter_negative_substring0"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
+	-DFILTER_PLUS_ONECHAR=$<TARGET_FILE_NAME:filter_test>
+	-DTEST_PROG=$<TARGET_FILE:filter_test>
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
+set_tests_properties("filter_negative_substring0"
+	PROPERTIES PASS_REGULAR_EXPRESSION "disallowed")
+
+# the executable name is a substring of the filter
+add_test(NAME "filter_negative_substring1"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
+	-DFILTER=A$<TARGET_FILE_NAME:filter_test>
+	-DTEST_PROG=$<TARGET_FILE:filter_test>
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
+set_tests_properties("filter_negative_substring1"
 	PROPERTIES PASS_REGULAR_EXPRESSION "disallowed")
 
 add_executable(test_clone_thread test_clone_thread.c)
