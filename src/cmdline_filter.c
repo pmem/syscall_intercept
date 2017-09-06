@@ -30,11 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * entry.c -- the entry point for libsyscall_intercept
- *  expected to be executed by the loader while using LD_PRELOAD
- */
-
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,28 +39,6 @@
 
 #include "libsyscall_intercept_hook_point.h"
 #include "intercept.h"
-
-static const char *cmdline;
-
-/*
- * entry_point - the main entry point for syscall_intercept
- *
- * The loader calls this routine once the library is loaded, except in certain
- * cases when testing -- see asm_wrapper.c for more details.
- * The actual work of hotpatching libraries is done the routine
- * called intercept.
- */
-static __attribute__((constructor)) void
-entry_point(int argc, char **argv)
-{
-	if (argc < 1)
-		return;
-
-	cmdline = argv[0];
-
-	if (syscall_hook_in_process_allowed())
-		intercept();
-}
 
 /*
  * cmdline_match - match the last component of the path in cmdline
@@ -111,6 +84,9 @@ syscall_hook_in_process_allowed(void)
 
 	if (is_decided)
 		return result;
+
+	if (cmdline == NULL)
+		return 0;
 
 	result = cmdline_match(getenv("INTERCEPT_HOOK_CMDLINE_FILTER"));
 	is_decided = true;

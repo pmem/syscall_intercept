@@ -29,7 +29,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.3)
 project(syscall_intercept C CXX ASM)
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
@@ -60,7 +60,7 @@ include(GNUInstallDirs)
 include(cmake/toolchain_features.cmake)
 include(cmake/find_capstone.cmake)
 
-# main source files - intentionally excluding src/entry.c
+# main source files - intentionally excluding src/cmdline_filter.c
 set(SOURCES_C
 	src/disasm_wrapper.c
 	src/intercept.c
@@ -83,8 +83,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # can use the internal interface of the libraries (linking
 # with syscall_intercept_base instead of the actual lib ), without
 # the library trying to hotpatch libc every time.
-add_library(syscall_intercept_base_c STATIC ${SOURCES_C})
-add_library(syscall_intercept_base_asm STATIC ${SOURCES_ASM})
+add_library(syscall_intercept_base_c OBJECT ${SOURCES_C})
+add_library(syscall_intercept_base_asm OBJECT ${SOURCES_ASM})
+add_library(syscall_intercept_base_clf OBJECT src/cmdline_filter.c)
 
 if(HAS_NOUNUSEDARG)
 	target_compile_options(syscall_intercept_base_asm BEFORE
@@ -94,15 +95,32 @@ endif()
 set_property(TARGET syscall_intercept_base_c
 	APPEND PROPERTY COMPILE_FLAGS ${capstone_CFLAGS})
 
-target_link_libraries(syscall_intercept_base_c
-	${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
+add_library(syscall_intercept_unscoped STATIC
+		$<TARGET_OBJECTS:syscall_intercept_base_c>
+		$<TARGET_OBJECTS:syscall_intercept_base_asm>
+		$<TARGET_OBJECTS:syscall_intercept_base_clf>)
 
-add_library(syscall_intercept_shared SHARED src/entry.c)
+set(syscall_intercept_unscoped_a $<TARGET_FILE:syscall_intercept_unscoped>)
+
+add_custom_command(
+	OUTPUT syscall_intercept_scoped.o
+	COMMAND ${CMAKE_LINKER}
+		-r --whole-archive ${syscall_intercept_unscoped_a}
+		-o syscall_intercept_scoped.o
+	COMMAND ${CMAKE_OBJCOPY} --localize-hidden syscall_intercept_scoped.o
+	COMMENT "Hiding symbols")
+
+add_library(syscall_intercept_shared SHARED syscall_intercept_scoped.o)
+add_library(syscall_intercept_static STATIC syscall_intercept_scoped.o)
+
+set_target_properties(syscall_intercept_base_c
+		PROPERTIES C_VISIBILITY_PRESET hidden)
+
 target_link_libraries(syscall_intercept_shared
-	syscall_intercept_base_c syscall_intercept_base_asm)
-add_library(syscall_intercept_static STATIC src/entry.c)
+	PRIVATE ${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
+
 target_link_libraries(syscall_intercept_static
-	syscall_intercept_base_c syscall_intercept_base_asm)
+	INTERFACE ${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
 
 set_target_properties(syscall_intercept_shared
 	PROPERTIES VERSION ${SYSCALL_INTERCEPT_VERSION}
@@ -110,20 +128,9 @@ set_target_properties(syscall_intercept_shared
 
 add_executable(cpp_test src/cpp_compile_test.cc src/cpp_compile_mock.c)
 
-if(CMAKE_OBJCOPY)
-foreach(target syscall_intercept_shared syscall_intercept_static)
-	add_custom_command(TARGET ${target}
-	POST_BUILD COMMAND ${CMAKE_OBJCOPY}
-	--localize-hidden
-	-G intercept_hook_point
-	-G syscall_no_intercept
-	-G libc_hook_in_process_allowed
-	$<TARGET_FILE:${target}>)
-endforeach()
-endif()
-
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
+	LINKER_LANGUAGE C
 	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
 	OUTPUT_NAME syscall_intercept)
 

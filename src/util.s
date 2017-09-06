@@ -31,9 +31,11 @@
  */
 
 .global xlongjmp;
+.hidden xlongjmp;
 .type   xlongjmp, @function
 
 .global has_ymm_registers;
+.hidden has_ymm_registers;
 .type   has_ymm_registers, @function
 
 .global syscall_no_intercept;
