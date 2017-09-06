@@ -712,7 +712,7 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 		buf = print_syscall(buf, "fcntl", 3,
 				F_DEC, arg0,
 				F_FCNTL_CMD, arg1,
-				F_DEC, arg1,
+				F_HEX, arg2,
 				result_known, result);
 	} else if (nr == SYS_flock) {
 		buf = print_syscall(buf, "flock", 2,
