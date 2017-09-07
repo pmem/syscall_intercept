@@ -31,31 +31,21 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-# run-coverage.sh - is called inside a Docker container;
-#                   builds syscall_intercept with the aim of collecting
-#                   information on code coverage
+# install-nvml.sh - installs libpmem & libpmemobj
+#
 
-cd $WORKDIR
+mkdir nvml
+cd nvml
 
-mkdir build
-cd build
-CC=gcc cmake ..  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-		-DCMAKE_C_FLAGS=-coverage \
-		-DCMAKE_CXX_FLAGS=-coverage \
-		-DEXPECT_SPURIOUS_SYSCALLS=ON
-
-make
-ctest --output-on-failure
-bash <(curl -s https://codecov.io/bash) -c -F regular_tests
-find . -name ".coverage" -exec rm {} \;
-find . -name "coverage.xml" -exec rm {} \;
-find . -name "*.gcov" -exec rm {} \;
-find . -name "*.gcda" -exec rm {} \;
-
-pushd ~/pmemfile/build
-LD_LIBRARY_PATH=$WORKDIR/build ctest --output-on-failure -R preload_
-popd
-bash <(curl -s https://codecov.io/bash) -c -F pmemfile_tests
+if [ "$1" = "dpkg" ]; then
+	wget https://github.com/pmem/nvml/releases/download/1.3/nvml-1.3-dpkgs.tar.gz
+	tar -xzf nvml-1.3-dpkgs.tar.gz
+	sudo dpkg -i libpmem_*.deb libpmem-dev_*.deb libpmemobj_*.deb libpmemobj-dev_*.deb
+elif [ "$1" = "rpm" ]; then
+	wget https://github.com/pmem/nvml/releases/download/1.3/nvml-1.3-rpms.tar.gz
+	tar -xzf nvml-1.3-rpms.tar.gz
+	sudo rpm -i x86_64/libpmem-*.rpm x86_64/libpmemobj-*.rpm
+fi
 
 cd ..
-rm -r build
+rm -rf nvml
