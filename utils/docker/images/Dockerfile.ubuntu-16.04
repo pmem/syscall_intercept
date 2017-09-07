@@ -41,17 +41,27 @@ MAINTAINER gabor.buella@intel.com
 # Update the Apt cache and install basic tools
 RUN apt-get update
 RUN apt-get install -y \
+	autoconf \
+	automake \
 	clang \
 	curl \
 	cmake \
+	debhelper \
+	devscripts \
+	doxygen \
 	git \
+	libcap-dev \
 	libcapstone-dev \
+	libunwind-dev \
 	pandoc \
+	libtext-diff-perl \
 	pkg-config \
 	debhelper \
 	devscripts \
 	ruby \
 	sudo \
+	sqlite3 \
+	tcl-dev \
 	wget \
 	whois
 
@@ -61,7 +71,17 @@ ENV USER user
 ENV USERPASS pass
 RUN useradd -m $USER -g sudo -p `mkpasswd $USERPASS`
 
+
+# Install nvml
+COPY install-nvml.sh install-nvml.sh
+RUN ./install-nvml.sh dpkg
+
 USER $USER
+
+# Build pmemfile
+COPY libsyscall_intercept_hook_point.h libsyscall_intercept_hook_point.h
+COPY build-pmemfile.sh build-pmemfile.sh
+RUN ./build-pmemfile.sh
 
 # Set required environment variables
 ENV OS ubuntu
