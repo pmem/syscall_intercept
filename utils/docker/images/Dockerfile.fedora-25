@@ -45,11 +45,17 @@ RUN dnf install -y \
 	cmake \
 	gcc \
 	git \
+	libcap-devel \
+	libunwind-devel \
 	make \
 	pandoc \
+	perl-Text-Diff \
 	rpm-build \
 	passwd \
 	sudo \
+	sqlite \
+	tcl-devel \
+	wget \
 	which \
 	whois
 
@@ -60,7 +66,16 @@ RUN useradd -m $USER
 RUN echo $USERPASS | passwd $USER --stdin
 RUN gpasswd wheel -a $USER
 
+# Install nvml
+COPY install-nvml.sh install-nvml.sh
+RUN ./install-nvml.sh rpm
+
 USER $USER
+
+# Build pmemfile
+COPY libsyscall_intercept_hook_point.h libsyscall_intercept_hook_point.h
+COPY build-pmemfile.sh build-pmemfile.sh
+RUN ./build-pmemfile.sh
 
 # Set required environment variables
 ENV OS fedora
