@@ -61,6 +61,8 @@ if [[ ! -f "Dockerfile.$os_ver" ]]; then
 	exit 1
 fi
 
+cp ../../../include/libsyscall_intercept_hook_point.h libsyscall_intercept_hook_point.h
+
 # Build a Docker image tagged with PROJECT/OS:VER
 tag=${DOCKER_USER}/${PROJECT}_$1
 sudo docker build -t $tag \
