@@ -103,15 +103,28 @@ add_library(syscall_intercept_unscoped STATIC
 set(syscall_intercept_unscoped_a $<TARGET_FILE:syscall_intercept_unscoped>)
 
 add_custom_command(
-	OUTPUT syscall_intercept_scoped.o
+	OUTPUT syscall_intercept_unscoped.o
 	COMMAND ${CMAKE_LINKER}
 		-r --whole-archive ${syscall_intercept_unscoped_a}
-		-o syscall_intercept_scoped.o
-	COMMAND ${CMAKE_OBJCOPY} --localize-hidden syscall_intercept_scoped.o
-	COMMENT "Hiding symbols")
+		-o syscall_intercept_unscoped.o
+	DEPENDS syscall_intercept_unscoped)
+
+add_custom_command(
+	OUTPUT syscall_intercept_scoped.o
+	COMMAND ${CMAKE_OBJCOPY}
+		--localize-hidden
+		syscall_intercept_unscoped.o
+		syscall_intercept_scoped.o
+	DEPENDS syscall_intercept_unscoped.o)
+
+add_custom_target(generate_syscall_intercept_scoped
+		DEPENDS syscall_intercept_scoped.o)
 
 add_library(syscall_intercept_shared SHARED syscall_intercept_scoped.o)
 add_library(syscall_intercept_static STATIC syscall_intercept_scoped.o)
+
+add_dependencies(syscall_intercept_shared generate_syscall_intercept_scoped)
+add_dependencies(syscall_intercept_static generate_syscall_intercept_scoped)
 
 set_target_properties(syscall_intercept_base_c
 		PROPERTIES C_VISIBILITY_PRESET hidden)
