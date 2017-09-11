@@ -1,0 +1,8 @@
+$(S) $(XX) -- vfork()
+$(S) $(XX) -- exit_group(0)
+$(S) $(XX) -- write(1, "In original process, after first vfork\n", 39) = ?
+$(S) $(XX) -- write(1, "In original process, after first vfork\n", 39) = 39
+$(S) $(XX) -- vfork()
+$(S) $(XX) -- execve("$(S)", $(XX), $(XX)) = ?
+$(S) $(XX) -- write(1, "In original process, after second vfork\n", 40) = ?
+$(S) $(XX) -- write(1, "In original process, after second vfork\n", 40) = 40
