@@ -30,6 +30,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * intercept_wrapper.s -- see asm_wrapper.md
+ */
+
 /* the function in this file */
 .global intercept_wrapper
 .hidden intercept_wrapper
