@@ -65,12 +65,10 @@ RUN apt-get install -y \
 	wget \
 	whois
 
-
 # Add user
 ENV USER user
 ENV USERPASS pass
 RUN useradd -m $USER -g sudo -p `mkpasswd $USERPASS`
-
 
 # Install nvml
 COPY install-nvml.sh install-nvml.sh

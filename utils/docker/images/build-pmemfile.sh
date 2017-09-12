@@ -70,7 +70,7 @@ cd
 # antool tests.
 git clone https://github.com/pmem/pmemfile.git
 cd pmemfile
-git checkout a7f1d347bfdbabec3b0e0b1dca50542ec6c267e3
+git checkout 6d1e91ecdf86263b9ddf0224963b37715f33874d
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
