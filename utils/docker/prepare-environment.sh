@@ -32,7 +32,7 @@
 
 #
 # prepare-environment.sh - installs Docker on the host environment and
-#                          pulls a Docker image for building syscall_intercept.
+#                          pulls a Docker image for building the project.
 #
 
 # Install the newest Docker engine

@@ -35,9 +35,6 @@
 #            prepared for building this project.
 #
 
-export DOCKER_USER=gaborbuella
-export PROJECT=syscall_intercept
-
 if [[ -z "$OS" || -z "$OS_VER" ]]; then
 	echo "ERROR: The variables OS and OS_VER have to be set properly " \
 		"(eg. OS=ubuntu, OS_VER=16.04)."
@@ -49,6 +46,8 @@ if [[ -z "$HOST_WORKDIR" ]]; then
 		"the root of this project on the host machine"
 	exit 1
 fi
+
+sudo chmod -R a+w $HOST_WORKDIR
 
 if [[ "$TRAVIS_EVENT_TYPE" == "cron" || "$TRAVIS_BRANCH" == "coverity_scan" ]]; then
 	if [[ $COVERITY -eq 1 ]]; then
@@ -64,8 +63,8 @@ else
 	fi
 fi
 
-imageName=${DOCKER_USER}/${PROJECT}_${OS}:${OS_VER}
-containerName=${DOCKER_USER}-${PROJECT}-${OS}-${OS_VER}
+imageName=${DOCKERHUB_REPO}:${OS}-${OS_VER}
+containerName=pmemfile-${OS}-${OS_VER}
 
 if [[ "$command" == "" ]]; then
 	if [[ $MAKE_PKG -eq 0 ]] ; then command="./run-build.sh"; fi
@@ -73,15 +72,15 @@ if [[ "$command" == "" ]]; then
 	if [[ $COVERAGE -eq 1 ]] ; then command="./run-coverage.sh"; ci_env=`bash <(curl -s https://codecov.io/env)`; fi
 fi
 
-WORKDIR=/${PROJECT}
+WORKDIR=/pmemfile-${OS}-${OS_VER}
 
 chmod a+w $HOST_WORKDIR
 
 # Run a container with
 #  - environment variables set (--env)
-#  - host directory containing source mounted (-v)
+#  - host directory containing the project source mounted (-v)
 #  - working directory set (-w)
-sudo docker run --rm --privileged=true --name=$containerName -ti \
+sudo docker run --rm --privileged=true --name=$containerName $EXTRA_DOCKER_ARGS -i \
 	$ci_env \
 	--env http_proxy=$http_proxy \
 	--env https_proxy=$https_proxy \
@@ -96,6 +95,7 @@ sudo docker run --rm --privileged=true --name=$containerName -ti \
 	--env TRAVIS_EVENT_TYPE=$TRAVIS_EVENT_TYPE \
 	--env COVERITY_SCAN_TOKEN=$COVERITY_SCAN_TOKEN \
 	--env COVERITY_SCAN_NOTIFICATION_EMAIL=$COVERITY_SCAN_NOTIFICATION_EMAIL \
+	--env COVERAGE=$COVERAGE \
 	-v $HOST_WORKDIR:$WORKDIR \
 	-w $WORKDIR/utils/docker \
 	$imageName $command

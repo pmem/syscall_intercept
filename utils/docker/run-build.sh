@@ -32,7 +32,7 @@
 
 #
 # run-build.sh - is called inside a Docker container;
-#		starts a build of syscall_intercept
+#		starts a build of the project
 #
 
 # Build all and run tests
@@ -47,11 +47,11 @@ fi
 
 mkdir build
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/tmp/syscall_intercept \
+cmake .. -DCMAKE_INSTALL_PREFIX=/tmp/${PROJECT} \
 		-DCMAKE_BUILD_TYPE=Debug \
 
-make
-ctest --output-on-failure
+make -j2
+ctest --output-on-failure -j2
 make install
 cd ..
 rm -r build
@@ -59,11 +59,11 @@ rm -r build
 
 mkdir build
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/tmp/syscall_intercept \
+cmake .. -DCMAKE_INSTALL_PREFIX=/tmp/${PROJECT} \
 		-DCMAKE_BUILD_TYPE=Release \
 
-make
-ctest --output-on-failure
+make -j2
+ctest --output-on-failure -j2
 make install
 cd ..
 rm -r build

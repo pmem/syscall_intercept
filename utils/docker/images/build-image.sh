@@ -31,9 +31,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-# build-image.sh <OS:VER> - prepares a Docker image with <OS>-based
-#                           environment for building syscall_intercept, according
-#                           to the Dockerfile.<OS:VER> file located
+# build-image.sh <OS-VER> - prepares a Docker image with <OS>-based
+#                           environment for building the project, according
+#                           to the Dockerfile.<OS-VER> file located
 #                           in the same directory.
 #
 # The script can be run locally.
@@ -41,31 +41,27 @@
 
 function usage {
 	echo "Usage:"
-	echo "    build-image.sh <OS:VER>"
-	echo "where <OS:VER>, for example, can be 'ubuntu:16.04', provided " \
+	echo "    build-image.sh <DOCKERHUB_REPO> <OS-VER>"
+	echo "where <OS-VER>, for example, can be 'ubuntu-16.04', provided " \
 		"a Dockerfile named 'Dockerfile.ubuntu-16.04' exists in the " \
 		"current directory."
 }
 
-# Check if the first argument is nonempty
-if [[ -z "$1" ]]; then
+# Check if the first two arguments are nonempty
+if [ -z "$1" -o -z "$2" ]; then
 	usage
 	exit 1
 fi
 
 # Check if the file Dockerfile.OS-VER exists
-os_ver=${1/\:/-}
-if [[ ! -f "Dockerfile.$os_ver" ]]; then
+if [[ ! -f "Dockerfile.$2" ]]; then
 	echo "ERROR: wrong argument."
 	usage
 	exit 1
 fi
 
-cp ../../../include/libsyscall_intercept_hook_point.h libsyscall_intercept_hook_point.h
-
-# Build a Docker image tagged with PROJECT/OS:VER
-tag=${DOCKER_USER}/${PROJECT}_$1
-sudo docker build -t $tag \
+# Build a Docker image tagged with ${DOCKERHUB_REPO}:OS-VER
+sudo docker build -t $1:$2 \
 	--build-arg http_proxy=$http_proxy \
 	--build-arg https_proxy=$https_proxy \
-	-f Dockerfile.$os_ver .
+	-f Dockerfile.$2 .
