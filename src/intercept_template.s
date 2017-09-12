@@ -31,7 +31,7 @@
  */
 
 /*
- * intercept_template.s
+ * intercept_template.s -- see asm_wrapper.md
  */
 
 .global intercept_asm_wrapper_tmpl;
