@@ -32,7 +32,7 @@
 
 #
 # run-build-package.sh - is called inside a Docker container;
-#                		 starts a build of syscall_intercept
+#                		 starts a build of the project
 #
 
 # Build all and run tests
