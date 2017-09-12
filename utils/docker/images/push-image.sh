@@ -31,22 +31,19 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-# push-image.sh <OS:VER> - pushes the Docker image tagged with ${PROJECT}_$OS:$OS_VER
-#                          to the Docker Hub
+# push-image.sh <OS-VER> - pushes the Docker image tagged with OS-VER
+#                          to Docker Hub
 #
-# The script utilizes $DOCKER_PASSWORD variable to log in to the Docker Hub.
-# It can be set in the Travis project's configuration for automated builds.
-# If it is not set, the user will be asked to provide the password.
+# The script utilizes $DOCKERHUB_USER and $DOCKERHUB_PASSWORD variables to log
+# in to Docker Hub. The variables can be set in the Travis project's
+# configuration for automated builds.
 #
-
-export DOCKER_USER=gaborbuella
-export PROJECT=syscall_intercept
 
 function usage {
 	echo "Usage:"
-	echo "    push-image.sh <OS:VER>"
-	echo "where <OS:VER>, for example, can be 'ubuntu:16.04', provided " \
-	"a Docker image tagged with ${DOCKER_USER}/${PROJECT}_ubuntu:16.04 exists locally."
+	echo "    push-image.sh <OS-VER>"
+	echo "where <OS-VER>, for example, can be 'ubuntu-16.04', provided " \
+	"a Docker image tagged with ${DOCKERHUB_REPO}:ubuntu-16.04 exists locally."
 }
 
 # Check if the first argument is nonempty
@@ -55,8 +52,8 @@ if [[ -z "$1" ]]; then
 	exit 1
 fi
 
-# Check if the image tagged with ${DOCKER_USER}/${PROJECT}_OS:VER exists locally
-if [[ ! $(sudo docker images -a | awk -v pattern="^${DOCKER_USER}/${PROJECT}_$1\$" \
+# Check if the image tagged with ${DOCKERHUB_REPO}:OS-VER exists locally
+if [[ ! $(sudo docker images -a | awk -v pattern="^${DOCKERHUB_REPO}:$1\$" \
 	'$1":"$2 ~ pattern') ]]
 then
 	echo "ERROR: wrong argument."
@@ -65,7 +62,7 @@ then
 fi
 
 # Log in to the Docker Hub
-sudo docker login -u="${DOCKER_USER}" -p="$DOCKER_PASSWORD"
+sudo docker login -u="${DOCKERHUB_USER}" -p="${DOCKERHUB_PASSWORD}"
 
 # Push the image to the repository
-sudo docker push ${DOCKER_USER}/${PROJECT}_$1
+sudo docker push ${DOCKERHUB_REPO}:$1
