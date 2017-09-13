@@ -21,7 +21,7 @@ Userspace syscall intercepting library.
  * perl -- for checking coding style
  * pandoc -- for generating the man page
 
-# Travis CI build dependencies #
+### Travis CI build dependencies ###
 
 The travis builds use some scripts to generate a docker images, in which syscall_intercept is built/tested.
 These docker images are pushed to Dockerhub, to be reused in later travis builds.
@@ -33,7 +33,7 @@ The scripts expect four environment variables to be set in the travis environmen
  * DOCKERHUB_PASSWORD - used for logging into Dockerhub
  * GITHUB_REPO - where the repository is available on github (e.g. "pmem/syscall_intercept" )
 
-# How to build #
+### How to build ###
 
 Building libsyscall_intercept requires cmake.
 Example:
