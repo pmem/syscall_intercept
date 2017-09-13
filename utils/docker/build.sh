@@ -47,7 +47,7 @@ if [[ -z "$HOST_WORKDIR" ]]; then
 	exit 1
 fi
 
-sudo chmod -R a+w $HOST_WORKDIR
+chmod -R a+w $HOST_WORKDIR
 
 if [[ "$TRAVIS_EVENT_TYPE" == "cron" || "$TRAVIS_BRANCH" == "coverity_scan" ]]; then
 	if [[ $COVERITY -eq 1 ]]; then
@@ -80,7 +80,7 @@ chmod a+w $HOST_WORKDIR
 #  - environment variables set (--env)
 #  - host directory containing the project source mounted (-v)
 #  - working directory set (-w)
-sudo docker run --rm --privileged=true --name=$containerName $EXTRA_DOCKER_ARGS -i \
+docker run --rm --privileged=true --name=$containerName $EXTRA_DOCKER_ARGS -i \
 	$ci_env \
 	--env http_proxy=$http_proxy \
 	--env https_proxy=$https_proxy \
