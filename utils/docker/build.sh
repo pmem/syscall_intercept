@@ -96,6 +96,7 @@ sudo docker run --rm --privileged=true --name=$containerName $EXTRA_DOCKER_ARGS 
 	--env COVERITY_SCAN_TOKEN=$COVERITY_SCAN_TOKEN \
 	--env COVERITY_SCAN_NOTIFICATION_EMAIL=$COVERITY_SCAN_NOTIFICATION_EMAIL \
 	--env COVERAGE=$COVERAGE \
+	--env PROJECT=$PROJECT \
 	-v $HOST_WORKDIR:$WORKDIR \
 	-w $WORKDIR/utils/docker \
 	$imageName $command
