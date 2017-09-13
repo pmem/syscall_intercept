@@ -308,3 +308,15 @@ add_test(NAME "prog_no_pie_intercept_all"
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check.cmake)
 set_tests_properties("prog_no_pie_intercept_all"
 	PROPERTIES PASS_REGULAR_EXPRESSION "intercepted_call")
+
+add_executable(prog_using_vfork prog_using_vfork.c)
+add_test(NAME "prog_using_vfork"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
+	-DTEST_PROG=$<TARGET_FILE:prog_using_vfork>
+	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
+	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept2.log.match
+	-DTEST_NAME=prog_using_vfork
+	${CHECK_LOG_COMMON_ARGS})
+set_tests_properties("prog_using_vfork"
+	PROPERTIES PASS_REGULAR_EXPRESSION "in_child_created_using_vfork")
