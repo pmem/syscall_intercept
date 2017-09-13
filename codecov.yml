@@ -4,3 +4,4 @@ ignore:
   - src/cpp_compile_test.cc
   - examples/icap.c
   - examples/fork_ban.c
+  - test/
