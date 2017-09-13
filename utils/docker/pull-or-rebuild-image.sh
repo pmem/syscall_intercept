@@ -47,6 +47,18 @@
 # Docker Hub.
 #
 
+if [[ "$TRAVIS_EVENT_TYPE" == "cron" || "$TRAVIS_BRANCH" == "coverity_scan" ]]; then
+	if [[ $COVERITY -ne 1 ]]; then
+		echo "Skipping non-Coverity job for cron/Coverity build"
+		exit 0
+	fi
+else
+	if [[ $COVERITY -eq 1 ]]; then
+		echo "Skipping Coverity job for non cron/Coverity build"
+		exit 0
+	fi
+fi
+
 if [[ -z "$OS" || -z "$OS_VER" ]]; then
 	echo "ERROR: The variables OS and OS_VER have to be set properly " \
              "(eg. OS=ubuntu, OS_VER=16.04)."
