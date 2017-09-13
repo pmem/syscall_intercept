@@ -26,12 +26,8 @@ Userspace syscall intercepting library.
 The travis builds use some scripts to generate a docker images, in which syscall_intercept is built/tested.
 These docker images are pushed to Dockerhub, to be reused in later travis builds.
 The scripts expect four environment variables to be set in the travis environment:
- * DOCKERHUB_REPO - where to store the docker images used for building
-    e.g. in order to refer to a Dockerhub repository at https://hub.docker.com/r/pmem/syscall_intercept, this variable
-    should contain the string "pmem/syscall_intercept"
  * DOCKERHUB_USER - used for logging into Dockerhub
  * DOCKERHUB_PASSWORD - used for logging into Dockerhub
- * GITHUB_REPO - where the repository is available on github (e.g. "pmem/syscall_intercept" )
 
 ### How to build ###
 
