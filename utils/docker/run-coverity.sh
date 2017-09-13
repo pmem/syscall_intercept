@@ -40,7 +40,6 @@ mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 
-export COVERITY_SCAN_PROJECT_NAME="${PROJECT}"
 [[ "$TRAVIS_EVENT_TYPE" == "cron" ]] \
 	&& export COVERITY_SCAN_BRANCH_PATTERN="master" \
 	|| export COVERITY_SCAN_BRANCH_PATTERN="coverity_scan"
