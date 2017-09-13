@@ -804,12 +804,12 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 	} else if (nr == SYS_chmod) {
 		buf = print_syscall(buf, "chmod", 2,
 				F_STR, arg0,
-				F_OCT_MODE, arg2,
+				F_OCT_MODE, arg1,
 				result_known, result);
 	} else if (nr == SYS_fchmod) {
 		buf = print_syscall(buf, "fchmod", 2,
 				F_DEC, arg0,
-				F_OCT_MODE, arg2,
+				F_OCT_MODE, arg1,
 				result_known, result);
 	} else if (nr == SYS_chown) {
 		buf = print_syscall(buf, "chown", 3,
