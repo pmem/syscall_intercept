@@ -448,6 +448,9 @@ print_clone_flags(char buffer[static 0x100], long flags)
 /* 1st argument of clone */
 #define F_CLONE_FLAGS 8
 
+/* last argument of lseek */
+#define F_LSEEK_WHENCE 9
+
 /*
  * xprint_escape
  * Prints a user provided buffer (in src) as printable characters (to dst).
@@ -568,6 +571,10 @@ print_syscall(char *b, const char *name, unsigned args, ...)
 			b = print_fcntl_args(b, cmd, va_arg(ap, void *));
 		} else if (format == F_CLONE_FLAGS) {
 			b = print_clone_flags(b, va_arg(ap, long));
+		} else if (format == F_LSEEK_WHENCE) {
+			long whence = va_arg(ap, long);
+			b += sprintf(b, "%ld (%s)", whence,
+					desc_whence(whence));
 		}
 
 		--args;
@@ -672,7 +679,7 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 		buf = print_syscall(buf, "lseek", 3,
 				F_DEC, arg0,
 				F_DEC, arg1,
-				F_DEC, arg2,
+				F_LSEEK_WHENCE, arg2,
 				result_known, result);
 	} else if (nr == SYS_mmap) {
 		buf = print_syscall(buf, "mmap", 6,
