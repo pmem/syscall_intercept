@@ -696,7 +696,7 @@ print_rdec(char *dst, long n)
 {
 	dst = print_signed_dec(dst, n);
 
-	if (n < 0 && n >= -((long)ARRAY_SIZE(error_codes))) {
+	if (n < 0 && n > -((long)ARRAY_SIZE(error_codes))) {
 		if (error_codes[-n] != NULL) {
 			dst = print_cstr(dst, " (");
 			dst = print_cstr(dst, error_codes[-n]);
