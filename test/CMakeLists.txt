@@ -320,3 +320,15 @@ add_test(NAME "vfork_logging"
 	${CHECK_LOG_COMMON_ARGS})
 set_tests_properties("vfork_logging"
 	PROPERTIES PASS_REGULAR_EXPRESSION "in_child_created_using_vfork")
+
+
+add_executable(syscall_format syscall_format.c)
+target_link_libraries(syscall_format PRIVATE syscall_intercept_shared)
+add_test(NAME "syscall_format_logging"
+	COMMAND ${CMAKE_COMMAND}
+	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
+	-DTEST_PROG=$<TARGET_FILE:syscall_format>
+	-DLIB_FILE=
+	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept3.log.match
+	-DTEST_NAME=syscall_format_logging
+	${CHECK_LOG_COMMON_ARGS})
