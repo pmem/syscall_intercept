@@ -233,6 +233,34 @@ print_open_flags(char *buffer, int flags)
 	return c;
 }
 
+static const char *
+desc_flock_type(short t)
+{
+#define F(x) case x: return #x;
+	switch (t) {
+		F(F_RDLCK);
+		F(F_WRLCK);
+		F(F_UNLCK);
+	}
+#undef F
+	return "?";
+}
+
+static const char *
+desc_whence(short w)
+{
+#define F(x) case x: return #x;
+	switch (w) {
+		F(SEEK_SET);
+		F(SEEK_CUR);
+		F(SEEK_END);
+		F(SEEK_DATA);
+		F(SEEK_HOLE);
+	}
+#undef F
+	return "?";
+}
+
 /*
  * fcntl_name
  * Returns a pointer to string literal describing an fcntl command.
@@ -280,6 +308,15 @@ fcntl_name(long cmd)
 #undef F
 }
 
+static int
+print_fcntl_flock(char *buffer, struct flock *fl)
+{
+	return sprintf(buffer,
+		" ({.l_type = %d (%s), .l_whence = %d (%s), .l_start = %ld, .l_len = %ld, .l_pid = %d})",
+		fl->l_type, desc_flock_type(fl->l_type), fl->l_whence,
+		desc_whence(fl->l_whence), fl->l_start, fl->l_len, fl->l_pid);
+}
+
 /*
  * print_fcntl_cmd
  * Prints an fcntl command in a human readable format to a buffer,
@@ -287,9 +324,21 @@ fcntl_name(long cmd)
  * after the just printed text.
  */
 static char *
-print_fcntl_cmd(char *buffer, long cmd)
+print_fcntl_args(char *buffer, long cmd, void *ptr)
 {
-	return buffer + sprintf(buffer, "%ld (%s)", cmd, fcntl_name(cmd));
+	buffer += sprintf(buffer, "%ld (%s), %p", cmd, fcntl_name(cmd), ptr);
+	switch (cmd) {
+		case F_GETLK:
+		case F_SETLK:
+		case F_SETLKW:
+		case F_OFD_GETLK:
+		case F_OFD_SETLK:
+		case F_OFD_SETLKW:
+			buffer += print_fcntl_flock(buffer, ptr);
+			break;
+	}
+
+	return buffer;
 }
 
 /*
@@ -393,8 +442,8 @@ print_clone_flags(char buffer[static 0x100], long flags)
 /* only used for oflags in open, openat */
 #define F_OPEN_FLAGS 6
 
-/* 2nd argument of fcntl */
-#define F_FCNTL_CMD 7
+/* 2nd and 3rd argument of fcntl */
+#define F_FCNTL_ARGS 7
 
 /* 1st argument of clone */
 #define F_CLONE_FLAGS 8
@@ -514,8 +563,9 @@ print_syscall(char *b, const char *name, unsigned args, ...)
 			b = xprint_escape(b, data, 0x80, false, size);
 		} else if (format == F_OPEN_FLAGS) {
 			b = print_open_flags(b, va_arg(ap, int));
-		} else if (format == F_FCNTL_CMD) {
-			b = print_fcntl_cmd(b, va_arg(ap, long));
+		} else if (format == F_FCNTL_ARGS) {
+			long cmd = va_arg(ap, long);
+			b = print_fcntl_args(b, cmd, va_arg(ap, void *));
 		} else if (format == F_CLONE_FLAGS) {
 			b = print_clone_flags(b, va_arg(ap, long));
 		}
@@ -709,10 +759,9 @@ intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
 				F_DEC, arg1,
 				result_known, result);
 	} else if (nr == SYS_fcntl) {
-		buf = print_syscall(buf, "fcntl", 3,
+		buf = print_syscall(buf, "fcntl", 2,
 				F_DEC, arg0,
-				F_FCNTL_CMD, arg1,
-				F_HEX, arg2,
+				F_FCNTL_ARGS, arg1, arg2,
 				result_known, result);
 	} else if (nr == SYS_flock) {
 		buf = print_syscall(buf, "flock", 2,
