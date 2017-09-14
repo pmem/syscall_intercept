@@ -31,7 +31,7 @@
  */
 
 /*
- * logging_test.c -- dummy program, to issue some syscalls via libc
+ * fork_logging.c -- dummy program, to issue fork via libc
  */
 
 #include <err.h>

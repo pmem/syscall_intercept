@@ -116,14 +116,14 @@ set(CHECK_LOG_COMMON_ARGS
 	-DEXPECT_SPURIOUS_SYSCALLS=${EXPECT_SPURIOUS_SYSCALLS}
 	-P ${CMAKE_CURRENT_SOURCE_DIR}/check_log.cmake)
 
-add_executable(logging_test logging_test.c)
-add_test(NAME "logging"
+add_executable(fork_logging fork_logging.c)
+add_test(NAME "fork_logging"
 	COMMAND ${CMAKE_COMMAND}
 	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_NAME=logging
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
-	-DTEST_PROG=$<TARGET_FILE:logging_test>
-	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
+	-DTEST_PROG=$<TARGET_FILE:fork_logging>
+	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/fork_logging.c
 	-DHAS_SECOND_LOG=1
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
 	-DSECOND_MATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0_child.log.match
@@ -167,8 +167,8 @@ add_test(NAME "hook_clone"
 	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_NAME=hook_clone
 	-DLIB_FILE=$<TARGET_FILE:hook_test_clone_preload>
-	-DTEST_PROG=$<TARGET_FILE:logging_test>
-	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/logging_test.c
+	-DTEST_PROG=$<TARGET_FILE:fork_logging>
+	-DTEST_PROG_ARG=${CMAKE_CURRENT_SOURCE_DIR}/fork_logging.c
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0.log.match
 	-DHAS_SECOND_LOG=1
 	-DSECOND_MATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept0_child.log.match
@@ -309,14 +309,14 @@ add_test(NAME "prog_no_pie_intercept_all"
 set_tests_properties("prog_no_pie_intercept_all"
 	PROPERTIES PASS_REGULAR_EXPRESSION "intercepted_call")
 
-add_executable(prog_using_vfork prog_using_vfork.c)
-add_test(NAME "prog_using_vfork"
+add_executable(vfork_logging vfork_logging.c)
+add_test(NAME "vfork_logging"
 	COMMAND ${CMAKE_COMMAND}
 	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
-	-DTEST_PROG=$<TARGET_FILE:prog_using_vfork>
+	-DTEST_PROG=$<TARGET_FILE:vfork_logging>
 	-DLIB_FILE=$<TARGET_FILE:syscall_intercept_shared>
 	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept2.log.match
-	-DTEST_NAME=prog_using_vfork
+	-DTEST_NAME=vfork_logging
 	${CHECK_LOG_COMMON_ARGS})
-set_tests_properties("prog_using_vfork"
+set_tests_properties("vfork_logging"
 	PROPERTIES PASS_REGULAR_EXPRESSION "in_child_created_using_vfork")
