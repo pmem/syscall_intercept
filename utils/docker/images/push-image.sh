@@ -53,7 +53,7 @@ if [[ -z "$1" ]]; then
 fi
 
 # Check if the image tagged with ${DOCKERHUB_REPO}:OS-VER exists locally
-if [[ ! $(sudo docker images -a | awk -v pattern="^${DOCKERHUB_REPO}:$1\$" \
+if [[ ! $(docker images -a | awk -v pattern="^${DOCKERHUB_REPO}:$1\$" \
 	'$1":"$2 ~ pattern') ]]
 then
 	echo "ERROR: wrong argument."
@@ -62,7 +62,7 @@ then
 fi
 
 # Log in to the Docker Hub
-sudo docker login -u="${DOCKERHUB_USER}" -p="${DOCKERHUB_PASSWORD}"
+docker login -u="${DOCKERHUB_USER}" -p="${DOCKERHUB_PASSWORD}"
 
 # Push the image to the repository
-sudo docker push ${DOCKERHUB_REPO}:$1
+docker push ${DOCKERHUB_REPO}:$1

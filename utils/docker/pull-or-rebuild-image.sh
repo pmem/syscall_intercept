@@ -129,4 +129,4 @@ done
 
 # Getting here means rebuilding the Docker image is not required.
 # Pull the image from Docker Hub.
-sudo docker pull ${DOCKERHUB_REPO}:$OS-$OS_VER
+docker pull ${DOCKERHUB_REPO}:$OS-$OS_VER
