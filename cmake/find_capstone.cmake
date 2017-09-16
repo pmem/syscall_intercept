@@ -39,5 +39,12 @@ if(NOT capstone_FOUND)
 endif()
 
 if(NOT capstone_FOUND)
-	message(FATAL_ERROR "capstone library not found")
+	message(FATAL_ERROR
+"Unable to find capstone. Please install capstone development files, e.g.:
+sudo apt-get install libcapstone-dev (on Debian, Ubuntu)
+or
+sudo dnf install capstone-devel (on Fedora)
+or see instructions for other ways of installing capstone: http://www.capstone-engine.org/download.html
+If casptone is installed, but cmake didn't manage to find it, there is a slight chance of fixing things by setting some of the following environment variables:
+PKG_CONFIG_PATH, CMAKE_PREFIX_PATH, CMAKE_MODULE_PATH")
 endif()
