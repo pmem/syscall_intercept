@@ -11,6 +11,7 @@ env:
     - MAKE_PKG=0 OS=fedora OS_VER=25    C_COMPILER=clang CPP_COMPILER=clang++
     - MAKE_PKG=0 OS=ubuntu OS_VER=16.04
     - MAKE_PKG=0 OS=fedora OS_VER=25
+    - MAKE_PKG=0 CAPSTONE_EXPERIMENTAL=1 OS=ubuntu OS_VER=16.04
     - COVERITY=1 OS=ubuntu OS_VER=16.04
     - COVERAGE=1 OS=ubuntu OS_VER=16.04
 

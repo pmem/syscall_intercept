@@ -35,6 +35,12 @@
 #		starts a build of the project
 #
 
+# Which capstone to use?
+# One can verify this by looking at ldd output in build logs
+if [ -n "$CAPSTONE_EXPERIMENTAL" ]; then
+	export PKG_CONFIG_LIBDIR=~/capstone_4_0_aplha5/build
+fi
+
 # Build all and run tests
 cd $WORKDIR
 if [ -n "$C_COMPILER" ]; then
@@ -51,11 +57,11 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/tmp/${PROJECT} \
 		-DCMAKE_BUILD_TYPE=Debug \
 
 make -j2
+ldd ./libsyscall_intercept.so
 ctest --output-on-failure -j2
 make install
 cd ..
 rm -r build
-
 
 mkdir build
 cd build
@@ -63,6 +69,7 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/tmp/${PROJECT} \
 		-DCMAKE_BUILD_TYPE=Release \
 
 make -j2
+ldd ./libsyscall_intercept.so
 ctest --output-on-failure -j2
 make install
 cd ..
