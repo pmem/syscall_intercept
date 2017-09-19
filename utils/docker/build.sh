@@ -86,6 +86,7 @@ docker run --rm --privileged=true --name=$containerName $EXTRA_DOCKER_ARGS -i \
 	--env https_proxy=$https_proxy \
 	--env C_COMPILER=$C_COMPILER \
 	--env CPP_COMPILER=$CPP_COMPILER \
+	--env CAPSTONE_EXPERIMENTAL=$CAPSTONE_EXPERIMENTAL \
 	--env WORKDIR=$WORKDIR \
 	--env TRAVIS=$TRAVIS \
 	--env TRAVIS_COMMIT_RANGE=$TRAVIS_COMMIT_RANGE \

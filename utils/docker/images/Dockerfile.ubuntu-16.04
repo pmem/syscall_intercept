@@ -81,6 +81,10 @@ COPY libsyscall_intercept_hook_point.h libsyscall_intercept_hook_point.h
 COPY build-pmemfile.sh build-pmemfile.sh
 RUN ./build-pmemfile.sh
 
+# Build capstone - experimental version
+COPY build-capstone.sh build-capstone.sh
+RUN ./build-capstone.sh
+
 # Set required environment variables
 ENV OS ubuntu
 ENV OS_VER 16.04

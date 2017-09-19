@@ -1,5 +1,6 @@
+#!/bin/bash -ex
 #
-# Copyright 2016-2017, Intel Corporation
+# Copyright 2017, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -30,59 +31,42 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-# Dockerfile - a 'recipe' for Docker to build an image of fedora-based
-#              environment for building syscall_intercept
+# build-capstone.sh - builds capstone
 #
 
-# Pull base image
-FROM fedora:25
-MAINTAINER gabor.buella@intel.com
+cd
+git clone https://github.com/aquynh/capstone.git capstone_4_0_aplha5
+cd capstone_4_0_aplha5
+git checkout 4.0-alpha5
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release \
+	-DCAPSTONE_X86_SUPPORT=ON \
+	-DCAPSTONE_ARM_SUPPORT=OFF \
+	-DCAPSTONE_ARM64_SUPPORT=OFF \
+	-DCAPSTONE_M68K_SUPPORT=OFF \
+	-DCAPSTONE_MIPS_SUPPORT=OFF \
+	-DCAPSTONE_PPC_SUPPORT=OFF \
+	-DCAPSTONE_SPARC_SUPPORT=OFF \
+	-DCAPSTONE_SYSZ_SUPPORT=OFF \
+	-DCAPSTONE_XCORE_SUPPORT=OFF \
+	-DCAPSTONE_TMS320C64X_SUPPORT=OFF \
+	-DCAPSTONE_BUILD_STATIC=OFF \
+	-DCAPSTONE_BUILD_STATIC_RUNTIME=OFF \
+	-DCAPSTONE_BUILD_TESTS=OFF \
+	-DCAPSTONE_BUILD_DIET=ON \
+	..
+make
 
-# Install basic tools
-RUN dnf install -y \
-	capstone-devel \
-	clang \
-	cmake \
-	gcc \
-	git \
-	libcap-devel \
-	libunwind-devel \
-	make \
-	pandoc \
-	perl-Text-Diff \
-	rpm-build \
-	passwd \
-	sudo \
-	sqlite \
-	tcl-devel \
-	wget \
-	which \
-	whois
+# This branch in capstone does not install a package config file, but it is easy
+# to mock one that works for a specific version of capstone.
+echo Name: capstone > capstone.pc
+echo Description: Capstone disassembly engine >> capstone.pc
+echo Version: 4.0-alpha5 >> capstone.pc
+echo libdir=$PWD >> capstone.pc
+echo includedir=$PWD/../include/capstone >> capstone.pc
+echo archive=\${libdir}/libcapstone.a >> capstone.pc
+echo Libs: -L\${libdir} -lcapstone >> capstone.pc
+echo Cflags: -I\${includedir} >> capstone.pc
 
-# Add user
-ENV USER user
-ENV USERPASS pass
-RUN useradd -m $USER
-RUN echo $USERPASS | passwd $USER --stdin
-RUN gpasswd wheel -a $USER
-
-# Install nvml
-COPY install-nvml.sh install-nvml.sh
-RUN ./install-nvml.sh rpm
-
-USER $USER
-
-# Build pmemfile
-COPY libsyscall_intercept_hook_point.h libsyscall_intercept_hook_point.h
-COPY build-pmemfile.sh build-pmemfile.sh
-RUN ./build-pmemfile.sh
-
-# Build capstone - experimental version
-COPY build-capstone.sh build-capstone.sh
-RUN ./build-capstone.sh
-
-# Set required environment variables
-ENV OS fedora
-ENV OS_VER 25
-ENV PACKAGE_MANAGER rpm
-ENV NOTTY 1
+cd
