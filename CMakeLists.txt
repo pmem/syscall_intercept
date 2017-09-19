@@ -56,9 +56,9 @@ set(SYSCALL_INTERCEPT_VERSION_PATCH 0)
 set(SYSCALL_INTERCEPT_VERSION
 	${SYSCALL_INTERCEPT_VERSION_MAJOR}.${SYSCALL_INTERCEPT_VERSION_MINOR}.${SYSCALL_INTERCEPT_VERSION_PATCH})
 
+include(cmake/find_capstone.cmake)
 include(GNUInstallDirs)
 include(cmake/toolchain_features.cmake)
-include(cmake/find_capstone.cmake)
 
 # main source files - intentionally excluding src/cmdline_filter.c
 set(SOURCES_C
@@ -75,6 +75,7 @@ set(SOURCES_ASM
 
 
 include_directories(include)
+link_directories(${capstone_LIBRARY_DIRS})
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
