@@ -31,587 +31,86 @@
  */
 
 /*
- * intercept_template.s
- *
- * The syscall instructions in glibc are
- * overwritten with a call instruction, which
- * jumps here. This assembly wrapper has to achieve multiple things
- * that can not be achieved in C:
- *
- * libc expects the registers not clobbered by a syscall to have the
- * same value before and after a syscall instruction. C function calls
- * clobber a different set of registers. To make sure this doesn't cause
- * problems, all registers are saved on the stack before calling the
- * C function, and these register values are restored after the function
- * returns. This gives the following steps:
- *
- * - save registers
- * - call C function
- * - restore registers
- * - jump back to libc
- *
- * Besides this, many syscall instructions in libc are present in leaf
- * functions. These don't necessarily have to set up the stack pointer,
- * leaf functions can just use e.g. the address (RSP - 16) to store
- * local variables. But they definitely can not use the memory more than
- * 128 bytes below the stack pointer -- this area is usually referred to as
- * red zone, see: https://en.wikipedia.org/wiki/Red_zone_(computing) .
- * Signal handlers are examples of code that can use the stack of the current
- * thread between any two instructions, like this code does. This leaves us
- * with the following steps ( new steps are marked with an asterisk ) :
- *
- * - * decrement the stack pointer by 128
- * - save registers
- * - call C function
- * - restore registers
- * - * increment the stack pointer by 128
- * - jump back to libc
- *
- * When patching libc, sometimes some instructions surrounding the original
- * syscall instruction need to be relocated, to make space for a jump
- * instruction that would otherwise not fit in the two byte of the syscall
- * instruction. These instructions are moved into this assembly template.
- * Considering these additional steps:
- *
- * - * execute instructions relocated from before the original syscall
- * - decrement the stack pointer by 128
- * - save registers
- * - call C function
- * - restore registers
- * - increment the stack pointer by 128
- * - * execute instructions relocated from after the original syscall
- * - jump back to libc
- *
- * Note: the relocated instructions need to be executed while the
- * stack pointer is not altered. This way, they can still use RSP.
- * The only register these instructions can't rely on, is RIP. Therefore
- * instructions such as 'mov $5, 6(%rip)', 'jmp 4', etc... can not be
- * relocated.
- *
- * The arguments in the C function call ABI are passed in a way
- * that is different from the syscall ABI. E.g. when calling the libc
- * function called 'syscall', the first argument is the syscall number,
- * and it is passed in RDI. A syscall instruction expects the syscall number
- * in RAX. A conversion between the two calling conventions must be done
- * before calling the C function.
- *
- * - execute instructions relocated from before the original syscall
- * - decrement the stack pointer by 128
- * - save registers
- * - * rearrange arguments to use the appropriate calling convention
- * - call C function
- * - restore registers
- * - increment the stack pointer by 128
- * - execute instructions relocated from after the original syscall
- * - jump back to libc
- *
- * Sometimes the C function executes the actual syscall, sometimes
- * it calls a hook function to provide a user space implementation.
- * In case of creating a thread ( using SYS_clone ), none of these
- * two approaches can work. The new thread is starting execution on a
- * new stack - therefore the 'restore registers' step would fail.
- * So creating a new thread can not be hooked, and this assembly
- * template provides a way to execute such a syscall while avoiding
- * any stack related issues. This is achieved by actually executing the
- * syscall instruction *after* all the registers are already restored.
- *
- * - execute instructions relocated from before the original syscall
- * - decrement the stack pointer by 128
- * - save registers
- * - rearrange arguments to use the appropriate calling convention
- * - call C function
- * - restore registers
- * - increment the stack pointer by 128
- * - * if(special_syscall) execute syscall
- * - execute instructions relocated from after the original syscall
- * - jump back to libc
- *
- * Since there is a separate copy of this assembly template made in the
- * data segment for each patched syscall, a debugger is generally not able to
- * unwind the stack -- it needs debug information which can only be supplied
- * for code in the stack segment, not for code generated dynamically. This
- * lack of complete callstack information can make debugging very difficult.
- * To address this problem, a trick is introduced that supplies a 'fake'
- * return address when calling the C function. This fake return address points
- * to a function in the text segment, for which appropriate debug information
- * is available for debuggers. This is the magic routine seen in the code
- * below, and seen in the callstack. So instead calling the C function with
- * call instruction, and address inside a placeholder routine is pushed on the
- * stack, and a jump instruction jumps to the C function -- this makes a
- * debugger believe that the C function was called from the said placeholder
- * Appropriate debug information is provided using the cfi_def_cfa_offset
- * assembler directive as follows:
- *
- * backtrace_placeholder:
- *	.cfi_startproc
- *	.cfi_def_cfa_offset 0x580
- *	nop
- *	nop
- *	nop
- *	nop
- *	.cfi_endproc
- *
- * Whenever a debugger sees the instruction pointer pointing to an instruction
- * inside this routine, it assumes the routine uses 0x580 bytes of stack space.
- * This matches the stack space used by the assembly code generated from this
- * template, so a debugger can look for the stack of original libc routine
- * at the correct place. This brings up a new problem: The C function can't
- * just return once it has all it needs to do, as the return address it would
- * normally return to is a faked return address. To handle this problem, the C
- * function receives the real return address as an argument, and jumps to this
- * address instead of returning. The xlongjmp routine serves this purpose:
- * xlongjmp sets the RAX register ( the return value of the C function ), the
- * RSP register ( to restore the stack pointer after the C function ), and the
- * RIP register ( instead of using a ret instruction ).
- * This mechanism is also used for deciding if the original syscall instruction
- * should be executed in this assembly code or not ( remember SYS_clone ).
- * So the additional arguments passed to the C function are as follows:
- *
- * long return_to_asm_wrapper_syscall
- * long return_to_asm_wrapper
- * long rsp_in_asm_wrapper
- *
- * Where return_to_asm_wrapper_syscall is address to jump back to if
- * original syscall instruction must be executed once the original stack is
- * not used anymore.
- * The return_to_asm_wrapper argument is address to jump back to if that is
- * not needed.
- * The rsp_in_asm_wrapper is the value RSP held before calling the function,
- * and should be restored to after the function 'returns'. Normally this would
- * be achieved by the function prologue generated by the compiler.
- * The R11 register used as a flag to signal a special syscall.
- * The resulting steps are:
- *
- * - execute instructions relocated from before the original syscall
- * - decrement the stack pointer by 128
- * - save registers
- * - * pass additional argument to the C function
- * - rearrange syscall arguments to use the appropriate calling convention
- * - * call the C function using the faked return address
- * - * C function returns, and doesn't ask for the syscall, R11 := 1
- * - * C function returns, and does ask for the syscall, R11 := 0
- * - restore registers
- * - increment the stack pointer by 128
- * - if(R11 == 0) execute syscall
- * - execute instructions relocated from after the original syscall
- * - jump back to libc
- *
- * Alignment issues:
- * The ABI requires the stack pointer to aligned to a 16 byte boundary
- * upon entering a function. The leaf functions inside libc don't always
- * leave the stack pointer 16 byte aligned when issuing a syscall, as that
- * is not required for a syscall instruction. Thus, this code must take
- * care of stack alignment before calling anything created with a C
- * compiler. This has a nasty side effect: the magic routine explained above
- * presents a fixed stack size to debuggers. But aligning the stack can
- * makes it impossible to guarantee using a fixed stack size. Therefore,
- * two versions of the magic placeholder routine are supplied, with different
- * stack sizes. One of them is used if the stack used by this code is 16n bytes
- * ( when the stack pointer was already 16 aligned ), the other one is used when
- * 16n + 8 bytes of stack is used ( when the original RSP is just 8 bytes
- * aligned ). An address in the appropriate function is used as the faked
- * return address pushed on the stack before calling the C function.
+ * intercept_template.s -- see asm_wrapper.md
  */
-
-.global backtrace_placeholder;
-.hidden backtrace_placeholder;
-.type   backtrace_placeholder, @function
-
-.global backtrace_placeholder_2;
-.hidden backtrace_placeholder_2;
-.type   backtrace_placeholder_2, @function
 
 .global intercept_asm_wrapper_tmpl;
 .hidden intercept_asm_wrapper_tmpl;
-.global intercept_asm_wrapper_simd_save;
-.hidden intercept_asm_wrapper_simd_save;
-.global intercept_asm_wrapper_prefix;
-.hidden intercept_asm_wrapper_prefix;
-.global intercept_asm_wrapper_push_origin_addr;
-.hidden intercept_asm_wrapper_push_origin_addr;
-.global intercept_asm_wrapper_mov_return_addr_r11_no_syscall;
-.hidden intercept_asm_wrapper_mov_return_addr_r11_no_syscall;
-.global intercept_asm_wrapper_mov_return_addr_r11_syscall;
-.hidden intercept_asm_wrapper_mov_return_addr_r11_syscall;
-.global intercept_asm_wrapper_mov_libpath_r11;
-.hidden intercept_asm_wrapper_mov_libpath_r11;
-.global intercept_asm_wrapper_mov_phaddr_r11;
-.hidden intercept_asm_wrapper_mov_phaddr_r11;
-.global intercept_asm_wrapper_mov_ph2addr_r11;
-.hidden intercept_asm_wrapper_mov_ph2addr_r11;
-.global intercept_asm_wrapper_call;
-.hidden intercept_asm_wrapper_call;
-.global intercept_asm_wrapper_simd_restore;
-.hidden intercept_asm_wrapper_simd_restore;
-.global intercept_asm_wrapper_postfix;
-.hidden intercept_asm_wrapper_postfix;
-.global intercept_asm_wrapper_return_jump;
-.hidden intercept_asm_wrapper_return_jump;
-.global intercept_asm_wrapper_end;
-.hidden intercept_asm_wrapper_end;
-.global intercept_asm_wrapper_simd_save_YMM;
-.hidden intercept_asm_wrapper_simd_save_YMM;
-.global intercept_asm_wrapper_simd_save_YMM_end;
-.hidden intercept_asm_wrapper_simd_save_YMM_end;
-.global intercept_asm_wrapper_simd_restore_YMM;
-.hidden intercept_asm_wrapper_simd_restore_YMM;
-.global intercept_asm_wrapper_simd_restore_YMM_end;
-.hidden intercept_asm_wrapper_simd_restore_YMM_end;
-.global intercept_asm_wrapper_return_and_no_syscall;
-.hidden intercept_asm_wrapper_return_and_no_syscall;
-.global intercept_asm_wrapper_return_and_syscall;
-.hidden intercept_asm_wrapper_return_and_syscall;
-.global intercept_asm_wrapper_push_stack_first_return_addr;
-.hidden intercept_asm_wrapper_push_stack_first_return_addr;
-.global intercept_asm_wrapper_mov_r11_stack_first_return_addr;
-.hidden intercept_asm_wrapper_mov_r11_stack_first_return_addr;
-.global intercept_asm_wrapper_clone_wrapper;
-.hidden intercept_asm_wrapper_clone_wrapper;
-.global intercept_asm_wrapper_call_clone_child_intercept;
-.hidden intercept_asm_wrapper_call_clone_child_intercept;
+.global intercept_asm_wrapper_patch_desc_addr;
+.hidden intercept_asm_wrapper_patch_desc_addr;
+.global intercept_asm_wrapper_wrapper_level1_addr;
+.hidden intercept_asm_wrapper_wrapper_level1_addr;
+.global intercept_asm_wrapper_tmpl_end;
+.hidden intercept_asm_wrapper_tmpl_end;
 
 .text
 
-backtrace_placeholder:
-	.cfi_startproc
-	/*
-	 * Call Frame Information. The stack size is 0x580,
-	 * and the cfi_offset entries mark the place of a each
-	 * register's previous value in the call frame.
-	 */
-	.cfi_def_cfa_offset 0x580
-	.cfi_offset 6, -136    /* rbp */
-	.cfi_offset 15, -152   /* r15 */
-	.cfi_offset 14, -160   /* r14 */
-	.cfi_offset 13, -168   /* r13 */
-	.cfi_offset 12, -176   /* r12 */
-	.cfi_offset 10, -184   /* r10 */
-	.cfi_offset 9, -192    /* r9  */
-	.cfi_offset 8, -200    /* r8  */
-	.cfi_offset 2, -208    /* rcx */
-	.cfi_offset 4, -216    /* rdx */
-	/* rsi at -224 */
-	/* rdi at -232 */
-	.cfi_offset 3, -240    /* rbx */
-	nop
-	nop
-	nop
-	nop
-	.cfi_endproc
-
-.size   backtrace_placeholder, .-backtrace_placeholder
-
-backtrace_placeholder_2:
-	.cfi_startproc
-	.cfi_def_cfa_offset 0x588
-	.cfi_offset 6, -136    /* rbp */
-	.cfi_offset 15, -152   /* r15 */
-	.cfi_offset 14, -160   /* r14 */
-	.cfi_offset 13, -168   /* r13 */
-	.cfi_offset 12, -176   /* r12 */
-	.cfi_offset 10, -184   /* r10 */
-	.cfi_offset 9, -192    /* r9  */
-	.cfi_offset 8, -200    /* r8  */
-	.cfi_offset 2, -208    /* rcx */
-	.cfi_offset 4, -216    /* rdx */
-	/* rsi at -224 */
-	/* rdi at -232 */
-	.cfi_offset 3, -240    /* rbx */
-	nop
-	nop
-	nop
-	nop
-	.cfi_endproc
-
-.size   backtrace_placeholder_2, .-backtrace_placeholder_2
-
+/*
+ * Locals on the stack:
+ * 0(%rsp) the original value of %rsp, in the code around the syscall
+ * 8(%rsp) the pointer to the struct patch_desc instance
+ *
+ * The %rcx register controls which C function to call in intercept.c:
+ *
+ * if %rcx == 0 then call intercept_routine
+ * if %rcx == 1 then intercept_routine_post_clone
+ *
+ * This value in %rcx is passed to the function intercep_wrapper.
+ *
+ *
+ * Note: the subq instruction allocating stack for locals must not
+ * ruin the stack alignment. It must round up the number of bytes
+ * needed for locals.
+ */
 intercept_asm_wrapper_tmpl:
-	nop
+	movq        $0x0, %rcx /* choose intercept_routine */
 
-intercept_asm_wrapper_prefix:
+0:	movq        %rsp, %r11 /* remember original rsp */
+	subq        $0x80, %rsp  /* avoid the red zone */
+	andq        $-16, %rsp /* align the stack */
+	subq        $0x20, %rsp /* allocate stack for some locals */
+	movq        %r11, (%rsp) /* orignal rsp on stack */
+intercept_asm_wrapper_patch_desc_addr:
+	movabsq     $0x000000000000, %r11
+	movq        %r11, 0x8 (%rsp) /* patch_desc pointer on stack */
+intercept_asm_wrapper_wrapper_level1_addr:
+	movabsq     $0x000000000000, %r11
+	callq       *%r11 /* call intercept_wrapper */
+	movq        (%rsp), %rsp /* restore original rsp */
 	/*
-	 * The placeholder nops for whatever instruction
-	 * preceding the syscall instruction in glibc was overwritten
-	 */
-.fill 20, 1, 0x90
-
-intercept_asm_wrapper_mov_r11_stack_first_return_addr:
-.fill 20, 1, 0x90
-intercept_asm_wrapper_push_stack_first_return_addr:
-	subq        $0x8, %rsp
-.fill 10, 1, 0x90
-
-	subq        $0x78, %rsp  /* red zone */
-
-	pushq       %rbp
-	movq        %rsp, %rbp /* save the original rsp value */
-	addq        $0x88, %rbp
-	pushf
-	pushq       %r15
-	pushq       %r14
-	pushq       %r13
-	pushq       %r12
-	pushq       %r10
-	pushq       %r9
-	pushq       %r8
-	pushq       %rcx
-	pushq       %rdx
-	pushq       %rsi
-	pushq       %rdi
-
-	pushq       %rbx
-
-	movq        %rsp, %rbx
-
-	/*
-	 * Reserve stack for SIMD registers.
-	 * Largest space is used in the AVX512 case, 32 * 32 bytes.
-	 */
-	subq       $0x400, %rsp
-intercept_asm_wrapper_simd_save:
-	/*
-	 * Save any SIMD registers that need to be saved,
-	 * these nops are going to be replace with CPU
-	 * dependent code.
-	 */
-	movups      %xmm0, (%rsp)
-	movups      %xmm1, 0x10 (%rsp)
-	movups      %xmm2, 0x20 (%rsp)
-	movups      %xmm3, 0x30 (%rsp)
-	movups      %xmm4, 0x40 (%rsp)
-	movups      %xmm5, 0x50 (%rsp)
-	movups      %xmm6, 0x60 (%rsp)
-	movups      %xmm7, 0x70 (%rsp)
-.fill 32, 1, 0x90
-
-	pushq       %rbx
-	movq        %rsp, %r11
-
-	movq        %rbp, %rsp
-	subq        $0x548, %rsp
-
-	/*
-	 * Fix the alignment if needed. The C functions called
-	 * from here expect 16 byte aligned stack.
+	 * The intercept_wrapper function did restore all registers to their
+	 * original state, except for rax, rsp, rip, and r11.
 	 *
-	 * Important! The alignment is fixed up before the function
-	 * call arguments are pushed to the stack. Therefore, the branch
-	 * below must be jz or jnz based on the number of arguments pushed.
-	 * The stack must be aligned to a 16 byte boundary right after the
-	 * push instructions, and before the call instruction.
+	 * If r11 is zero, rax contains a syscall number, and that syscall
+	 *  is executed here.
+	 * If r11 is 1, rax contains the return value of the hooked syscall.
+	 * If r11 is 2, a clone syscall is executed here.
 	 */
-	andq        $0x8, %rbp
-	jz          L3
-	subq        $0x8, %rsp
-L3:
-
-	/*
-	 * The following values pushed on the stack are
-	 * arguments of the C routine.
-	 * First we push value of rsp that should be restored
-	 * upon returning to this code.
-	 *
-	 * See: intercept_routine in intercept.c
-	 */
-	pushq       %r11 /* rsp_in_asm_wrapper */
-
-	leaq        L7(%rip), %r11
-	pushq       %r11 /* clone_wrapper */
-
-intercept_asm_wrapper_mov_return_addr_r11_no_syscall:
-.fill 10, 1, 0x90
-	pushq       %r11 /* return_to_asm_wrapper */
-
-intercept_asm_wrapper_mov_return_addr_r11_syscall:
-.fill 10, 1, 0x90
-	pushq       %r11 /* return_to_asm_wrapper_syscall */
-
-intercept_asm_wrapper_mov_libpath_r11:
-.fill 10, 1, 0x90
-	pushq       %r11 /* libpath */
-
-intercept_asm_wrapper_push_origin_addr:
-.fill 5, 1, 0x90 /* syscall_offset */
-
-
-	/*
-	 * Convert the arguments list to one used in
-	 * the linux x86_64 ABI. The reverse of what
-	 * is done syscall_no_intercept.
-	 *
-	 * syscall arguments are expected in:
-	 *   rax, rdi, rsi, rdx, r10, r8, r9
-	 *
-	 * C function expects arguments in:
-	 *   rdi, rsi, rdx, rcx, r8, r9, [rsp + 8]
-	 */
-	pushq       %r9
-
-	movq        %r8, %r9
-	movq        %r10, %r8
-	movq        %rdx, %rcx
-	movq        %rsi, %rdx
-	movq        %rdi, %rsi
-	movq        %rax, %rdi
-
-	/*
-	 * Move the faked return address into r11, so that it can be
-	 * pushed to the stack. The stack size to present to gdb depends
-	 * on the stack alignment.
-	 * If the stack pointer originally was not 16 byte aligned, this
-	 * code will use 16n+8 bytes of stack -- this should fix the alignment.
-	 * We ignore the case the RSP is not even 8 byte aligned, as that wasn't
-	 * encountered before, and this is just a nicety for debugging.
-	 * If the stack was originally 16 byte aligned, this code will use
-	 * 16n bytes of stack, thus keeping the alignment correct.
-	 *
-	 * To explain all this to gdb, the return address should point into
-	 * a function that uses the appropriate stack space, and the binary
-	 * has debug information associated with it. For this purpose addresses
-	 * in backtrace_placeholder, or backtrace_placeholder_2 are used.
-	 * The appropriate mov instructions should be filled in the template, e.g.:
-	 * at intercept_asm_wrapper_mov_ph2addr_r11, where mov_ph2addr_r11
-	 * stands for 'mov placeholder2 address into r11' a movabs instruction
-	 * is expected, with an actual runtime address in
-	 * backtrace_placeholder_2. It wouldn't be easy to fill this compile,
-	 * especially since GAS is designed for compiler generated assembly, and
-	 * I don't know how to describe such a thing in this syntax.
-	 */
-	andq        $0x8, %rbp
-	jnz         L4
-intercept_asm_wrapper_mov_phaddr_r11:
-.fill 10, 1, 0x90
-	jmp         L5
-L4:
-intercept_asm_wrapper_mov_ph2addr_r11:
-.fill 10, 1, 0x90
-L5:
-	pushq       %r11  /* push the fake return address */
-
-intercept_asm_wrapper_call:
-	/*
-	 * Calling into the code written in C.
-	 * Use the return value in rax as the return value
-	 * of the syscall.
-	 */
-.fill 5, 1, 0x90
-
-	/* addq        $0x18, %rsp */
-
-intercept_asm_wrapper_return_and_no_syscall:
-	movq        $0x1, %r11
-	jmp L1
-intercept_asm_wrapper_return_and_syscall:
-	movq        $0x0, %r11
-L1:
-	popq        %rbx
-
-intercept_asm_wrapper_simd_restore:
-	movups      (%rsp), %xmm0
-	movups      0x10 (%rsp), %xmm1
-	movups      0x20 (%rsp), %xmm2
-	movups      0x30 (%rsp), %xmm3
-	movups      0x40 (%rsp), %xmm4
-	movups      0x50 (%rsp), %xmm5
-	movups      0x60 (%rsp), %xmm6
-	movups      0x70 (%rsp), %xmm7
-.fill 32, 1, 0x90
-
-
-	movq        %rbx, %rsp
-
-	popq        %rbx    /* restoring the rest of the registers */
-
-	popq        %rdi
-	popq        %rsi
-	popq        %rdx
-	popq        %rcx
-	popq        %r8
-	popq        %r9
-	popq        %r10
-	popq        %r12
-	popq        %r13
-	popq        %r14
-	popq        %r15
-	popf
-	popq        %rbp
-	addq        $0x80, %rsp  /* return address + mock rbp + red zone */
-
+	cmp         $0x0, %r11
+	je          2f
 	cmp         $0x1, %r11
-	je          L2
-	/* execute fork, clone, etc.. */
-	/* assuming the syscall does not use a seventh argument */
+	je          3f
+	cmp         $0x2, %r11
+	je          1f
+
+	hlt /* r11 value is invalid? */
+
+1:
+	/* execute the clone syscall in its original context */
 	syscall
-L2:
-	nop
-intercept_asm_wrapper_postfix:
+	movq        $0x1, %rcx /* choose intercept_routine_post_clone */
 	/*
-	 * The placeholder nops for whatever instruction
-	 * following the syscall instruction in glibc was overwritten.
+	 * Now goto 0, and call the C function named
+	 * intercept_routine_post_clone both in the parent thread, adn the
+	 * child thread.
 	 */
-.fill 20, 1, 0x90
+	jmp         0b
 
-intercept_asm_wrapper_return_jump:
-.fill 20, 1, 0x90
-
-L7:
-intercept_asm_wrapper_clone_wrapper:
-	/*
-	 * Called from C, as clone_wrapper(arg0, arg1, arg2, arg3, arg4, arg5)
-	 * The arguments passed from C vs. arguments of the clone syscall (in
-	 * the case of creating a new thread):
-	 *
-	 *                   C (System V ABI)  vs.  Linux syscall
-	 * syscall number       [implied]              rax
-	 *          flags         rdi                  rdi
-	 *      new stack         rsi                  rsi
-	 *     parent TID         rdx                  rdx
-	 *      child TID         rcx                  r10
-	 * thread pointer         r8                   r8
-	 *
-	 * The only two differences in the above table: the syscall number is
-	 * not in rax when this code is called from C, and arg3 must be passed
-	 * in r10 instead of rcx.
-	 *
-	 * If the syscall return value is non-zero, this subroutine behaves
-	 * as a regular function, called from C, returning to C. On the other
-	 * hand, if the return value is zero, this subroutine jumps back to
-	 * libc (without restoring any of the registers) instead of returning
-	 * to the C caller.
-	 */
-	movq        $56, %rax       /* Linux SYS_clone */
-	movq        %rcx, %r10      /* account for syscall calling convention */
+2:
 	syscall
-	testq       %rax, %rax      /* in a child thread? */
-	jz          L6              /* yes, in a new child */
-	retq                        /* no, return as normal */
-
-L6:                                 /* in a new child */
-intercept_asm_wrapper_call_clone_child_intercept:
-.fill 20, 1, 0x90                   /* placeholder for call to C hook */
-	movq        $0, %rax        /* clone - return value in child */
-	jmp         L2              /* back to libc */
-
-intercept_asm_wrapper_end:
-
-intercept_asm_wrapper_simd_save_YMM:
-	vmovups     %ymm0, (%rsp)
-	vmovups     %ymm1, 0x20 (%rsp)
-	vmovups     %ymm2, 0x40 (%rsp)
-	vmovups     %ymm3, 0x60 (%rsp)
-	vmovups     %ymm4, 0x80 (%rsp)
-	vmovups     %ymm5, 0xa0 (%rsp)
-	vmovups     %ymm6, 0xc0 (%rsp)
-	vmovups     %ymm7, 0xe0 (%rsp)
-intercept_asm_wrapper_simd_save_YMM_end:
-
-intercept_asm_wrapper_simd_restore_YMM:
-	vmovups     (%rsp), %ymm0
-	vmovups     0x20 (%rsp), %ymm1
-	vmovups     0x40 (%rsp), %ymm2
-	vmovups     0x60 (%rsp), %ymm3
-	vmovups     0x80 (%rsp), %ymm4
-	vmovups     0xa0 (%rsp), %ymm5
-	vmovups     0xc0 (%rsp), %ymm6
-	vmovups     0xe0 (%rsp), %ymm7
-intercept_asm_wrapper_simd_restore_YMM_end:
+3:
+intercept_asm_wrapper_tmpl_end:
+	/*
+	 * This template must be appended here with a
+	 * jump back to the intercepted code.
+	 */

@@ -38,6 +38,8 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include "intercept.h"
+
 /*
  * syscall_no_intercept - syscall without interception
  *
@@ -87,10 +89,11 @@ void intercept_log(const char *buffer, size_t len);
 
 enum intercept_log_result { KNOWN, UNKNOWN };
 
-void intercept_log_syscall(const char *libpath, long nr, long arg0, long arg1,
-			long arg2, long arg3,
-			long arg4, long arg5, uint64_t syscall_offset,
-			enum intercept_log_result result_known, long result);
+void intercept_log_syscall(const struct patch_desc *,
+				const struct syscall_desc *,
+				enum intercept_log_result result_known,
+				long result);
+
 void intercept_log_close(void);
 
 #endif
