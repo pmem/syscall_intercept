@@ -45,12 +45,12 @@
 
 text_start:
 		xor     rax, rax
-		jmp     1f
-0:		jmp     dst0
+		jmp     .L1
+.L0:		jmp     dst0
 		.byte   0x00
 		.byte   0x00
 		.byte   0x00
-1:		inc     rax
+.L1:		inc     rax
 		inc     rax
 		dec     rax
 		dec     rax
@@ -88,7 +88,7 @@ text_start:
 		dec     rax
 		inc     rax
 		mov     rax, 1
-		jmp     0b
+		jmp     .L0
 		cmp     rax, -1
 		mov     rax, 2
 		jmp     dst1

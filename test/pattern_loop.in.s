@@ -44,11 +44,11 @@
 .text
 
 text_start:
-0:		xor     rax, rax
+.L0:		xor     rax, rax
 		mov     rax, 1
 		syscall
 		cmp     rax, -1
 		mov     rax, 2
 		syscall
-		loop    0b # this instruction should not be touched
+		loop    .L0 # this instruction should not be touched
 text_end:

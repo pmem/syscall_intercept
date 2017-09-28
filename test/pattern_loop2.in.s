@@ -47,10 +47,10 @@
 
 text_start:
 		xor     rax, rax # this instruction should be left unchanged
-0:		mov     rax, 1
+.L0:		mov     rax, 1
 		syscall
 		cmp     rax, -1
 		mov     rax, 2
 		syscall
-		loop    0b # this one as well
+		loop    .L0 # this one as well
 text_end:

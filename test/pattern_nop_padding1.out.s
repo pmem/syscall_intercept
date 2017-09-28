@@ -45,14 +45,14 @@
 
 text_start:
 		xor     rax, rax
-		jmp     1f    # where a nop was originally
-0:		jmp     dst0
+		jmp     .L1    # where a nop was originally
+.L0:		jmp     dst0
 		.byte   0x00
-1:		inc     rax
+.L1:		inc     rax
 		inc     rax
 		inc     rax
 		mov     rax, 1
-		jmp     0b      # where a syscall was originally
+		jmp     .L0      # where a syscall was originally
 		cmp     rax, -1
 		mov     rax, 2
 		jmp     dst1
