@@ -42,7 +42,7 @@
 
 text_start:
 		xor     rax, rax
-0:		jmp     dst0
+.L0:		jmp     dst0
 		int3
 		int3
 		int3
@@ -56,5 +56,5 @@ text_start:
 		int3
 		int3
 		int3
-		loop    0b
+		loop    .L0
 text_end:
