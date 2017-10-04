@@ -451,6 +451,9 @@ print_clone_flags(char buffer[static 0x100], long flags)
 /* last argument of lseek */
 #define F_LSEEK_WHENCE 9
 
+/* array of two integers */
+#define F_2INT 10
+
 /*
  * xprint_escape
  * Prints a user provided buffer (in src) as printable characters (to dst).
@@ -575,6 +578,12 @@ print_syscall(char *b, const char *name, unsigned args, ...)
 			long whence = va_arg(ap, long);
 			b += sprintf(b, "%ld (%s)", whence,
 					desc_whence(whence));
+		} else if (format == F_2INT) {
+			int *ints = va_arg(ap, int *);
+			if (ints)
+				b += sprintf(b, "[%d, %d]", ints[0], ints[1]);
+			else
+				b += sprintf(b, "NULL");
 		}
 
 		--args;
@@ -1310,12 +1319,14 @@ intercept_log_syscall(const struct patch_desc *patch,
 				F_DEC, desc->args[1],
 				result_known, result);
 	} else if (desc->nr == SYS_pipe) {
+		int fmt = result_known == KNOWN ? F_2INT : F_HEX;
 		buf = print_syscall(buf, "pipe", 1,
-				F_HEX, desc->args[0],
+				fmt, desc->args[0],
 				result_known, result);
 	} else if (desc->nr == SYS_pipe2) {
+		int fmt = result_known == KNOWN ? F_2INT : F_HEX;
 		buf = print_syscall(buf, "pipe2", 2,
-				F_HEX, desc->args[0],
+				fmt, desc->args[0],
 				F_HEX, desc->args[1],
 				result_known, result);
 	} else if (desc->nr == SYS_socket) {
