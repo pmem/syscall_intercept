@@ -48,6 +48,10 @@ option(TREAT_WARNINGS_AS_ERRORS
 	"make the build fail on any warnings during compilation, or linking" ON)
 option(EXPECT_SPURIOUS_SYSCALLS
 	"account for some unexpected syscalls in tests - enable while using sanitizers, gcov" OFF)
+find_program(CTAGS ctags)
+if(CTAGS)
+	option(AUTO_RUN_CTAGS "create tags file every on every rebuild" ON)
+endif()
 set(TEST_EXTRA_PRELOAD "" CACHE STRING "path to preloadable lib used while running tests e.g.: /usr/lib/gcc/x86_64-linux-gnu/6/libasan.so")
 
 set(SYSCALL_INTERCEPT_VERSION_MAJOR 0)
@@ -200,6 +204,12 @@ add_custom_target(uninstall
 	"${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake/cmake_uninstall.cmake") 
 
 add_subdirectory(doc)
+
+
+if(AUTO_RUN_CTAGS)
+	add_custom_target(gen_ctags ALL
+		${CTAGS} -R ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/test)
+endif()
 
 if(BUILD_EXAMPLES)
 	add_subdirectory(examples)
