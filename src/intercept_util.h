@@ -33,12 +33,9 @@
 #ifndef INTERCEPT_UTIL_H
 #define INTERCEPT_UTIL_H
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
-#include <sys/types.h>
 
-#include "intercept.h"
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 /*
  * syscall_no_intercept - syscall without interception
@@ -84,16 +81,11 @@ long xlseek(long fd, unsigned long off, int whence);
  */
 void xread(long fd, void *buffer, size_t size);
 
-void intercept_setup_log(const char *path_base, const char *trunc);
-void intercept_log(const char *buffer, size_t len);
-
-enum intercept_log_result { KNOWN, UNKNOWN };
-
-void intercept_log_syscall(const struct patch_desc *,
-				const struct syscall_desc *,
-				enum intercept_log_result result_known,
-				long result);
-
-void intercept_log_close(void);
+/*
+ * strerror_no_intercept - returns a pointer to a C string associated with
+ * an errno value.
+ * Does not go through libc, MT-safe, signal-safe, never returns NULL.
+ */
+const char *strerror_no_intercept(long errnum);
 
 #endif
