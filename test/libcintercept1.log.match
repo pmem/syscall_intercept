@@ -1,6 +1,6 @@
 $(S) $(XX) -- write(8765, "dummy_data\0", 11) = ?
 $(S) $(XX) -- write(8765, "dummy_data\0", 11) = 5
 $(S) $(XX) -- write(8765, "thin", 4) = ?
-$(S) $(XX) -- write(8765, "thin", 4) = -9
+$(S) $(XX) -- write(8765, "thin", 4) = -9 EBADF (Bad file number)
 $(S) $(XX) -- write(8765, "dummy_data\0", 11) = ?
 $(S) $(XX) -- write(8765, "dummy_data\0", 11) = 5
