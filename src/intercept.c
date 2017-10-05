@@ -54,6 +54,7 @@
 #include <sys/auxv.h>
 
 #include "intercept.h"
+#include "intercept_log.h"
 #include "intercept_util.h"
 #include "libsyscall_intercept_hook_point.h"
 #include "disasm_wrapper.h"

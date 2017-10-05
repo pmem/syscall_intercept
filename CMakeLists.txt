@@ -69,9 +69,11 @@ set(SOURCES_C
 	src/disasm_wrapper.c
 	src/intercept.c
 	src/intercept_desc.c
+	src/intercept_log.c
 	src/intercept_util.c
 	src/patcher.c
-	src/magic_syscalls.c)
+	src/magic_syscalls.c
+	src/syscall_formats.c)
 
 set(SOURCES_ASM
 	src/intercept_template.s

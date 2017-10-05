@@ -1,5 +1,5 @@
 /*
- * Copyright 2017, Intel Corporation
+ * Copyright 2016-2017, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,50 +30,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SYSCALL_INTERCEPT_WITHOUT_MAGIC_SYSCALLS
+#ifndef INTERCEPT_LOG_H
+#define INTERCEPT_LOG_H
 
-#include <stdint.h>
-#include <string.h>
+#include <stddef.h>
 
-#include "magic_syscalls.h"
-#include "intercept.h"
-#include "intercept_util.h"
-#include "intercept_log.h"
+struct patch_desc;
+struct syscall_desc;
 
-/*
- * handle_magic_syscalls - this routine performs two tasks:
- * recognizes 'magic' syscalls, and, if executes commands based
- * on messages from 'magic' syscalls.
- * It returns zero if some magic syscall was handled,
- * -1 otherwise (i.e.: the syscall shall be treated as a regular syscall).
- */
-int
-handle_magic_syscalls(struct syscall_desc *desc, long *result)
-{
-	if (desc->nr != SYS_write)
-		return -1;
+void intercept_setup_log(const char *path_base, const char *trunc);
+void intercept_log(const char *buffer, size_t len);
 
-	if (desc->args[0] != SYSCALL_INT_MAGIC_WRITE_FD)
-		return -1;
+enum intercept_log_result { KNOWN, UNKNOWN };
 
-	const char *message = (void *)(uintptr_t)desc->args[1];
-	size_t len = (size_t)desc->args[2];
+void intercept_log_syscall(const struct patch_desc *,
+				const struct syscall_desc *,
+				enum intercept_log_result result_known,
+				long result);
 
-	if (strncmp(message, start_log_message, len) == 0) {
-		const char *path = (const void *)(uintptr_t)desc->args[3];
-		const char *trunc = (const void *)(uintptr_t)desc->args[4];
-		intercept_setup_log(path, trunc);
-		*result = (long)len;
-		return 0;
-	}
+void intercept_log_close(void);
 
-	if (strncmp(message, stop_log_message, len) == 0) {
-		intercept_log_close();
-		*result = (long)len;
-		return 0;
-	}
-
-	return -1;
-}
-
-#endif /* SYSCALL_INTERCEPT_WITHOUT_MAGIC_SYSCALLS */
+#endif

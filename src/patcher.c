@@ -70,6 +70,7 @@
 
 #include "intercept.h"
 #include "intercept_util.h"
+#include "intercept_log.h"
 
 #include <assert.h>
 #include <stdint.h>
