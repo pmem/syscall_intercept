@@ -1,5 +1,7 @@
-$(S) $(XX) -- open($(S), O_RDONLY) = ?
-$(S) $(XX) -- open($(S), O_RDONLY) = $(N)
+$(OPT)$(S) $(XX) -- open($(S), O_RDONLY) = ?
+$(OPT)$(S) $(XX) -- open($(S), O_RDONLY) = $(N)
+$(OPT)$(S) $(XX) -- openat(AT_FDCWD, $(S), O_RDONLY) = ?
+$(OPT)$(S) $(XX) -- openat(AT_FDCWD, $(S), O_RDONLY) = $(N)
 $(S) $(XX) -- fstat($(N), $(XX)) = ?
 $(S) $(XX) -- fstat($(N), $(XX)) = 0
 $(OPT)$(S) $(XX) -- mmap($(XX), $(N), $(N), $(N), $(N), $(XX)) = ?
