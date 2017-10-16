@@ -515,7 +515,7 @@ arg_print_output_buf(char *buffer, const struct syscall_desc *desc, int i,
 				enum intercept_log_result result_status,
 				long result)
 {
-	if (buffer == 0 || result_status == UNKNOWN || result < 0)
+	if (desc->args[i] == 0 || result_status == UNKNOWN || result < 0)
 		return print_pointer(buffer, desc->args[i]);
 
 	const char *input = (const char *)(uintptr_t)(desc->args[i]);
@@ -708,7 +708,7 @@ arg_print_2fds(char *buffer, const struct syscall_desc *desc, int i,
 {
 	(void) result;
 
-	if (buffer == NULL || result_status == UNKNOWN)
+	if (desc->args[i] == 0 || result_status == UNKNOWN || result < 0)
 		return print_pointer(buffer, desc->args[i]);
 
 	int *fds = (int *)desc->args[i];
