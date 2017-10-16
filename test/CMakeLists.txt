@@ -77,8 +77,8 @@ set(asm_patterns_failing
 	pattern_jmps)
 
 macro(add_asm_test test_name failing)
-	add_library(${test_name}.in SHARED ${test_name}.in.s)
-	add_library(${test_name}.out SHARED ${test_name}.out.s)
+	add_library(${test_name}.in SHARED ${test_name}.in.S)
+	add_library(${test_name}.out SHARED ${test_name}.out.S)
 	if(LINKER_HAS_NOSTDLIB)
 		set_target_properties(${test_name}.in
 			PROPERTIES LINK_FLAGS "-nostdlib")
@@ -240,7 +240,7 @@ set_tests_properties("clone_thread"
 add_library(intercept_sys_write SHARED intercept_sys_write.c)
 target_link_libraries(intercept_sys_write PRIVATE syscall_intercept_shared)
 
-add_executable(executable_with_syscall_pie executable_with_syscall.s)
+add_executable(executable_with_syscall_pie executable_with_syscall.S)
 if(HAS_NOUNUSEDARG)
 	target_compile_options(executable_with_syscall_pie BEFORE
 		PRIVATE "-Wno-unused-command-line-argument")
@@ -252,7 +252,7 @@ if(HAS_ARG_PIE)
 	target_link_libraries(executable_with_syscall_pie PRIVATE "-pie")
 endif()
 
-add_executable(executable_with_syscall_no_pie executable_with_syscall.s)
+add_executable(executable_with_syscall_no_pie executable_with_syscall.S)
 if(HAS_NOUNUSEDARG)
 	target_compile_options(executable_with_syscall_no_pie BEFORE
 		PRIVATE "-Wno-unused-command-line-argument")
