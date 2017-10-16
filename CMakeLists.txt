@@ -76,9 +76,9 @@ set(SOURCES_C
 	src/syscall_formats.c)
 
 set(SOURCES_ASM
-	src/intercept_template.s
-	src/util.s
-	src/intercept_wrapper.s)
+	src/intercept_template.S
+	src/util.S
+	src/intercept_wrapper.S)
 
 
 include_directories(include)
