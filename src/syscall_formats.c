@@ -327,7 +327,7 @@ static const struct syscall_format formats[] = {
 	SARGS(fanotify_mark, rdec, arg_, arg_, arg_, arg_, arg_),
 	SARGS(prlimit64, rdec, arg_, arg_, arg_, arg_),
 	SARGS(name_to_handle_at, rdec, arg_atfd, arg_cstr, arg_, arg_, arg_),
-	SARGS(open_by_handle_at, rdec, arg_atfd, arg_cstr, arg_),
+	SARGS(open_by_handle_at, rdec, arg_fd, arg_pointer, arg_dec32),
 	SARGS(clock_adjtime, rdec, arg_, arg_),
 	SARGS(syncfs, rdec, arg_fd),
 	SARGS(sendmmsg, rdec, arg_fd, arg_, arg_, arg_),
