@@ -300,10 +300,12 @@ $(S) $(XX) -- msgrcv(0x1, 0x123000, 0x1, 0x1, 0x1) = ?
 $(S) $(XX) -- msgrcv(0x1, 0x123000, 0x1, 0x1, 0x1) = 22
 $(S) $(XX) -- msgctl(0x1, 0x2, 0x123000) = ?
 $(S) $(XX) -- msgctl(0x1, 0x2, 0x123000) = 22
-$(S) $(XX) -- fcntl(1, 1030 (unknown), 0x0000000000000003, 0x3) = ?
-$(S) $(XX) -- fcntl(1, 1030 (unknown), 0x0000000000000003, 0x3) = 22
-$(S) $(XX) -- fcntl(10, 4 (unknown), 0x0000000000040000, 0x40000) = ?
-$(S) $(XX) -- fcntl(10, 4 (unknown), 0x0000000000040000, 0x40000) = 22
+$(S) $(XX) -- fcntl(1, 1030 (F_DUPFD_CLOEXEC), 0x3) = ?
+$(S) $(XX) -- fcntl(1, 1030 (F_DUPFD_CLOEXEC), 0x3) = 22
+$(S) $(XX) -- fcntl(10, 4 (F_SETFL), 0x40000) = ?
+$(S) $(XX) -- fcntl(10, 4 (F_SETFL), 0x40000) = 22
+$(S) $(XX) -- fcntl(11, 6 (F_SETLK), $(XX) ({.l_type = 1 (F_WRLCK), .l_whence = 2 (SEEK_END), .l_start = 123, .l_len = 456, .l_pid = 768})) = ?
+$(S) $(XX) -- fcntl(11, 6 (F_SETLK), $(XX) ({.l_type = 1 (F_WRLCK), .l_whence = 2 (SEEK_END), .l_start = 123, .l_len = 456, .l_pid = 768})) = 22
 $(S) $(XX) -- flock(1, 0x2) = ?
 $(S) $(XX) -- flock(1, 0x2) = 22
 $(S) $(XX) -- fsync(2) = ?

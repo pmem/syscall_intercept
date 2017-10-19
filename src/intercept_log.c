@@ -214,7 +214,11 @@ static char *
 print_flag_set(char *buffer_start, char *c, long flags,
 		const struct flag_desc *desc)
 {
-	while (flags != 0 && desc->flag != 0) {
+	bool is_zero = flags == 0;
+	while (flags != 0 && desc->printable_name != NULL) {
+		if (is_zero && desc->flag == 0)
+			return print_flag(buffer_start, c,
+						desc->printable_name);
 		if ((flags & desc->flag) != 0) {
 			c = print_flag(buffer_start, c, desc->printable_name);
 			flags &= ~desc->flag;
@@ -543,7 +547,7 @@ static const struct flag_desc flock_type[] = {
 	FLAG_ENTRY(F_RDLCK),
 	FLAG_ENTRY(F_WRLCK),
 	FLAG_ENTRY(F_UNLCK),
-	{ .flag = 0, }
+	{ 0, }
 };
 
 static char *
@@ -599,13 +603,15 @@ static const struct flag_desc fcntl_cmds[] = {
 	FLAG_ENTRY(F_SEAL_GROW),
 	FLAG_ENTRY(F_SEAL_WRITE),
 #endif
-	{ .flag = 0, }
+	{ 0, }
 };
 
 static char *
 print_fcntl_cmd(char *buffer, int cmd)
 {
-	for (const struct flag_desc *d = fcntl_cmds; d->flag != 0; ++d) {
+	for (const struct flag_desc *d = fcntl_cmds;
+		d->printable_name != NULL;
+		++d) {
 		if (d->flag == cmd)
 			return print_cstr(buffer, d->printable_name);
 	}
@@ -633,11 +639,11 @@ print_fcntl_flock(char *buffer, long arg)
 	buffer = print_signed_dec(buffer, fl->l_type);
 	buffer = print_cstr(buffer, " (");
 	buffer = print_flag_set(buffer, buffer, fl->l_type, flock_type);
-	buffer = print_cstr(buffer, " ), .l_whence = ");
+	buffer = print_cstr(buffer, "), .l_whence = ");
 	buffer = print_signed_dec(buffer, fl->l_whence);
 	buffer = print_cstr(buffer, " (");
 	buffer = print_seek_whence(buffer, fl->l_whence);
-	buffer = print_cstr(buffer, " ), .l_start = ");
+	buffer = print_cstr(buffer, "), .l_start = ");
 	buffer = print_signed_dec(buffer, fl->l_start);
 	buffer = print_cstr(buffer, ", .l_len = ");
 	buffer = print_signed_dec(buffer, fl->l_len);
@@ -650,7 +656,7 @@ print_fcntl_flock(char *buffer, long arg)
 
 
 static char *
-arg_print_fcntl_args(char *buffer, const struct syscall_desc *desc, int i,
+arg_print_fcntl_cmd(char *buffer, const struct syscall_desc *desc, int i,
 				enum intercept_log_result result_status,
 				long result)
 {
@@ -662,21 +668,21 @@ arg_print_fcntl_args(char *buffer, const struct syscall_desc *desc, int i,
 	buffer = print_signed_dec(buffer, cmd);
 	buffer = print_cstr(buffer, " (");
 	buffer = print_fcntl_cmd(buffer, cmd);
-	buffer = print_cstr(buffer, "), ");
-	buffer = print_pointer(buffer, desc->args[i + 1]);
-
-	switch (cmd) {
-		case F_GETLK:
-		case F_SETLK:
-		case F_SETLKW:
-		case F_OFD_GETLK:
-		case F_OFD_SETLK:
-		case F_OFD_SETLKW:
-			buffer = print_fcntl_flock(buffer, desc->args[i + 1]);
-			break;
-	}
+	buffer = print_cstr(buffer, ")");
 
 	return buffer;
+}
+
+static char *
+arg_print_flock(char *buffer, const struct syscall_desc *desc, int i,
+				enum intercept_log_result result_status,
+				long result)
+{
+	(void) result_status;
+	(void) result;
+
+	buffer = print_pointer(buffer, desc->args[i]);
+	return print_fcntl_flock(buffer, desc->args[i]);
 }
 
 static char *
@@ -757,12 +763,13 @@ static const arg_printer_func arg_printer_func_table[] = {
 	[arg_cstr] = arg_print_cstr,
 	[arg_buf_in] = arg_print_input_buf,
 	[arg_buf_out] = arg_print_output_buf,
-	[arg_fcntl_args] = arg_print_fcntl_args,
+	[arg_fcntl_cmd] = arg_print_fcntl_cmd,
 	[arg_clone_flags] = arg_print_clone_flags,
 	[arg_seek_whence] = arg_print_seek_whence,
 	[arg_2fds] = arg_print_2fds,
 	[arg_pipe2_flags] = arg_print_pipe2_flags,
-	[arg_access_mode] = arg_print_access_mode
+	[arg_access_mode] = arg_print_access_mode,
+	[arg_flock] = arg_print_flock
 };
 
 static const return_value_printer_func return_value_printer_table[] = {

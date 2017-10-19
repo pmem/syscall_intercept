@@ -113,7 +113,7 @@ static const struct syscall_format formats[] = {
 	SARGS(msgsnd, rdec, arg_, arg_, arg_, arg_),
 	SARGS(msgrcv, rdec, arg_, arg_, arg_, arg_, arg_),
 	SARGS(msgctl, rdec, arg_, arg_, arg_),
-	SARGS(fcntl, rdec, arg_fd, arg_fcntl_args, arg_),
+	SARGS(fcntl, rdec, arg_fd, arg_fcntl_cmd, arg_),
 	SARGS(flock, rdec, arg_fd, arg_),
 	SARGS(fsync, rdec, arg_fd),
 	SARGS(fdatasync, rdec, arg_fd),
@@ -402,8 +402,30 @@ static struct syscall_format open_with_o_creat = {.name = "open", rdec,
 static struct syscall_format openat_with_o_creat = {.name = "openat", rdec,
 	{arg_atfd, arg_cstr, arg_open_flags, arg_oct_mode}};
 
+static struct syscall_format fcntl_with_flock = {.name = "fcntl", rdec,
+	{arg_fd, arg_fcntl_cmd, arg_flock}};
+
 static struct syscall_format unkown = {.name = NULL, rdec,
 	{arg_, arg_, arg_, arg_, arg_, arg_}};
+
+static bool
+is_fcntl_with_flock(const struct syscall_desc *desc)
+{
+	if (desc->nr != SYS_fcntl)
+		return false;
+
+	switch ((int)desc->args[1]) {
+		case F_GETLK:
+		case F_SETLK:
+		case F_SETLKW:
+		case F_OFD_GETLK:
+		case F_OFD_SETLK:
+		case F_OFD_SETLKW:
+			return true;
+		default:
+			return false;
+	}
+}
 
 const struct syscall_format *
 get_syscall_format(const struct syscall_desc *desc)
@@ -419,6 +441,9 @@ get_syscall_format(const struct syscall_desc *desc)
 
 	if (desc->nr == SYS_openat && ((desc->args[2] & O_CREAT) == O_CREAT))
 		return &openat_with_o_creat;
+
+	if (is_fcntl_with_flock(desc))
+		return &fcntl_with_flock;
 
 	return formats + desc->nr;
 }
