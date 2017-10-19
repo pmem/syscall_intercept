@@ -754,7 +754,7 @@ main(int argc, char **argv)
 	fanotify_mark(2, FAN_MARK_REMOVE, FAN_Q_OVERFLOW, 3, input[0]);
 
 	syscall(SYS_name_to_handle_at, AT_FDCWD, input[0], p0, p1, 0L);
-	/* XXX syscall(SYS_open_by_handle_at, 3, p0, 0L); */
+	syscall(SYS_open_by_handle_at, 3, p0, 0L);
 
 	setns(2, 0);
 
