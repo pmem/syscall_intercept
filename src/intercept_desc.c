@@ -561,14 +561,19 @@ get_min_address(void)
 
 	min_address = 0x10000; /* best guess */
 
-	FILE *f = fopen("/proc/sys/vm/mmap_min_addr,", "r");
+	int fd = syscall_no_intercept(SYS_open, "/proc/sys/vm/mmap_min_addr",
+					O_RDONLY);
 
-	if (f != NULL) {
+	if (fd >= 0) {
 		char line[64];
-		if (fgets(line, sizeof(line), f) != NULL)
+		ssize_t r;
+		r = syscall_no_intercept(SYS_read, fd, line, sizeof(line) - 1);
+		if (r > 0) {
+			line[r] = '\0';
 			min_address = (uintptr_t)atoll(line);
+		}
 
-		fclose(f);
+		syscall_no_intercept(SYS_close, fd);
 	}
 
 	return min_address;
