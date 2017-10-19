@@ -59,12 +59,13 @@ enum arg_format {
 	arg_fd, /* fd argument - not the first argument of *at syscalls */
 	arg_atfd, /* fd argument - the first argument of *at syscalls */
 	arg_pointer, /* general pointer argument */
-	arg_fcntl_args, /* 2nd (and 3rd) argument of fcntl */
+	arg_fcntl_cmd, /* 2nd argument of fcntl */
 	arg_clone_flags, /* 1st argument of clone */
 	arg_seek_whence, /* 3rd argument of lseek */
 	arg_2fds, /* array of 2 int fd numbers */
 	arg_pipe2_flags, /* second argument of pipe2 */
-	arg_access_mode /* second argument of access */
+	arg_access_mode, /* second argument of access */
+	arg_flock /* pointer to struct flock */
 };
 
 /*

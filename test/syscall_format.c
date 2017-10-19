@@ -245,6 +245,14 @@ main(int argc, char **argv)
 
 	struct utsname uname_buf;
 
+	struct flock fl = {
+		.l_type = F_WRLCK,
+		.l_whence = SEEK_END,
+		.l_start = 123,
+		.l_len = 456,
+		.l_pid = 768
+	};
+
 	magic_syscall_start_log(argv[1], "1");
 
 
@@ -445,6 +453,7 @@ main(int argc, char **argv)
 
 	fcntl(1, F_DUPFD_CLOEXEC, 3, 4);
 	fcntl(10, F_SETFL, O_NOATIME);
+	fcntl(11, F_SETLK, &fl);
 	flock(1, LOCK_EX);
 	fsync(2);
 	fdatasync(2);
