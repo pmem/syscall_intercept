@@ -294,7 +294,9 @@ main(int argc, char **argv)
 	openat(AT_FDCWD, input[1], 0);
 	openat(AT_FDCWD, NULL, 0);
 	openat(99, input[0], O_CREAT, 0777);
-
+#ifdef O_TMPFILE
+	openat(AT_FDCWD, input[1], O_RDWR | O_TMPFILE, 0333);
+#endif
 
 	close(9);
 
