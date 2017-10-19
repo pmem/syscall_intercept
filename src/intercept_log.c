@@ -447,7 +447,7 @@ static const struct flag_desc open_flags[] = {
 #ifdef O_TTY_INIT
 	FLAG_ENTRY(O_TTY_INIT),
 #endif
-	{ .flag = 0, }
+	{ 0, }
 };
 
 static char *
@@ -477,6 +477,20 @@ arg_print_open_flags(char *buffer, const struct syscall_desc *desc, int i,
 	}
 
 	flags &= ~(O_RDONLY | O_WRONLY | O_RDWR);
+
+#ifdef O_TMPFILE
+	if ((flags & O_TMPFILE) == O_TMPFILE) {
+		/*
+		 * Listing it with the other flags can result in
+		 * printing O_DIRECTORY, when it should not be listed.
+		 *
+		 * See O_TMPFILE' definition in fcntl-linux.h :
+		 * #define __O_TMPFILE   (020000000 | __O_DIRECTORY)
+		 */
+		c = print_flag(buffer, c, "O_TMPFILE");
+		flags &= ~O_TMPFILE;
+	}
+#endif
 
 	buffer = print_flag_set(buffer, c, flags, open_flags);
 

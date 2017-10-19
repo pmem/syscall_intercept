@@ -427,6 +427,18 @@ is_fcntl_with_flock(const struct syscall_desc *desc)
 	}
 }
 
+static bool
+oflags_refer_mode_arg(int flags)
+{
+	if ((flags & O_CREAT) == O_CREAT)
+		return true;
+#ifdef O_TMPFILE
+	if ((flags & O_TMPFILE) == O_TMPFILE)
+		return true;
+#endif
+	return false;
+}
+
 const struct syscall_format *
 get_syscall_format(const struct syscall_desc *desc)
 {
@@ -436,10 +448,10 @@ get_syscall_format(const struct syscall_desc *desc)
 	if (formats[desc->nr].name == NULL)
 		return &unkown;
 
-	if (desc->nr == SYS_open && ((desc->args[1] & O_CREAT) == O_CREAT))
+	if (desc->nr == SYS_open && oflags_refer_mode_arg((int)desc->args[1]))
 		return &open_with_o_creat;
 
-	if (desc->nr == SYS_openat && ((desc->args[2] & O_CREAT) == O_CREAT))
+	if (desc->nr == SYS_openat && oflags_refer_mode_arg((int)desc->args[2]))
 		return &openat_with_o_creat;
 
 	if (is_fcntl_with_flock(desc))
