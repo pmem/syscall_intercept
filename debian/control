@@ -3,7 +3,7 @@ Maintainer: Marcin Ślusarz <marcin.slusarz@intel.com>
 Section: misc
 Priority: optional
 Standards-version: 3.9.8
-Build-Depends: debhelper (>= 9), libcapstone-dev
+Build-Depends: cmake, debhelper (>= 9), libcapstone-dev, pkg-config
 
 Package: libsyscall-intercept0
 Architecture: amd64
