@@ -7,7 +7,7 @@ Build-Depends: cmake (>= 3.3), debhelper (>= 9), libcapstone-dev (>= 3.0), pkg-c
 
 Package: libsyscall-intercept0
 Architecture: amd64
-Depends: libcapstone3, ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: System call intercepting library
  The system call intercepting library provides a low-level interface
  for hooking Linux system calls in user space. This is achieved
@@ -19,6 +19,6 @@ Description: System call intercepting library
 Package: libsyscall-intercept-dev
 Section: libdevel
 Architecture: amd64
-Depends: libsyscall-intercept0 (=${binary:Version}), ${misc:Depends}
+Depends: ${misc:Depends}, libsyscall-intercept0 (=${binary:Version})
 Description: Development files for libsyscall_intercept
  Development files for libsyscall_intercept library.
