@@ -418,9 +418,11 @@ is_fcntl_with_flock(const struct syscall_desc *desc)
 		case F_GETLK:
 		case F_SETLK:
 		case F_SETLKW:
+#ifdef F_OFD_GETLK
 		case F_OFD_GETLK:
 		case F_OFD_SETLK:
 		case F_OFD_SETLKW:
+#endif
 			return true;
 		default:
 			return false;
