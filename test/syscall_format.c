@@ -361,7 +361,9 @@ main(int argc, char **argv)
 	madvise(p1, 1234, MADV_DONTNEED);
 	madvise(NULL, 0, MADV_SEQUENTIAL);
 	mlock(p0, 0x3000);
+#ifdef SYS_mlock2
 	syscall(SYS_mlock2, p0, 0x3000, 0);
+#endif
 	munlock(p0, 0x3000);
 	mlockall(MCL_CURRENT);
 	mlockall(MCL_FUTURE);
@@ -712,7 +714,9 @@ main(int argc, char **argv)
 	syscall(SYS_mq_getsetattr, 1, p0, p1);
 
 	syscall(SYS_kexec_load, 1, 2, p0, KEXEC_PRESERVE_CONTEXT);
+#ifdef SYS_kexec_file_load
 	syscall(SYS_kexec_file_load, 1, 2, 3, input[0], KEXEC_PRESERVE_CONTEXT);
+#endif
 
 	syscall(SYS_waitid, 1, 2, p0, 4, p1);
 
