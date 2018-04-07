@@ -329,6 +329,6 @@ add_test(NAME "syscall_format_logging"
 	-DTEST_EXTRA_PRELOAD=${TEST_EXTRA_PRELOAD}
 	-DTEST_PROG=$<TARGET_FILE:syscall_format>
 	-DLIB_FILE=
-	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/libcintercept3.log.match
+	-DMATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/syscall_format.log.match
 	-DTEST_NAME=syscall_format_logging
 	${CHECK_LOG_COMMON_ARGS})
