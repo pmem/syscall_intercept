@@ -1,5 +1,5 @@
 /*
- * Copyright 2017, Intel Corporation
+ * Copyright 2017-2018, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -469,7 +469,7 @@ main(int argc, char **argv)
 	syscall(SYS_getdents64, 4, p0, 1);
 
 	setup_buffers();
-	getcwd(buffer[0], 9);
+	syscall(SYS_getcwd, buffer[0], 9);
 
 	chdir(input[0]);
 	fchdir(6);
