@@ -47,4 +47,20 @@ export COVERITY_SCAN_PROJECT_NAME="${PROJECT}"
 export COVERITY_SCAN_BUILD_COMMAND="make"
 
 # Run the Coverity scan
-curl -s https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh | bash
+
+# XXX: Patch the Coverity script.
+# Recently, this script regularly exits with an error, even though
+# the build is successfully submitted.  Probably because the status code
+# is missing in response, or it's not 201.
+# Changes:
+# 1) change the expected status code to 200 and
+# 2) print the full response string.
+#
+# This change should be reverted when the Coverity script is fixed.
+#
+# The previous version was:
+# curl -s https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh | bash
+
+wget https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh
+patch < utils/docker/0001-travis-fix-travisci_build_coverity_scan.sh.patch
+bash ./travisci_build_coverity_scan.sh
