@@ -502,7 +502,7 @@ static const char *const error_strings[] = {
 const char *
 strerror_no_intercept(long errnum)
 {
-	static const char unkown[] = "Uknown error";
+	static const char unkown[] = "Unknown error";
 
 	if (errnum < 0 || (size_t)errnum >= ARRAY_SIZE(error_strings))
 		return unkown;
