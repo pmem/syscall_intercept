@@ -1,6 +1,6 @@
 /*
- * Copyright 2013-2015, Intel Corporation
- * Copyright (c) 2016-2018, Microsoft Corporation. All rights reserved.
+ * Copyright 2016-2017, Intel Corporation
+ * Copyright (c) 2016, Microsoft Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,9 @@
  * check-license.c -- check the license in the file
  */
 
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +45,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define LICENSE_MAX_LEN		2048
 #define COPYRIGHT		"Copyright "
@@ -63,12 +68,13 @@
 #define STR_MODE_LICENSE	"check-license"
 
 #define ERROR(fmt, ...)	fprintf(stderr, "error: " fmt "\n", __VA_ARGS__)
+#define ERROR2(fmt, ...)	fprintf(stderr, fmt "\n", __VA_ARGS__)
 
 /*
  * help_str -- string for the help message
  */
-static const char *help_str =
-"Usage: %s <mode> <file_1> <file_2>\n"
+static const char * const help_str =
+"Usage: %s <mode> <file_1> <file_2> [filename]\n"
 "\n"
 "Modes:\n"
 "   create <file_license> <file_pattern>\n"
@@ -98,7 +104,8 @@ static const char *help_str =
 static int
 read_pattern(const char *path_pattern, char *pattern)
 {
-	int file_pattern, ret;
+	int file_pattern;
+	ssize_t ret;
 
 	if ((file_pattern = open(path_pattern, O_RDONLY)) == -1) {
 		ERROR("open(): %s: %s", strerror(errno), path_pattern);
@@ -125,7 +132,8 @@ read_pattern(const char *path_pattern, char *pattern)
 static int
 write_pattern(const char *path_pattern, char *pattern)
 {
-	int file_pattern, ret;
+	int file_pattern;
+	ssize_t ret;
 
 	if ((file_pattern = open(path_pattern, O_WRONLY | O_CREAT | O_EXCL,
 					S_IRUSR | S_IRGRP | S_IROTH)) == -1) {
@@ -162,12 +170,13 @@ strstr2(const char *str, const char *sub1, const char *sub2,
  * format_license -- remove comments and redundant whitespaces from the license
  */
 static void
-format_license(char *license, int *length)
+format_license(char *license, size_t length)
 {
 	char comment_str[COMMENT_STR_LEN];
 	char *comment = license;
-	int comment_len, was_space;
-	int w, r;
+	size_t comment_len;
+	int was_space;
+	size_t w, r;
 
 	/* detect a comment string */
 	while (*comment != '\n')
@@ -197,7 +206,7 @@ format_license(char *license, int *length)
 
 	/* replace multiple spaces with one space */
 	was_space = 0;
-	for (r = w = 0; r < *length; r++) {
+	for (r = w = 0; r < length; r++) {
 		if (!isspace(license[r])) {
 			if (was_space) {
 				license[w++] = ' ';
@@ -212,7 +221,6 @@ format_license(char *license, int *length)
 		}
 	}
 	license[w] = '\0';
-	*length = w;
 }
 
 /*
@@ -221,34 +229,33 @@ format_license(char *license, int *length)
 static int
 analyze_license(const char *path_to_check,
 		char *buffer,
-		char **license,
-		int *length)
+		char **license)
 {
 	char *_license;
-	int _length;
+	size_t _length;
 	char *beg_str, *end_str;
 
 	if (strstr2(buffer, LICENSE_BEG, LICENSE_END,
 				&beg_str, &end_str)) {
 		if (!beg_str)
-			ERROR("incorrect license in the file: %s"
+			ERROR2("%s:1: error: incorrect license"
 				" (license should start with the string '%s')",
 				path_to_check, LICENSE_BEG);
 		else
-			ERROR("incorrect license in the file: %s"
+			ERROR2("%s:1: error: incorrect license"
 				" (license should end with the string '%s')",
 				path_to_check, LICENSE_END);
 		return -1;
 	}
 
 	_license = beg_str;
-	_length = end_str - beg_str + strlen(LICENSE_END);
+	assert((uintptr_t)end_str > (uintptr_t)beg_str);
+	_length = (size_t)(end_str - beg_str) + strlen(LICENSE_END);
 	_license[_length] = '\0';
 
-	format_license(_license, &_length);
+	format_license(_license, _length);
 
 	*license = _license;
-	*length = _length;
 
 	return 0;
 }
@@ -261,7 +268,7 @@ create_pattern(const char *path_license, char *pattern)
 {
 	char buffer[LICENSE_MAX_LEN];
 	char *license;
-	int length, ret;
+	ssize_t ret;
 	int file_license;
 
 	if ((file_license = open(path_license, O_RDONLY)) == -1) {
@@ -278,7 +285,7 @@ create_pattern(const char *path_license, char *pattern)
 		return -1;
 	}
 
-	if (analyze_license(path_license, buffer, &license, &length) == -1)
+	if (analyze_license(path_license, buffer, &license) == -1)
 		return -1;
 
 	memset(pattern, 0, LICENSE_MAX_LEN);
@@ -291,9 +298,9 @@ create_pattern(const char *path_license, char *pattern)
  * print_diff -- print the first difference between 'license' and 'pattern'
  */
 static void
-print_diff(char *license, char *pattern, int len)
+print_diff(char *license, char *pattern, size_t len)
 {
-	int i = 0;
+	size_t i = 0;
 
 	while (i < len && license[i] == pattern[i])
 		i++;
@@ -314,15 +321,17 @@ print_diff(char *license, char *pattern, int len)
  *                  of the copyright line
  */
 static int
-verify_license(const char *path_to_check, char *pattern)
+verify_license(const char *path_to_check, char *pattern, const char *filename)
 {
 	char buffer[LICENSE_MAX_LEN];
 	char *license, *copyright;
-	int file_to_check, length, ret;
+	int file_to_check;
+	ssize_t ret;
 	int year_first, year_last;
 	int min_year_first = YEAR_INIT_MIN;
 	int max_year_last = YEAR_INIT_MAX;
 	char *err_str = NULL;
+	const char *name_to_print = filename ? filename : path_to_check;
 
 	if ((file_to_check = open(path_to_check, O_RDONLY)) == -1) {
 		ERROR("open(): %s: %s", strerror(errno), path_to_check);
@@ -334,11 +343,11 @@ verify_license(const char *path_to_check, char *pattern)
 	close(file_to_check);
 
 	if (ret == -1) {
-		ERROR("read(): %s: %s", strerror(errno), path_to_check);
+		ERROR("read(): %s: %s", strerror(errno), name_to_print);
 		return -1;
 	}
 
-	if (analyze_license(path_to_check, buffer, &license, &length) == -1)
+	if (analyze_license(path_to_check, buffer, &license) == -1)
 		return -1;
 
 	/* check the copyright notice */
@@ -405,12 +414,12 @@ verify_license(const char *path_to_check, char *pattern)
 
 	if (err_str)
 		/* found an error in the copyright notice */
-		ERROR("incorrect copyright notice in the file: %s (%s)",
-			path_to_check, err_str);
+		ERROR2("%s:1: error: incorrect copyright notice: %s",
+			name_to_print, err_str);
 
 	/* now check the license */
 	if (memcmp(license, pattern, strlen(pattern)) != 0) {
-		ERROR("incorrect license in the file: %s", path_to_check);
+		ERROR2("%s:1: error: incorrect license", name_to_print);
 		print_diff(license, pattern, strlen(pattern));
 		return -1;
 	}
@@ -453,45 +462,50 @@ mode_check_pattern(const char *path_license, const char *path_to_check)
 	if (create_pattern(path_license, pattern) == -1)
 		return -1;
 
-	return verify_license(path_to_check, pattern);
+	return verify_license(path_to_check, pattern, NULL);
 }
 
 /*
  * mode_check_license -- 'check_license' mode function
  */
 static int
-mode_check_license(const char *path_pattern, const char *path_to_check)
+mode_check_license(const char *path_pattern, const char *path_to_check,
+		const char *filename)
 {
 	char pattern[LICENSE_MAX_LEN];
 
 	if (read_pattern(path_pattern, pattern) == -1)
 		return -1;
 
-	return verify_license(path_to_check, pattern);
+	return verify_license(path_to_check, pattern, filename);
 }
 
 int
 main(int argc, char *argv[])
 {
-	if (argc != 4) {
-		printf(help_str, argv[0]);
-		return -1;
-	}
-
 	if (strcmp(argv[1], STR_MODE_CREATE) == 0) {
+		if (argc != 4)
+			goto invalid_args;
+
 		return mode_create_pattern_file(argv[2], argv[3]);
 
 	} else if (strcmp(argv[1], STR_MODE_PATTERN) == 0) {
-		return mode_check_license(argv[2], argv[3]);
+		if (argc != 5)
+			goto invalid_args;
+
+		return mode_check_license(argv[2], argv[3], argv[4]);
 
 	} else if (strcmp(argv[1], STR_MODE_LICENSE) == 0) {
+		if (argc != 4)
+			goto invalid_args;
+
 		return mode_check_pattern(argv[2], argv[3]);
 
 	} else {
 		ERROR("wrong mode: %s\n", argv[1]);
-		printf(help_str, argv[0]);
-		return -1;
 	}
 
-	return 0;
+invalid_args:
+	printf(help_str, argv[0]);
+	return -1;
 }
