@@ -239,6 +239,8 @@ main(int argc, char **argv)
 
 	void *p0 = (void *)0x123000;
 	void *p1 = (void *)0x234000;
+	void *p2 = (void *)0x456000;
+	void *p3 = (void *)0x567000;
 
 	socklen_t sl[2] = {1, 1};
 
@@ -386,7 +388,7 @@ main(int argc, char **argv)
 	pipe(fd2);
 	pipe2(fd2, 0);
 
-	select(2, p0, p1, p1, p0);
+	select(2, p0, p1, p2, p3);
 	syscall(SYS_pselect6, 2, p0, p1, p0, p1, p0);
 
 	sched_yield();
