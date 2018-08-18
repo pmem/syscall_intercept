@@ -115,7 +115,6 @@
 #include <sys/xattr.h>
 #include <time.h>
 #include <unistd.h>
-#include <ustat.h>
 #include <utime.h>
 
 #include "libsyscall_intercept_hook_point.h"
@@ -583,7 +582,7 @@ main(int argc, char **argv)
 	mknodat(1, input[0], 1, 2);
 	mknodat(AT_FDCWD, input[0], 1, 2);
 
-	ustat(2, p0);
+	syscall(SYS_ustat, 2, p0);
 
 	statfs(input[0], p0);
 	fstatfs(4, p0);
