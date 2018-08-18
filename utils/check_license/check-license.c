@@ -170,25 +170,26 @@ strstr2(const char *str, const char *sub1, const char *sub2,
  * format_license -- remove comments and redundant whitespaces from the license
  */
 static void
-format_license(char *license, size_t length)
+format_license(char *buffer_start, char *license, size_t length)
 {
-	char comment_str[COMMENT_STR_LEN];
 	char *comment = license;
 	size_t comment_len;
 	int was_space;
 	size_t w, r;
 
 	/* detect a comment string */
-	while (*comment != '\n')
+	while (*comment != '\n' && comment != buffer_start)
 		comment--;
 	/* is there any comment? */
 	if (comment + 1 != license) {
 		/* separate out a comment */
-		strncpy(comment_str, comment, COMMENT_STR_LEN);
+		assert(*license == LICENSE_BEG[0]);
+		*license = '0';
+		char *comment_str = comment;
 		comment = comment_str + 1;
 		while (isspace(*comment))
 			comment++;
-		while (!isspace(*comment))
+		while (comment != license && !isspace(*comment))
 			comment++;
 		*comment = '\0';
 		comment_len = strlen(comment_str);
@@ -202,6 +203,7 @@ format_license(char *license, size_t length)
 			while ((comment = strstr(license, comment_str)) != NULL)
 				comment[1] = ' ';
 		}
+		*license = LICENSE_BEG[0];
 	}
 
 	/* replace multiple spaces with one space */
@@ -253,7 +255,7 @@ analyze_license(const char *path_to_check,
 	_length = (size_t)(end_str - beg_str) + strlen(LICENSE_END);
 	_license[_length] = '\0';
 
-	format_license(_license, _length);
+	format_license(buffer, _license, _length);
 
 	*license = _license;
 
@@ -289,7 +291,7 @@ create_pattern(const char *path_license, char *pattern)
 		return -1;
 
 	memset(pattern, 0, LICENSE_MAX_LEN);
-	strncpy(pattern, license, strlen(license) + 1);
+	strcpy(pattern, license);
 
 	return 0;
 }
