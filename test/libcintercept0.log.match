@@ -2,11 +2,11 @@ $(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID | 0x11, (null), (n
 $(OPT)$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID | 0x11, (null), (null), $(XX), $(XX)) = 0
 $(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID | 0x11, (null), (null), $(XX), $(XX)) = $(N)
 $(OPT)$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID | 0x11, (null), (null), $(XX), $(XX)) = 0
-$(S) $(XX) -- wait4(-1, 0x0, 0x0, 0x0) = ?
+$(S) $(XX) -- wait4($(N), 0x0, 0x0, 0x0) = ?
 $(OPT)$(S) $(XX) -- clone(CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID | 0x11, (null), (null), $(XX), $(XX)) = 0
 $(OPT)$(S) $(XX) -- set_robust_list($(XX), $(N)) = ?
 $(OPT)$(S) $(XX) -- set_robust_list($(XX), $(N)) = $(N)
-$(S) $(XX) -- wait4(-1, 0x0, 0x0, 0x0) = $(N)
+$(S) $(XX) -- wait4($(N), 0x0, 0x0, 0x0) = $(N)
 $(OPT)$(S) $(XX) -- open($(S), O_RDONLY) = ?
 $(OPT)$(S) $(XX) -- open($(S), O_RDONLY) = $(N)
 $(OPT)$(S) $(XX) -- openat(AT_FDCWD, $(S), O_RDONLY) = ?
