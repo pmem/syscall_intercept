@@ -517,7 +517,7 @@ xabort_errno(int error_code, const char *msg)
 
 		/* not using libc - inline sprintf */
 		do {
-			*c-- = error_code % 10;
+			*c-- = (error_code % 10) + '0';
 			++len;
 			error_code /= 10;
 		} while (error_code != 0);
