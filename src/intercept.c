@@ -45,6 +45,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -501,6 +502,8 @@ void
 xabort_errno(int error_code, const char *msg)
 {
 	static const char main_msg[] = " libsyscall_intercept error\n";
+	int tid;
+	pid_t pid;
 
 	if (msg != NULL) {
 		/* not using libc - inline strlen */
@@ -527,7 +530,11 @@ xabort_errno(int error_code, const char *msg)
 	}
 
 	syscall_no_intercept(SYS_write, 2, main_msg, sizeof(main_msg) - 1);
-	syscall_no_intercept(SYS_exit_group, 1);
+
+	/* abort(), but without using glibc */
+	tid = syscall_no_intercept(SYS_gettid);
+	pid = syscall_no_intercept(SYS_getpid);
+	syscall(SYS_tgkill, pid, tid, SIGABRT);
 
 	__builtin_unreachable();
 }
