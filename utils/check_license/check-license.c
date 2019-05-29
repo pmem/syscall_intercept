@@ -175,7 +175,10 @@ format_license(char *license, int *length)
 	/* is there any comment? */
 	if (comment + 1 != license) {
 		/* separate out a comment */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
 		strncpy(comment_str, comment, COMMENT_STR_LEN);
+#pragma GCC diagnostic pop
 		comment = comment_str + 1;
 		while (isspace(*comment))
 			comment++;
@@ -282,7 +285,10 @@ create_pattern(const char *path_license, char *pattern)
 		return -1;
 
 	memset(pattern, 0, LICENSE_MAX_LEN);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
 	strncpy(pattern, license, strlen(license) + 1);
+#pragma GCC diagnostic pop
 
 	return 0;
 }
