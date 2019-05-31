@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Copyright 2016-2017, Intel Corporation
+# Copyright 2016-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -56,7 +56,9 @@ shift
 
 PATTERN=`mktemp`
 TMP=`mktemp`
-rm -f $PATTERN $TMP
+TMP2=`mktemp`
+TEMPFILE=`mktemp`
+rm -f $PATTERN $TMP $TMP2
 
 function exit_if_not_exist()
 {
@@ -74,7 +76,8 @@ fi
 exit_if_not_exist $LICENSE
 exit_if_not_exist $CHECK_LICENSE
 
-git rev-parse || exit 1
+export GIT="git -C ${SOURCE_ROOT}"
+$GIT rev-parse || exit 1
 
 if [ -f $SOURCE_ROOT/.git/shallow ]; then
 	SHALLOW_CLONE=1
@@ -101,17 +104,17 @@ while [ "$1" != "" ]; do
 done
 
 if [ $CHECK_ALL -eq 0 ]; then
-	CURRENT_COMMIT=$(git log --pretty=%H -1)
-	MERGE_BASE=$(git merge-base HEAD origin/master 2>/dev/null)
+	CURRENT_COMMIT=$($GIT log --pretty=%H -1)
+	MERGE_BASE=$($GIT merge-base HEAD origin/master 2>/dev/null)
 	[ -z $MERGE_BASE ] && \
-		MERGE_BASE=$(git log --pretty="%cN:%H" | grep GitHub | head -n1 | cut -d: -f2)
+		MERGE_BASE=$($GIT log --pretty="%cN:%H" | grep GitHub | head -n1 | cut -d: -f2)
 	[ -z $MERGE_BASE -o "$CURRENT_COMMIT" = "$MERGE_BASE" ] && \
 		CHECK_ALL=1
 fi
 
 if [ $CHECK_ALL -eq 1 ]; then
 	echo "Checking copyright headers of all files..."
-	GIT_COMMAND="ls-tree -r --name-only HEAD $SOURCE_ROOT"
+	GIT_COMMAND="ls-tree -r --name-only HEAD"
 else
 	echo
 	echo "Warning: will check copyright headers of modified files only,"
@@ -120,20 +123,18 @@ else
 	echo "         (e.g.: $ $SELF $SOURCE_ROOT $CHECK_LICENSE $LICENSE -a)"
 	echo
 	echo "Checking copyright headers of modified files only..."
-	GIT_COMMAND="diff --name-only $MERGE_BASE $CURRENT_COMMIT $SOURCE_ROOT"
+	GIT_COMMAND="diff --name-only $MERGE_BASE $CURRENT_COMMIT"
 fi
 
-FILES=$(git $GIT_COMMAND | \
-	grep -v -E -e 'src/jemalloc/' -e 'src/windows/jemalloc_gen/' -e '/queue.h$' -e '/ListEntry.h$' \
-		   -e '/getopt.h$' -e '/getopt.c$' -e 'test_header\.h$' | \
+FILES=$($GIT $GIT_COMMAND | ${SOURCE_ROOT}/utils/check_license/file-exceptions.sh | \
 	grep    -E -e '*\.[chs]$' -e '*\.[ch]pp$' -e '*\.sh$' \
-		   -e '*\.py$' -e '*\.map$' -e 'Makefile*' -e 'TEST*' \
+		   -e '*\.py$' -e '*\.link$' -e 'Makefile*' -e 'TEST*' \
 		   -e '/common.inc$' -e '/match$' -e '/check_whitespace$' \
-		   -e 'LICENSE$' | \
+		   -e 'LICENSE$' -e 'CMakeLists.txt$' -e '*\.cmake$' | \
 	xargs)
 
 # jemalloc.mk has to be checked always, because of the grep rules above
-FILES="$FILES $SOURCE_ROOT/src/jemalloc/jemalloc.mk"
+FILES="$FILES src/jemalloc/jemalloc.mk"
 
 # create a license pattern file
 $CHECK_LICENSE create $LICENSE $PATTERN
@@ -141,38 +142,48 @@ $CHECK_LICENSE create $LICENSE $PATTERN
 
 RV=0
 for file in $FILES ; do
-	[ ! -f $file ] && continue
-	YEARS=`$CHECK_LICENSE check-pattern $PATTERN $file`
+	# The src_path is a path which should be used in every command except git.
+	# git is called with -C flag so filepaths should be relative to SOURCE_ROOT
+	src_path="${SOURCE_ROOT}/$file"
+	[ ! -f $src_path ] && continue
+	# ensure that file is UTF-8 encoded
+	ENCODING=`file -b --mime-encoding $src_path`
+	iconv -f $ENCODING -t "UTF-8" $src_path > $TEMPFILE
+
+	YEARS=`$CHECK_LICENSE check-pattern $PATTERN $TEMPFILE $src_path`
 	if [ $? -ne 0 ]; then
 		echo -n $YEARS
 		RV=1
 	else
 		HEADER_FIRST=`echo $YEARS | cut -d"-" -f1`
 		HEADER_LAST=` echo $YEARS | cut -d"-" -f2`
-		git log --no-merges --format="%ai %H %aE" -- $file | sort > $TMP
-		FIRST=`cat $TMP | head -n1`
-		LAST=` cat $TMP | tail -n1`
+
+		if [ $SHALLOW_CLONE -eq 0 ]; then
+			$GIT log --no-merges --format="%ai %aE" -- $file | sort > $TMP
+		else
+			# mark the grafted commits (commits with no parents)
+			$GIT log --no-merges --format="%ai %aE grafted-%p-commit" -- $file | sort > $TMP
+		fi
 
 		# skip checking dates for non-Intel commits
-		AUTHOR_LAST=`echo $LAST | cut -d"@" -f2`
-		[ "AUTHOR_LAST" != "intel.com" ] && continue
+		[[ ! $(tail -n1 $TMP) =~ "@intel.com" ]] && continue
+
+		# skip checking dates for new files
+		[ $(cat $TMP | wc -l) -le 1 ] && continue
+
+		# grep out the grafted commits (commits with no parents)
+		# and skip checking dates for non-Intel commits
+		grep -v -e "grafted--commit" $TMP | grep -e "@intel.com" > $TMP2
+
+		[ $(cat $TMP2 | wc -l) -eq 0 ] && continue
+
+		FIRST=`head -n1 $TMP2`
+		LAST=` tail -n1 $TMP2`
 
 		COMMIT_FIRST=`echo $FIRST | cut -d"-" -f1`
 		COMMIT_LAST=` echo $LAST  | cut -d"-" -f1`
-		SKIP=0
-		if [ $SHALLOW_CLONE -eq 1 ]; then
-			HASH_FIRST=`echo $FIRST | cut -d" " -f4`
-			HASH_LAST=` echo $LAST  | cut -d" " -f4`
-			if [ "$HASH_FIRST" == "$HASH_LAST" ]; then
-				CHANGED=`git diff --name-only $HASH_FIRST -- $file`
-				if [ "$CHANGED" == "" ]; then
-					SKIP=1
-					[ $VERBOSE -eq 1 ] && echo "info: checking dates in file '$file' skipped (no history)"
-				fi
-			fi
-		fi
 		if [ "$COMMIT_FIRST" != "" -a "$COMMIT_LAST" != "" ]; then
-			if [ $SKIP -eq 0 -a $HEADER_LAST -lt $COMMIT_LAST ]; then
+			if [ $HEADER_LAST -lt $COMMIT_LAST ]; then
 				if [ $HEADER_FIRST -lt $COMMIT_FIRST ]; then
 					COMMIT_FIRST=$HEADER_FIRST
 				fi
@@ -182,7 +193,7 @@ for file in $FILES ; do
 				else
 					NEW=$COMMIT_FIRST-$COMMIT_LAST
 				fi
-				echo "error: wrong copyright date in file: $file (is: $YEARS, should be: $NEW)" >&2
+				echo "$file:1: error: wrong copyright date: (is: $YEARS, should be: $NEW)" >&2
 				RV=1
 			fi
 		else
@@ -191,7 +202,7 @@ for file in $FILES ; do
 		fi
 	fi
 done
-rm -f $TMP
+rm -f $TMP $TMP2 $TEMPFILE
 
 # check if error found
 if [ $RV -eq 0 ]; then
