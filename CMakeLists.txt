@@ -1,5 +1,5 @@
 #
-# Copyright 2017, Intel Corporation
+# Copyright 2017-2020, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.3)
-project(syscall_intercept C CXX ASM)
+project(syscall_intercept C ASM)
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 # Setting CMAKE_DISABLE_IN_SOURCE_BUILD to ON should
@@ -63,6 +63,7 @@ set(SYSCALL_INTERCEPT_VERSION
 include(cmake/find_capstone.cmake)
 include(GNUInstallDirs)
 include(cmake/toolchain_features.cmake)
+include(CheckLanguage)
 
 # main source files - intentionally excluding src/cmdline_filter.c
 set(SOURCES_C
@@ -147,15 +148,18 @@ set_target_properties(syscall_intercept_shared
 	PROPERTIES VERSION ${SYSCALL_INTERCEPT_VERSION}
 		   SOVERSION ${SYSCALL_INTERCEPT_VERSION_MAJOR})
 
-add_executable(cpp_test src/cpp_compile_test.cc src/cpp_compile_mock.c)
-
 set_target_properties(syscall_intercept_shared syscall_intercept_static
 	PROPERTIES
 	LINKER_LANGUAGE C
 	PUBLIC_HEADER "include/libsyscall_intercept_hook_point.h"
 	OUTPUT_NAME syscall_intercept)
 
-add_dependencies(syscall_intercept_base_c cpp_test)
+check_language(CXX)
+if(CMAKE_CXX_COMPILER)
+	enable_language(CXX)
+	add_executable(cpp_test src/cpp_compile_test.cc src/cpp_compile_mock.c)
+	add_dependencies(syscall_intercept_base_c cpp_test)
+endif()
 
 if(PERFORM_STYLE_CHECKS)
 	include(FindPerl)
