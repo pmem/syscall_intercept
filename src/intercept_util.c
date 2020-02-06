@@ -50,6 +50,15 @@
 #include <sched.h>
 #include <linux/limits.h>
 
+void
+mprotect_no_intercept(void *addr, size_t len, int prot,
+			const char *msg_on_error)
+{
+	long result = syscall_no_intercept(SYS_mprotect, addr, len, prot);
+
+	xabort_on_syserror(result, msg_on_error);
+}
+
 void *
 xmmap_anon(size_t size)
 {

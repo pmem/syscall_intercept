@@ -80,23 +80,10 @@
 
 #include <stdio.h>
 
-#define PAGE_SIZE ((size_t)0x1000)
-
 /* The size of a trampoline jump, jmp instruction + pointer */
 enum { TRAMPOLINE_SIZE = 6 + 8 };
 
-static unsigned char *
-round_down_address(unsigned char *address)
-{
-	return (unsigned char *)(((uintptr_t)address) & ~(PAGE_SIZE - 1));
-}
-
-
-static unsigned char asm_wrapper_space[0x100000];
-
-static unsigned char *next_asm_wrapper_space = asm_wrapper_space + PAGE_SIZE;
-
-static void create_wrapper(struct patch_desc *patch);
+static void create_wrapper(struct patch_desc *patch, unsigned char **dst);
 
 /*
  * create_absolute_jump(from, to)
@@ -269,12 +256,12 @@ assign_nop_trampoline(struct intercept_desc *desc,
 }
 
 /*
- * is_relocateable_before_syscall
+ * is_copiable_before_syscall
  * checks if an instruction found before a syscall instruction
- * can be relocated (and thus overwritten).
+ * can be copied (and thus overwritten).
  */
 static bool
-is_relocateable_before_syscall(struct intercept_disasm_result ins)
+is_copiable_before_syscall(struct intercept_disasm_result ins)
 {
 	if (!ins.is_set)
 		return false;
@@ -289,14 +276,14 @@ is_relocateable_before_syscall(struct intercept_disasm_result ins)
 }
 
 /*
- * is_relocateable_after_syscall
+ * is_copiable_after_syscall
  * checks if an instruction found after a syscall instruction
- * can be relocated (and thus overwritten).
+ * can be copied (and thus overwritten).
  *
- * Notice: we allow relocation of ret instructions.
+ * Notice: we allow the copy of ret instructions.
  */
 static bool
-is_relocateable_after_syscall(struct intercept_disasm_result ins)
+is_copiable_after_syscall(struct intercept_disasm_result ins)
 {
 	if (!ins.is_set)
 		return false;
@@ -320,27 +307,26 @@ static void
 check_surrounding_instructions(struct intercept_desc *desc,
 				struct patch_desc *patch)
 {
-	patch->uses_prev_ins =
-	    is_relocateable_before_syscall(patch->preceding_ins) &&
+	patch->uses_prev_ins = patch->preceding_ins.is_lea_rip ||
+	    (is_copiable_before_syscall(patch->preceding_ins) &&
 	    !is_overwritable_nop(&patch->preceding_ins) &&
-	    !has_jump(desc, patch->syscall_addr);
+	    !has_jump(desc, patch->syscall_addr));
 
 	if (patch->uses_prev_ins) {
-		patch->uses_prev_ins_2 =
-		    patch->uses_prev_ins &&
-		    is_relocateable_before_syscall(patch->preceding_ins_2) &&
+		patch->uses_prev_ins_2 = patch->preceding_ins_2.is_lea_rip ||
+		    (patch->uses_prev_ins &&
+		    is_copiable_before_syscall(patch->preceding_ins_2) &&
 		    !is_overwritable_nop(&patch->preceding_ins_2) &&
 		    !has_jump(desc, patch->syscall_addr
-			- patch->preceding_ins.length);
+			- patch->preceding_ins.length));
 	} else {
 		patch->uses_prev_ins_2 = false;
 	}
 
-	patch->uses_next_ins =
-	    is_relocateable_after_syscall(patch->following_ins) &&
+	patch->uses_next_ins = patch->following_ins.is_lea_rip ||
+	    (is_copiable_after_syscall(patch->following_ins) &&
 	    !is_overwritable_nop(&patch->following_ins) &&
-	    !has_jump(desc,
-		patch->syscall_addr + SYSCALL_INS_SIZE);
+	    !has_jump(desc, patch->syscall_addr + SYSCALL_INS_SIZE));
 }
 
 /*
@@ -359,12 +345,14 @@ check_surrounding_instructions(struct intercept_desc *desc,
  * finding padding bytes, etc..
  */
 void
-create_patch_wrappers(struct intercept_desc *desc)
+create_patch_wrappers(struct intercept_desc *desc, unsigned char **dst)
 {
 	size_t next_nop_i = 0;
 
 	for (unsigned patch_i = 0; patch_i < desc->count; ++patch_i) {
 		struct patch_desc *patch = desc->items + patch_i;
+		debug_dump("patching %s:0x%lx\n", desc->path,
+				patch->syscall_addr - desc->base_addr);
 
 		assign_nop_trampoline(desc, patch, &next_nop_i);
 
@@ -499,7 +487,7 @@ create_patch_wrappers(struct intercept_desc *desc)
 
 		mark_jump(desc, patch->return_address);
 
-		create_wrapper(patch);
+		create_wrapper(patch, dst);
 	}
 }
 
@@ -512,19 +500,11 @@ extern unsigned char intercept_asm_wrapper_patch_desc_addr;
 extern unsigned char intercept_asm_wrapper_wrapper_level1_addr;
 extern unsigned char intercept_wrapper;
 
-static size_t tmpl_size;
+size_t asm_wrapper_tmpl_size;
 static ptrdiff_t o_patch_desc_addr;
 static ptrdiff_t o_wrapper_level1_addr;
 
 bool intercept_routine_must_save_ymm;
-
-static bool
-is_asm_wrapper_space_full(void)
-{
-	return next_asm_wrapper_space + tmpl_size + 256 >
-			asm_wrapper_space + sizeof(asm_wrapper_space);
-}
-
 
 /*
  * init_patcher
@@ -544,7 +524,8 @@ init_patcher(void)
 	assert(&intercept_asm_wrapper_wrapper_level1_addr <
 		&intercept_asm_wrapper_tmpl_end);
 
-	tmpl_size = (size_t)(&intercept_asm_wrapper_tmpl_end - begin);
+	asm_wrapper_tmpl_size =
+		(size_t)(&intercept_asm_wrapper_tmpl_end - begin);
 	o_patch_desc_addr = &intercept_asm_wrapper_patch_desc_addr - begin;
 	o_wrapper_level1_addr =
 		&intercept_asm_wrapper_wrapper_level1_addr - begin;
@@ -563,25 +544,64 @@ init_patcher(void)
 }
 
 /*
- * create_movabs_r11
+ * create_movabs
  * Generates a movabs instruction, that assigns a 64 bit constant to
- * the R11 register.
+ * the 64 general purpose register.
+ * the reg_bits value must contain the X86 encoding of the register.
+ * Returns a pointer to the char right after the generated instruction.
  */
-static void
-create_movabs_r11(unsigned char *code, uint64_t value)
+static unsigned char *
+create_movabs(unsigned char *code, uint64_t value, unsigned char reg_bits)
 {
+	assert(reg_bits < 16);
+
 	unsigned char *bytes = (unsigned char *)&value;
 
-	code[0] = 0x49; /* movabs opcode */
-	code[1] = 0xbb; /* specifiy r11 as destination */
-	code[2] = bytes[0];
-	code[3] = bytes[1];
-	code[4] = bytes[2];
-	code[5] = bytes[3];
-	code[6] = bytes[4];
-	code[7] = bytes[5];
-	code[8] = bytes[6];
-	code[9] = bytes[7];
+	*code++ = 0x48 | (reg_bits >> 3); /* REX prefix */
+	*code++ = 0xb8 | (reg_bits & 7); /* opcode */
+	*code++ = bytes[0];
+	*code++ = bytes[1];
+	*code++ = bytes[2];
+	*code++ = bytes[3];
+	*code++ = bytes[4];
+	*code++ = bytes[5];
+	*code++ = bytes[6];
+	*code++ = bytes[7];
+
+	return code;
+}
+
+/*
+ * create_movabs_r11
+ * Generates a movabs instruction moving a value into the R11 register.
+ */
+static unsigned char *
+create_movabs_r11(unsigned char *code, uint64_t value)
+{
+	return create_movabs(code, value, 11);
+}
+
+/*
+ * relocate_instruction
+ * Places an instruction equivalent to `ins` to the memory location at `dst`.
+ * Only handles instructions that can be copied verbatim, and some LEA
+ * instructions.
+ */
+static unsigned char *
+relocate_instruction(unsigned char *dst,
+			const struct intercept_disasm_result *ins)
+{
+	if (ins->is_lea_rip) {
+		/*
+		 * Substitue a "lea $offset(%rip), %reg" instruction
+		 * by a movabs instruction, to achieve the same effect.
+		 */
+		return create_movabs(dst, (uint64_t)ins->rip_ref_addr,
+				ins->arg_register_bits);
+	} else {
+		memcpy(dst, ins->address, ins->length);
+		return dst + ins->length;
+	}
 }
 
 /*
@@ -594,43 +614,30 @@ create_movabs_r11(unsigned char *code, uint64_t value)
  * (actually only after a call to mprotect_asm_wrappers).
  */
 static void
-create_wrapper(struct patch_desc *patch)
+create_wrapper(struct patch_desc *patch, unsigned char **dst)
 {
-	unsigned char *dst;
-
-	if (is_asm_wrapper_space_full())
-		xabort("not enough space in asm_wrapper_space");
-
 	/* Create a new copy of the template */
-	patch->asm_wrapper = dst = next_asm_wrapper_space;
+	patch->asm_wrapper = *dst;
 
 	/* Copy the previous instruction(s) */
 	if (patch->uses_prev_ins) {
-		size_t length = patch->preceding_ins.length;
 		if (patch->uses_prev_ins_2)
-			length += patch->preceding_ins_2.length;
-
-		memcpy(dst, patch->syscall_addr - length, length);
-		dst += length;
+			*dst = relocate_instruction(*dst,
+					&patch->preceding_ins_2);
+		*dst = relocate_instruction(*dst, &patch->preceding_ins);
 	}
 
-	memcpy(dst, intercept_asm_wrapper_tmpl, tmpl_size);
-	create_movabs_r11(dst + o_patch_desc_addr, (uintptr_t)patch);
-	create_movabs_r11(dst + o_wrapper_level1_addr,
+	memcpy(*dst, intercept_asm_wrapper_tmpl, asm_wrapper_tmpl_size);
+	create_movabs_r11(*dst + o_patch_desc_addr, (uintptr_t)patch);
+	create_movabs_r11(*dst + o_wrapper_level1_addr,
 				(uintptr_t)&intercept_wrapper);
-	dst += tmpl_size;
+	*dst += asm_wrapper_tmpl_size;
 
 	/* Copy the following instruction */
-	if (patch->uses_next_ins) {
-		memcpy(dst,
-		    patch->syscall_addr + SYSCALL_INS_SIZE,
-		    patch->following_ins.length);
-		dst += patch->following_ins.length;
-	}
+	if (patch->uses_next_ins)
+		*dst = relocate_instruction(*dst, &patch->following_ins);
 
-	dst = create_absolute_jump(dst, patch->return_address);
-
-	next_asm_wrapper_space = dst;
+	*dst = create_absolute_jump(*dst, patch->return_address);
 }
 
 /*
@@ -658,15 +665,6 @@ static unsigned char *
 after_nop(const struct range *nop)
 {
 	return nop->address + nop->size;
-}
-
-static void
-mprotect_no_intercept(void *addr, size_t len, int prot,
-			const char *msg_on_error)
-{
-	long result = syscall_no_intercept(SYS_mprotect, addr, len, prot);
-
-	xabort_on_syserror(result, msg_on_error);
 }
 
 /*
@@ -718,10 +716,8 @@ activate_patches(struct intercept_desc *desc)
 				patch->dst_jmp_patch, desc->next_trampoline);
 
 			/* jump - escape the 2 GB range of the text segment */
-			create_absolute_jump(
+			desc->next_trampoline = create_absolute_jump(
 				desc->next_trampoline, patch->asm_wrapper);
-
-			desc->next_trampoline += TRAMPOLINE_SIZE;
 		} else {
 			create_jump(JMP_OPCODE,
 				patch->dst_jmp_patch, patch->asm_wrapper);
@@ -766,21 +762,4 @@ activate_patches(struct intercept_desc *desc)
 	mprotect_no_intercept(first_page, size,
 	    PROT_READ | PROT_EXEC,
 	    "mprotect PROT_READ | PROT_EXEC");
-}
-
-/*
- * mprotect_asm_wrappers
- * The code generated into the data segment at the asm_wrapper_space
- * array is not executable by default. This routine sets that memory region
- * to be executable, must called before attempting to execute any patched
- * syscall.
- */
-void
-mprotect_asm_wrappers(void)
-{
-	mprotect_no_intercept(
-	    round_down_address(asm_wrapper_space + PAGE_SIZE),
-	    sizeof(asm_wrapper_space) - PAGE_SIZE,
-	    PROT_READ | PROT_EXEC,
-	    "mprotect_asm_wrappers PROT_READ | PROT_EXEC");
 }

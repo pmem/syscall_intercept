@@ -67,6 +67,8 @@ struct lib_data {
 	size_t mock_trampoline_table_size;
 	const unsigned char *text_start;
 	const unsigned char *text_end;
+	unsigned char *asm_wrapper_start;
+	unsigned char *asm_wrapper_end;
 	size_t text_size;
 };
 
@@ -136,40 +138,29 @@ load_test_lib(const char *path)
 	}
 
 	data.text_size = data.text_end - data.text_start;
+	data.asm_wrapper_start = dlsym(lib, "asm_wrapper_start");
+	data.asm_wrapper_end = dlsym(lib, "asm_wrapper_end");
 
 	return data;
 }
 
 /*
- * check_patch - binary comparison of text sections
- * This routine compares each byte in the text section of the 'input'
- * library and the 'expected output library' -- after the input library
- * has been patched.
- *
- * If a difference is found, it prints both text sections, highlighting
- * the differences.
+ * print_hex_diff
+ * Prints to stderr two columns of hexadecimal values, for easy inspection
+ * of failed test cases.
  */
 static void
-check_patch(const struct lib_data *in, const struct lib_data *out)
+print_hex_diff(const unsigned char *a, const unsigned char *b, size_t size)
 {
-	if (memcmp(in->text_start, out->text_start, in->text_size) == 0)
-		return;
-
-	fputs("Invalid patch\n", stderr);
-
-	const unsigned char *text = in->text_start;
-	const unsigned char *expected = out->text_start;
-	size_t count = in->text_size;
-
-	fputs("patch vs. expected:\n", stderr);
-	while (count > 0) {
+	fputs("result vs. expected:\n", stderr);
+	size_t offset = 0;
+	while (offset < size) {
 		fprintf(stderr,
-		    "0x%04zx: 0x%02hhx 0x%02hhx%s\n",
-		    text - in->text_start,
-		    *text, *expected, (*text == *expected) ? "" : " <-");
-		++text;
-		++expected;
-		--count;
+		    "0x%04zx: 0x%02hhx 0x%02hhx%s\n", offset, *a, *b,
+		    (*a == *b) ? "" : " <-");
+		++offset;
+		++a;
+		++b;
 	}
 
 	exit(EXIT_FAILURE);
@@ -200,6 +191,8 @@ main(int argc, char **argv)
 	 * file.
 	 */
 	struct intercept_desc patches;
+	static unsigned char builtin_wrapper_space[0x10000];
+	unsigned char *asm_wrapper_address = builtin_wrapper_space;
 	init_patcher();
 
 	/*
@@ -215,14 +208,31 @@ main(int argc, char **argv)
 
 	/* perform the actually patching */
 	find_syscalls(&patches);
-	create_patch_wrappers(&patches);
+	create_patch_wrappers(&patches, &asm_wrapper_address);
 	mprotect_asm_wrappers();
 	activate_patches(&patches);
 
-	/* compare the result of patching with the expected result */
-	check_patch(&lib_in, &lib_out);
+	int exit_code = EXIT_SUCCESS;
 
-	return EXIT_SUCCESS;
+	if (memcmp(lib_in.text_start, lib_out.text_start,
+				lib_in.text_size) != 0) {
+		fputs("Invalid patch\n", stderr);
+		print_hex_diff(lib_in.text_start, lib_out.text_start,
+				lib_in.text_size);
+		exit_code = EXIT_FAILURE;
+	}
+
+	if (lib_out.asm_wrapper_start != NULL &&
+		memcmp(builtin_wrapper_space, lib_out.asm_wrapper_start,
+		lib_out.asm_wrapper_end - lib_out.asm_wrapper_start) != 0) {
+		fputs("Invalid asm wrapper\n", stderr);
+		print_hex_diff(builtin_wrapper_space,
+			lib_out.asm_wrapper_start,
+			lib_out.asm_wrapper_end - lib_out.asm_wrapper_start);
+		exit_code = EXIT_FAILURE;
+	}
+
+	return exit_code;
 }
 
 /*

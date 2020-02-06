@@ -70,7 +70,9 @@ set(asm_patterns
 	pattern_nop_padding7
 	pattern_nop_padding8
 	pattern_nop_padding9
-	pattern_endbr64)
+	pattern_endbr64
+	pattern_lea_rip_rdi
+	pattern_lea_rip_r12)
 
 set(asm_patterns_failing
 	pattern_double_syscall
