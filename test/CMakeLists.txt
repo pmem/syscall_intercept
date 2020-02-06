@@ -69,7 +69,9 @@ set(asm_patterns
 	pattern_nop_padding6
 	pattern_nop_padding7
 	pattern_nop_padding8
-	pattern_nop_padding9)
+	pattern_nop_padding9
+	pattern_lea_rip_rdi
+	pattern_lea_rip_r12)
 
 try_compile(ASSEMBLER_SUPPORTS_ENDBR64 ${CMAKE_BINARY_DIR}
 		${CMAKE_CURRENT_SOURCE_DIR}/pattern_endbr64.in.S

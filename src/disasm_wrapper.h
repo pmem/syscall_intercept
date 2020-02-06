@@ -49,6 +49,7 @@
 #include <stdint.h>
 
 struct intercept_disasm_result {
+	const unsigned char *address;
 
 	bool is_set;
 
@@ -65,6 +66,18 @@ struct intercept_disasm_result {
 
 	/* as of now this only refers to endbr64 */
 	bool is_endbr;
+
+	/*
+	 * Flag marking lea instructions setting a 64 bit register to a
+	 * RIP relative address. They can be relocated -- but by simple memcpy.
+	 */
+	bool is_lea_rip;
+
+	/*
+	 * The X86 encoding of 64 bit register being set in an instruction
+	 * marked above as is_lea_rip.
+	 */
+	unsigned char arg_register_bits;
 
 	/* call instruction */
 	bool is_call;

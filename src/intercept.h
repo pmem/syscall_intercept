@@ -194,7 +194,7 @@ void allocate_trampoline_table(struct intercept_desc *desc);
 void find_syscalls(struct intercept_desc *desc);
 
 void init_patcher(void);
-void create_patch_wrappers(struct intercept_desc *desc);
+void create_patch_wrappers(struct intercept_desc *desc, unsigned char **dst);
 void mprotect_asm_wrappers(void);
 
 /*
@@ -216,5 +216,16 @@ bool is_overwritable_nop(const struct intercept_disasm_result *ins);
 void create_jump(unsigned char opcode, unsigned char *from, void *to);
 
 const char *cmdline;
+
+#define PAGE_SIZE ((size_t)0x1000)
+
+static inline unsigned char *
+round_down_address(unsigned char *address)
+{
+	return (unsigned char *)(((uintptr_t)address) & ~(PAGE_SIZE - 1));
+}
+
+/* The size of an asm wrapper instance */
+extern size_t asm_wrapper_tmpl_size;
 
 #endif
