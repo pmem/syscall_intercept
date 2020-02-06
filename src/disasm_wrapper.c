@@ -209,7 +209,7 @@ intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 {
 	static const unsigned char endbr64[] = {0xf3, 0x0f, 0x1e, 0xfa};
 
-	struct intercept_disasm_result result = {0, };
+	struct intercept_disasm_result result = {.address = code, 0, };
 	const unsigned char *start = code;
 	size_t size = (size_t)(context->end - code + 1);
 	uint64_t address = (uint64_t)code;
@@ -227,8 +227,6 @@ intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 
 	if (!cs_disasm_iter(context->handle, &start, &size,
 	    &address, context->insn)) {
-		result.is_set = false;
-		result.length = 0;
 		return result;
 	}
 
@@ -299,6 +297,22 @@ intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 	    op_i < context->insn->detail->x86.op_count; ++op_i)
 		check_op(&result, context->insn->detail->x86.operands + op_i,
 		    code);
+
+	result.is_lea_rip = (context->insn->id == X86_INS_LEA &&
+			result.has_ip_relative_opr);
+
+	if (result.is_lea_rip) {
+		/*
+		 * Extract the four bits from the encoding, which
+		 * specify the destination register.
+		 */
+
+		/* one bit from the REX prefix */
+		result.arg_register_bits = ((code[0] & 4) << 1);
+
+		/* three bits from the ModRM byte */
+		result.arg_register_bits |= ((code[2] >> 3) & 7);
+	}
 
 	result.is_set = true;
 

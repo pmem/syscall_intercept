@@ -47,6 +47,8 @@
  */
 long syscall_no_intercept(long syscall_number, ...);
 
+void mprotect_no_intercept(void *addr, size_t len, int prot,
+			const char *msg_on_error);
 /*
  * xmmap_anon - get new memory mapping
  *
