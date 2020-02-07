@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2016-2020, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,6 +62,9 @@ struct intercept_disasm_result {
 	 * as an operand.
 	 */
 	bool has_ip_relative_opr;
+
+	/* as of now this only refers to endbr64 */
+	bool is_endbr;
 
 	/* call instruction */
 	bool is_call;

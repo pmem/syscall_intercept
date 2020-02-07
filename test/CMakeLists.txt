@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2019, Intel Corporation
+# Copyright 2017-2020, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -70,6 +70,13 @@ set(asm_patterns
 	pattern_nop_padding7
 	pattern_nop_padding8
 	pattern_nop_padding9)
+
+try_compile(ASSEMBLER_SUPPORTS_ENDBR64 ${CMAKE_BINARY_DIR}
+		${CMAKE_CURRENT_SOURCE_DIR}/pattern_endbr64.in.S
+		CMAKE_FLAGS "-DCMAKE_ASM_LINK_EXECUTABLE='echo skip linking'")
+if(ASSEMBLER_SUPPORTS_ENDBR64)
+	list(APPEND asm_patterns pattern_endbr64)
+endif()
 
 set(asm_patterns_failing
 	pattern_double_syscall
