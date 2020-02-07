@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2019, Intel Corporation
+# Copyright 2017-2020, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -69,7 +69,8 @@ set(asm_patterns
 	pattern_nop_padding6
 	pattern_nop_padding7
 	pattern_nop_padding8
-	pattern_nop_padding9)
+	pattern_nop_padding9
+	pattern_endbr64)
 
 set(asm_patterns_failing
 	pattern_double_syscall

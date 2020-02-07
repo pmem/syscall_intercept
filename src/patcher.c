@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2016-2020, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -284,12 +284,13 @@ is_relocateable_before_syscall(struct intercept_disasm_result ins)
 	    ins.is_rel_jump ||
 	    ins.is_jump ||
 	    ins.is_ret ||
+	    ins.is_endbr ||
 	    ins.is_syscall);
 }
 
 /*
  * is_relocateable_after_syscall
- * checks if an instruction found before a syscall instruction
+ * checks if an instruction found after a syscall instruction
  * can be relocated (and thus overwritten).
  *
  * Notice: we allow relocation of ret instructions.
@@ -304,6 +305,7 @@ is_relocateable_after_syscall(struct intercept_disasm_result ins)
 	    ins.is_call ||
 	    ins.is_rel_jump ||
 	    ins.is_jump ||
+	    ins.is_endbr ||
 	    ins.is_syscall);
 }
 

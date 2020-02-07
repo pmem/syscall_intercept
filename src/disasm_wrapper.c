@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2016-2020, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -207,10 +207,23 @@ struct intercept_disasm_result
 intercept_disasm_next_instruction(struct intercept_disasm_context *context,
 					const unsigned char *code)
 {
+	static const unsigned char endbr64[] = {0xf3, 0x0f, 0x1e, 0xfa};
+
 	struct intercept_disasm_result result = {0, };
 	const unsigned char *start = code;
 	size_t size = (size_t)(context->end - code + 1);
 	uint64_t address = (uint64_t)code;
+
+	if (size >= sizeof(endbr64) &&
+	    memcmp(code, endbr64, sizeof(endbr64)) == 0) {
+		result.is_set = true;
+		result.is_endbr = true;
+		result.length = 4;
+#ifndef NDEBUG
+		result.mnemonic = "endbr64";
+#endif
+		return result;
+	}
 
 	if (!cs_disasm_iter(context->handle, &start, &size,
 	    &address, context->insn)) {
