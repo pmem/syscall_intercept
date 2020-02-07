@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017, Intel Corporation
+ * Copyright 2016-2020, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,18 +47,6 @@
 
 extern bool debug_dumps_on;
 void debug_dump(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-
-/*
- * Create wrapper functions to be called from glibc,
- * with an extra instruction taken from glibc
- * from before -- intercept_patch_with_prefix -- the syscall,
- * or after -- intercept_patch_with_postfix -- the syscall.
- */
-void intercept_patch_with_prefix(unsigned char *syscall_addr);
-
-
-void intercept_patch_with_postfix(unsigned char *syscall_addr,
-				unsigned postfix_len);
 
 #define INTERCEPTOR_EXIT_CODE 111
 
@@ -125,8 +113,6 @@ struct patch_desc {
 
 	struct range nop_trampoline;
 };
-
-void patch_apply(struct patch_desc *patch);
 
 /*
  * A section_list struct contains information about sections where
