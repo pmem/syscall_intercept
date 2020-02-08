@@ -1,10 +1,17 @@
 language: c
 
+dist: bionic
+addons:
+  apt:
+    packages:
+      - libcapstone-dev
+      - pandoc
+
 services:
   - docker
 
 env:
-  matrix:
+  jobs:
     - PUSH_IMAGE=1 MAKE_PKG=1 OS=ubuntu OS_VER=16.04
     - PUSH_IMAGE=1 MAKE_PKG=1 OS=fedora OS_VER=25
     - MAKE_PKG=0 OS=ubuntu OS_VER=16.04 C_COMPILER=clang CPP_COMPILER=clang++
@@ -14,20 +21,14 @@ env:
     - MAKE_PKG=0 CAPSTONE_EXPERIMENTAL=1 OS=ubuntu OS_VER=16.04
     - COVERITY=1 OS=ubuntu OS_VER=16.04
     - COVERAGE=1 OS=ubuntu OS_VER=16.04
+    - NO_DOCKER=1 CMAKE_BUILD_TYPE=Release
+    - NO_DOCKER=1 CMAKE_BUILD_TYPE=Debug
 
 before_install:
-  - export HOST_WORKDIR=`pwd`
-  - export GITHUB_REPO=${GITHUB_REPO:-pmem/syscall_intercept}
-  - export DOCKERHUB_REPO=${DOCKERHUB_REPO:-pmem/syscall_intercept}
-  - export PROJECT=syscall_intercept
-  - export EXTRA_DOCKER_ARGS=-t
-  - cd utils/docker
-  - ./pull-or-rebuild-image.sh
-  - if [[ -f push_image_to_repo_flag ]]; then PUSH_THE_IMAGE=1; fi
-  - rm -f push_image_to_repo_flag
+  - if [[ $NO_DOCKER -ne 1 ]]; then pwd ; ls ; source travis_prepare_docker.sh ; fi
 
 script:
-  - ./build.sh
+  - if [[ $NO_DOCKER -eq 1 ]]; then source travis_simple_build.sh ; else source build.sh ; fi
 
 after_success:
   - if [[ $PUSH_THE_IMAGE -eq 1 ]]; then images/push-image.sh $OS-$OS_VER; fi
