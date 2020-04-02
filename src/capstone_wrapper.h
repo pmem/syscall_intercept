@@ -40,4 +40,4 @@
 #pragma GCC system_header
 #endif
 
-#include <capstone/capstone.h>
+#include <capstone.h>
