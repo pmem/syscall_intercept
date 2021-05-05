@@ -601,7 +601,7 @@ allocate_trampoline_table(struct intercept_desc *desc)
 	}
 
 	FILE *maps;
-	char line[0x100];
+	char line[0x2000];
 	unsigned char *guess; /* Where we would like to allocate the table */
 	size_t size;
 
