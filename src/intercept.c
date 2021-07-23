@@ -705,18 +705,20 @@ intercept_routine(struct context *context)
 struct wrapper_ret
 intercept_routine_post_clone(struct context *context)
 {
+	struct syscall_desc desc;
+	get_syscall_in_context(context, &desc);
 	if (context->rax == 0) {
 		if (intercept_hook_point_clone_child != NULL)
 			intercept_hook_point_clone_child(
-				context->rdi, context->rsi,
-				(void *)context->rdx, (void *)context->r10,
-				context->r8);
+				desc.args[0], desc.args[1],
+				(void *)desc.args[2], (void *)desc.args[3],
+				desc.args[4]);
 	} else {
 		if (intercept_hook_point_clone_parent != NULL)
 			intercept_hook_point_clone_parent(
-				&context->rax, context->rdi, context->rsi,
-				(void *)context->rdx, (void *)context->r10,
-				context->r8);
+				&context->rax, desc.args[0], desc.args[1],
+				(void *)desc.args[2], (void *)desc.args[3],
+				desc.args[4]);
 	}
 
 	return (struct wrapper_ret){.rax = context->rax, .rdx = 1 };
