@@ -57,7 +57,9 @@ extern int (*intercept_hook_point)(long syscall_number,
 			long arg4, long arg5,
 			long *result);
 
-extern void (*intercept_hook_point_clone_child)(void);
+extern void (*intercept_hook_point_clone_child)(
+		unsigned long clone_flags, unsigned long newsp,
+		void *parent_tid, void *child_tid, unsigned tid);
 extern void (*intercept_hook_point_clone_parent)(
 		long *pid, unsigned long clone_flags, unsigned long newsp,
 		void *parent_tid, void *child_tid, unsigned tid);

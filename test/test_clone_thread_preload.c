@@ -96,8 +96,19 @@ hook(long syscall_number,
  * of the clone syscall.
  */
 static void
-hook_child(void)
+hook_child(unsigned long clone_flags,
+	unsigned long newsp,
+	void *parent_tid,
+	void *child_tid,
+	unsigned tid)
 {
+	// suppress unused warnings
+	(void) clone_flags;
+	(void) newsp;
+	(void) parent_tid;
+	(void) child_tid;
+	(void) tid;
+
 	static const char msg[] = "clone_hook_child called\n";
 
 	assert(flags != -1);
