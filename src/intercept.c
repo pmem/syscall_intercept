@@ -602,6 +602,25 @@ get_syscall_in_context(struct context *context, struct syscall_desc *sys)
 }
 
 /*
+ * is_clone_syscall
+ * Checks if the specified syscall is SYS_clone or SYS_clone3 on platforms
+ * that support clone3.
+ */
+static bool
+is_clone_syscall(long syscall_number)
+{
+	if (syscall_number == SYS_clone)
+		return true;
+
+#ifdef SYS_clone3
+	if (syscall_number == SYS_clone3)
+		return true;
+#endif
+
+	return false;
+}
+
+/*
  * intercept_routine(...)
  * This is the function called from the asm wrappers,
  * forwarding the syscall parameters to a hook function
@@ -675,7 +694,7 @@ intercept_routine(struct context *context)
 		 * the clone_child_intercept_routine instead, executing
 		 * it on the new child threads stack, then returns to libc.
 		 */
-		if (desc.nr == SYS_clone && desc.args[1] != 0)
+		if (is_clone_syscall(desc.nr) && desc.args[1] != 0)
 			return (struct wrapper_ret){
 				.rax = context->rax, .rdx = 2 };
 		else
