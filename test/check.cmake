@@ -47,8 +47,6 @@ else()
 endif()
 endif()
 
-endif()
-
 if(INTERCEPT_ALL)
 	set(ENV{INTERCEPT_ALL_OBJS} 1)
 else()
