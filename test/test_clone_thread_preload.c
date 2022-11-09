@@ -33,7 +33,8 @@
 /*
  * This library's purpose is to hook the syscalls of the program
  * built from test_clone_thread.c, and to check the
- * intercept_hook_point_clone_child hook point while doing so.
+ * intercept_hook_point_clone_child and intercept_hook_point_clone_parent
+ * hook point while doing so.
  *
  * See also: examples/fork_ban.c about forking a new process.
  */
@@ -48,7 +49,15 @@
 #include <syscall.h>
 #include <stdio.h>
 
-static long flags = -1;
+typedef struct {
+	unsigned long clone_flags;
+	unsigned long newsp;
+	void *parent_tid;
+	void *child_tid;
+	unsigned tid;
+} clone_args_t;
+
+static clone_args_t clone_args;
 
 static int
 hook(long syscall_number,
@@ -57,9 +66,6 @@ hook(long syscall_number,
 	long arg4, long arg5,
 	long *result)
 {
-	(void) arg2;
-	(void) arg3;
-	(void) arg4;
 	(void) arg5;
 	(void) result;
 
@@ -80,8 +86,13 @@ hook(long syscall_number,
 	 * therefore the return value (the child's pid) can not be observed,
 	 * or modified.
 	 */
-	if (syscall_number == SYS_clone && (arg1 != 0))
-		flags = arg0;
+	if (syscall_number == SYS_clone && (arg1 != 0)) {
+		clone_args.clone_flags = arg0;
+		clone_args.newsp = arg1;
+		clone_args.parent_tid = (void *) arg2;
+		clone_args.child_tid = (void *) arg3;
+		clone_args.tid = arg4;
+	}
 
 	return 1;
 }
@@ -96,11 +107,38 @@ hook(long syscall_number,
  * of the clone syscall.
  */
 static void
-hook_child(void)
+hook_child(unsigned long clone_flags,
+	unsigned long newsp,
+	void *parent_tid,
+	void *child_tid,
+	unsigned tid)
 {
+
 	static const char msg[] = "clone_hook_child called\n";
 
-	assert(flags != -1);
+	assert(clone_flags == clone_args.clone_flags);
+	assert(newsp == clone_args.newsp);
+	assert(parent_tid == clone_args.parent_tid);
+	assert(child_tid == clone_args.child_tid);
+	assert(tid == clone_args.tid);
+	syscall_no_intercept(SYS_write, 1, msg, sizeof(msg));
+}
+
+static void
+hook_parent(long *ret,
+	unsigned long clone_flags,
+	unsigned long newsp,
+	void *parent_tid,
+	void *child_tid,
+	unsigned tid) {
+	static const char msg[] = "clone_hook_parent called\n";
+
+	(void) ret;
+	assert(clone_flags == clone_args.clone_flags);
+	assert(newsp == clone_args.newsp);
+	assert(parent_tid == clone_args.parent_tid);
+	assert(child_tid == clone_args.child_tid);
+	assert(tid == clone_args.tid);
 	syscall_no_intercept(SYS_write, 1, msg, sizeof(msg));
 }
 
@@ -109,4 +147,5 @@ init(void)
 {
 	intercept_hook_point = hook;
 	intercept_hook_point_clone_child = hook_child;
+	intercept_hook_point_clone_parent = hook_parent;
 }
