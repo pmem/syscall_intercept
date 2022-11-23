@@ -42,7 +42,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <syscall.h>
-
+#include <linux/sched.h>
 #include "libsyscall_intercept_hook_point.h"
 
 static int hook_counter;
@@ -65,6 +65,10 @@ hook(long syscall_number,
 
 	if (syscall_number == SYS_clone)
 		hook_counter++;
+#ifdef SYS_clone3
+	if (syscall_number == SYS_clone3)
+		hook_counter++;
+#endif
 
 	return 1;
 }

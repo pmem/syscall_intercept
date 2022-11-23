@@ -47,6 +47,7 @@
 #include <assert.h>
 #include <syscall.h>
 #include <stdio.h>
+#include <linux/sched.h>
 
 static long flags = -1;
 
@@ -80,9 +81,15 @@ hook(long syscall_number,
 	 * therefore the return value (the child's pid) can not be observed,
 	 * or modified.
 	 */
-	if (syscall_number == SYS_clone && (arg1 != 0))
+	if (syscall_number == SYS_clone && (arg1 != 0)) {
 		flags = arg0;
-
+	}
+#ifdef SYS_clone3
+	if (syscall_number == SYS_clone3 &&
+			((struct clone_args *)arg0)->stack != 0) {
+		flags = arg0;
+	}
+#endif
 	return 1;
 }
 
