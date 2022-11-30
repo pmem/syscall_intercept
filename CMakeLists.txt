@@ -139,7 +139,8 @@ set_target_properties(syscall_intercept_base_c
 		PROPERTIES C_VISIBILITY_PRESET hidden)
 
 target_link_libraries(syscall_intercept_shared
-	PRIVATE ${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
+	PRIVATE ${CMAKE_DL_LIBS} ${capstone_LIBRARIES}
+	"-Wl,--version-script=${CMAKE_SOURCE_DIR}/version.map")
 
 target_link_libraries(syscall_intercept_static
 	INTERFACE ${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
