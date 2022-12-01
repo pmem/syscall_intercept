@@ -48,6 +48,8 @@ option(TREAT_WARNINGS_AS_ERRORS
 	"make the build fail on any warnings during compilation, or linking" ON)
 option(EXPECT_SPURIOUS_SYSCALLS
 	"account for some unexpected syscalls in tests - enable while using sanitizers, gcov" OFF)
+option(STATIC_CAPSTONE "statically link libcapstone into the shared library" OFF)
+
 find_program(CTAGS ctags)
 if(CTAGS)
 	option(AUTO_RUN_CTAGS "create tags file every on every rebuild" ON)
@@ -138,8 +140,14 @@ add_dependencies(syscall_intercept_static generate_syscall_intercept_scoped)
 set_target_properties(syscall_intercept_base_c
 		PROPERTIES C_VISIBILITY_PRESET hidden)
 
+set(CAPSTONE_LINK_MODE "-Bdynamic")
+if (STATIC_CAPSTONE)
+	set(CAPSTONE_LINK_MODE "-Bstatic")
+endif()
+
 target_link_libraries(syscall_intercept_shared
-	PRIVATE ${CMAKE_DL_LIBS} ${capstone_LIBRARIES}
+	PRIVATE ${CMAKE_DL_LIBS}
+	"-Wl,--push-state,${CAPSTONE_LINK_MODE} -lcapstone -Wl,--pop-state"
 	"-Wl,--version-script=${CMAKE_SOURCE_DIR}/version.map")
 
 target_link_libraries(syscall_intercept_static
