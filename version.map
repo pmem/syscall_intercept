@@ -1,0 +1,10 @@
+{
+	global:
+		syscall_no_intercept;
+		syscall_hook_in_process_allowed;
+		intercept_hook_point;
+		intercept_hook_point_clone_parent;
+		intercept_hook_point_clone_child;
+	local:
+		*;
+};
