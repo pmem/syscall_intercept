@@ -68,9 +68,16 @@ int (*intercept_hook_point)(long syscall_number,
 			long *result)
 	__attribute__((visibility("default")));
 
-void (*intercept_hook_point_clone_child)(void)
+void (*intercept_hook_point_clone_child)(
+		unsigned long flags, void *child_stack,
+		int *ptid, int *ctid,
+		long newtls)
 	__attribute__((visibility("default")));
-void (*intercept_hook_point_clone_parent)(long)
+
+void (*intercept_hook_point_clone_parent)(
+		unsigned long flags, void *child_stack,
+		int *ptid, int *ctid,
+		long newtls, long returned_pid)
 	__attribute__((visibility("default")));
 
 bool debug_dumps_on;
@@ -710,12 +717,26 @@ intercept_routine(struct context *context)
 struct wrapper_ret
 intercept_routine_post_clone(struct context *context)
 {
+	struct syscall_desc desc;
+	get_syscall_in_context(context, &desc);
+
 	if (context->rax == 0) {
 		if (intercept_hook_point_clone_child != NULL)
-			intercept_hook_point_clone_child();
+			intercept_hook_point_clone_child(
+				(unsigned long)desc.args[0],
+				(void *)desc.args[1],
+				(int *)desc.args[2],
+				(int *)desc.args[3],
+				desc.args[4]);
 	} else {
 		if (intercept_hook_point_clone_parent != NULL)
-			intercept_hook_point_clone_parent(context->rax);
+			intercept_hook_point_clone_parent(
+				(unsigned long)desc.args[0],
+				(void *)desc.args[1],
+				(int *)desc.args[2],
+				(int *)desc.args[3],
+				desc.args[4],
+				context->rax);
 	}
 
 	return (struct wrapper_ret){.rax = context->rax, .rdx = 1 };
