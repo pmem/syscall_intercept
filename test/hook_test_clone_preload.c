@@ -65,10 +65,8 @@ hook(long syscall_number,
 
 	if (syscall_number == SYS_clone)
 		hook_counter++;
-#ifdef SYS_clone3
-	if (syscall_number == SYS_clone3)
+	else if (syscall_number == SYS_clone3)
 		hook_counter++;
-#endif
 
 	return 1;
 }
