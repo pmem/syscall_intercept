@@ -679,15 +679,11 @@ intercept_routine(struct context *context)
 		if (desc.nr == SYS_clone && desc.args[1] != 0) {
 			return (struct wrapper_ret){
 				.rax = context->rax, .rdx = 2 };
-		}
-#ifdef SYS_clone3
-		else if (desc.nr == SYS_clone3 &&
+		} else if (desc.nr == SYS_clone3 &&
 			((struct clone_args *)desc.args[0])->stack != 0) {
 			return (struct wrapper_ret){
 				.rax = context->rax, .rdx = 2 };
-		}
-#endif
-		else
+		} else
 			result = syscall_no_intercept(desc.nr,
 					desc.args[0],
 					desc.args[1],
