@@ -148,7 +148,7 @@ endif()
 target_link_libraries(syscall_intercept_shared
 	PRIVATE ${CMAKE_DL_LIBS}
 	"-Wl,--push-state,${CAPSTONE_LINK_MODE} -lcapstone -Wl,--pop-state"
-	"-Wl,--version-script=${CMAKE_SOURCE_DIR}/version.map")
+	"-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/version.map")
 
 target_link_libraries(syscall_intercept_static
 	INTERFACE ${CMAKE_DL_LIBS} ${capstone_LIBRARIES})
