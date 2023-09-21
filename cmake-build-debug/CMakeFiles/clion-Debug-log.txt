@@ -1,0 +1,14 @@
+/opt/clion-2023.2.2/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" -S /home/atello/dev/syscall_intercept -B /home/atello/dev/syscall_intercept
+-- The C compiler identification is Clang 14.0.0
+-- The ASM compiler identification is Clang with GNU-like command-line
+-- Found assembler: /usr/bin/clang
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/clang - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+CMake Error at CMakeLists.txt:40 (message):
+  In-source builds are not supported.
+
+
+-- Configuring incomplete, errors occurred!
