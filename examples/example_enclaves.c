@@ -7,9 +7,11 @@
 #include <syscall.h>
 #include <errno.h>
 #include <libsyscall_intercept_hook_point.h>
+#include <linux/vm_sockets.h> // For vsock
+
 
 #define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 12345
+#define SERVER_PORT 7000
 
 int socket_fd = 0;
 
@@ -121,9 +123,11 @@ static int my_hook(long syscall_number, long arg0, long arg1, long arg2, long ar
 
 static void setup_socket() {
     struct sockaddr_in server_addr = {0};
+
+    // Create a VSOCK socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd < 0) {
-//        perror("Socket setup failed");
+       printf("error");
         return;
     }
 
@@ -131,9 +135,10 @@ static void setup_socket() {
     server_addr.sin_port = htons(SERVER_PORT);
     server_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
 
+    // Connect to the vsock port of the host
     if (connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-//        perror("Connection failed");
-    }
+       printf("error");
+      }
 }
 
 static __attribute__((constructor)) void init(void) {

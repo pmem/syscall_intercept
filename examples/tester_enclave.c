@@ -9,8 +9,9 @@
 int main() {
     setenv("INTERCEPT_LOG", "'intercept.log-'", 1);
 
-    const char *directory = "/home/ec2-user";
+    const char *directory = "/home/ec2-user/dev/aws-nitro-enclaves-samples/syscall_interceptor";
     const char *file_name = "test.txt";
+    printf("Test");
     int file_descriptor;
 
     // Flags for the openat syscall
@@ -23,7 +24,9 @@ int main() {
     // Call the openat syscall with the correct file path
     file_descriptor = openat(AT_FDCWD, file_path, flags);
 
+    // Check if the openat syscall was successful
     if (file_descriptor >= 0) {
+
         const char *data_to_write = "testing from client";
         ssize_t bytes_written = write(file_descriptor, data_to_write, strlen(data_to_write));
 
@@ -36,6 +39,6 @@ int main() {
     } else {
         perror("Error opening file");
     }
-//    remove("/home/atello/bcc/examples/test2.txt");
+    remove("/home/atello/bcc/examples/test2.txt");
     return 0;
 }
