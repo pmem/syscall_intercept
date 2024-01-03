@@ -405,6 +405,7 @@ should_patch_object(uintptr_t addr, const char *path)
  * }
  *
  */
+
 static int
 analyze_object(struct dl_phdr_info *info, size_t size, void *data)
 {

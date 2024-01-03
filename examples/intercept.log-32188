@@ -1,0 +1,14 @@
+tempfile=$(mktemp) ; tempfile2=$(mktemp) ; grep "^/" $0 | cut -d " " -f 1,2 | sed "s/^/addr2line -p -f -e /" > $tempfile ; { echo ; . $tempfile ; echo ; } > $tempfile2 ; paste $tempfile2 $0 ; exit 0
+/lib/x86_64-linux-gnu/libc.so.6 0x1148a4 -- openat(AT_FDCWD, ".", O_WRONLY | O_RSYNC | 0x18644028) = ?
+/lib/x86_64-linux-gnu/libc.so.6 0x1148a4 -- openat(AT_FDCWD, ".", O_WRONLY | O_RSYNC | 0x18644028) = -95 EOPNOTSUPP (Operation not supported on transport endpoint)
+/lib/x86_64-linux-gnu/libc.so.6 0x1151d9 -- dup(2) = ?
+/lib/x86_64-linux-gnu/libc.so.6 0x1151d9 -- dup(2) = 4
+/lib/x86_64-linux-gnu/libc.so.6 0x119b52 -- fcntl(4, 3 (F_GETFL), 0x0) = ?
+/lib/x86_64-linux-gnu/libc.so.6 0x119b52 -- fcntl(4, 3 (F_GETFL), 0x0) = 32770
+/lib/x86_64-linux-gnu/libc.so.6 0x113f2c -- newfstatat(4, "", 0x7ffc4d939a10, 0x1000) = ?
+/lib/x86_64-linux-gnu/libc.so.6 0x113f2c -- newfstatat(4, "", 0x7ffc4d939a10, 0x1000) = 0
+/lib/x86_64-linux-gnu/libc.so.6 0x114a75 -- write(4, "Error opening file: Operation not supported\n", 44) = ?
+/lib/x86_64-linux-gnu/libc.so.6 0x114a75 -- write(4, "Error opening file: Operation not supported\n", 44) = 44
+/lib/x86_64-linux-gnu/libc.so.6 0x119a59 -- close(4) = ?
+/lib/x86_64-linux-gnu/libc.so.6 0x119a59 -- close(4) = 0
+/lib/x86_64-linux-gnu/libc.so.6 0xeac2f -- exit_group(0x0)
