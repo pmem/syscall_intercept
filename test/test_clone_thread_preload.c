@@ -84,12 +84,12 @@ hook(long syscall_number,
 	if (syscall_number == SYS_clone && (arg1 != 0)) {
 		flags = arg0;
 	}
-#ifdef SYS_clone3
+
 	if (syscall_number == SYS_clone3 &&
 			((struct clone_args *)arg0)->stack != 0) {
 		flags = arg0;
 	}
-#endif
+
 	return 1;
 }
 
