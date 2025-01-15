@@ -546,6 +546,89 @@ crawl_text(struct intercept_desc *desc)
 }
 
 /*
+ * get_selinux_enforced
+ * Identifies if SELinux is active on the system.
+ */
+static int
+get_selinux_enforced(void)
+{
+	static int selinux_enforced = -1;
+
+	if (selinux_enforced != -1)
+		return selinux_enforced;
+
+	selinux_enforced = 0;
+
+	int fd = syscall_no_intercept(SYS_open, "/proc/mounts",
+					O_RDONLY);
+	if (fd >= 0) {
+		char *selinux_path = 0;
+		size_t selinux_path_len;
+
+		/* parse /proc/mounts to find selinux_mnt */
+		char line[1024];
+		size_t off = 0;
+		ssize_t r = syscall_no_intercept(
+				SYS_read, fd, line, sizeof(line));
+		size_t len = r;
+		while (r > 0) {
+			char *mntpt = (char *)memchr(
+				line + off, ' ', len - off);
+			char *fstype = mntpt ?  (char *)memchr(
+					mntpt + 1, ' ',
+					line + len - mntpt) : 0;
+			char *next = fstype ?  (char *)memchr(
+					fstype + 1, '\n',
+					line + len - fstype) : 0;
+			if (!next) {
+				len -= off;
+				memmove(line, line + off, len);
+				off = 0;
+				r = syscall_no_intercept(
+					SYS_read, fd, line + len,
+					sizeof(line) - len);
+				len += r;
+			} else {
+				if (memcmp(fstype, " selinuxfs ",
+						strlen(" selinuxfs ")) == 0) {
+					++ mntpt;
+				    selinux_path_len = fstype - mntpt;
+					memmove(line, mntpt, selinux_path_len);
+					selinux_path = line;
+					break;
+				}
+				off = next + 1 - line;
+			}
+		}
+
+		syscall_no_intercept(SYS_close, fd);
+
+		if (selinux_path) {
+			/* read mode from /enforce file */
+			memcpy(selinux_path + selinux_path_len, "/enforce",
+				strlen("/enforce") + 1);
+			fd = syscall_no_intercept(
+				SYS_open, selinux_path, O_RDONLY);
+
+			if (fd >= 0) {
+				char mode;
+
+				r = syscall_no_intercept(
+					SYS_read, fd, &mode, 1);
+
+				if (r > 0 && mode == '1') {
+					selinux_enforced = 1;
+				}
+
+				syscall_no_intercept(SYS_close, fd);
+			}
+		}
+	}
+
+	return selinux_enforced;
+}
+
+/*
  * get_min_address
  * Looks for the lowest address that might be mmap-ed. This is
  * useful while looking for space for a trampoline table close
@@ -559,18 +642,23 @@ get_min_address(void)
 	if (min_address != 0)
 		return min_address;
 
-	min_address = 0x10000; /* best guess */
+	min_address = 0x10000; /* common value for CONFIG_LSM_MMAP_MIN_ADDR */
 
 	int fd = syscall_no_intercept(SYS_open, "/proc/sys/vm/mmap_min_addr",
 					O_RDONLY);
 
 	if (fd >= 0) {
+		static uintptr_t proc_min_address;
 		char line[64];
 		ssize_t r;
 		r = syscall_no_intercept(SYS_read, fd, line, sizeof(line) - 1);
 		if (r > 0) {
 			line[r] = '\0';
-			min_address = (uintptr_t)atoll(line);
+			proc_min_address = (uintptr_t)atoll(line);
+
+			if (proc_min_address >= min_address ||
+					!get_selinux_enforced())
+				min_address = proc_min_address;
 		}
 
 		syscall_no_intercept(SYS_close, fd);
