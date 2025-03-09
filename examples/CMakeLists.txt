@@ -39,3 +39,8 @@ target_link_libraries(fork_ban PRIVATE syscall_intercept_shared)
 
 add_library(syscall_logger SHARED syscall_logger.c syscall_desc.c)
 target_link_libraries(syscall_logger PRIVATE syscall_intercept_shared)
+
+add_library(signal_interceptor SHARED signal_interceptor.c)
+target_link_libraries(signal_interceptor PRIVATE syscall_intercept_shared)
+
+add_executable(signaller signaller.c)
