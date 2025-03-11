@@ -217,7 +217,9 @@ void create_jump(unsigned char opcode, unsigned char *from, void *to);
 
 extern const char *cmdline;
 
+#ifndef PAGE_SIZE
 #define PAGE_SIZE ((size_t)0x1000)
+#endif
 
 static inline unsigned char *
 round_down_address(unsigned char *address)

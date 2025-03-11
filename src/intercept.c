@@ -413,7 +413,7 @@ analyze_object(struct dl_phdr_info *info, size_t size, void *data)
 	const char *path;
 
 	debug_dump("analyze_object called on \"%s\" at 0x%016" PRIxPTR "\n",
-	    info->dlpi_name, info->dlpi_addr);
+	    info->dlpi_name, (uintptr_t)info->dlpi_addr);
 
 	if ((path = get_object_path(info)) == NULL)
 		return 0;
@@ -658,7 +658,11 @@ intercept_routine(struct context *context)
 		    desc.args[5],
 		    &result);
 
+#ifdef SYS_vfork
 	if (desc.nr == SYS_vfork || desc.nr == SYS_rt_sigreturn) {
+#else
+	if (desc.nr == SYS_rt_sigreturn) {
+#endif
 		/* can't handle these syscalls the normal way */
 		return (struct wrapper_ret){.rax = context->rax, .rdx = 0 };
 	}
